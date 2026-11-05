@@ -73,6 +73,10 @@ their repositories arrive with the milestones that use them (M07, M18, M24, M26)
   `tests/storage/fixtures/data_vNNNN.sql` (rows valid at that version). Tests
   load each fixture at its version and upgrade it to head.
 - A database newer than the app is refused with "update the app".
+- Several processes may open the same library at once (for example the CLI
+  during app start): each migration re-checks the version under the write
+  lock and skips work another process finished, and the switch to WAL retries
+  while locked.
 
 ### Backups and recovery
 

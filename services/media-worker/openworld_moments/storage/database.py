@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 import sqlite3
+import time
 from collections.abc import Iterator, Sequence
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
@@ -178,12 +179,30 @@ class Database:
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
-        mode = conn.execute("PRAGMA journal_mode = WAL").fetchone()[0]
+        mode = self._enable_wal(conn)
         if mode != "wal":
             conn.close()
             raise StorageError(f"could not enable WAL mode (got {mode!r})")
         conn.execute("PRAGMA synchronous = NORMAL")
         return conn
+
+    @staticmethod
+    def _enable_wal(conn: sqlite3.Connection) -> str:
+        """Switch to WAL, retrying while another process holds the lock.
+
+        Changing the journal mode needs an exclusive lock and SQLite can report
+        "database is locked" immediately instead of honoring busy_timeout, which
+        happens when several processes open a new library at the same moment.
+        """
+        deadline = time.monotonic() + BUSY_TIMEOUT_MS / 1000
+        while True:
+            try:
+                return str(conn.execute("PRAGMA journal_mode = WAL").fetchone()[0])
+            except sqlite3.OperationalError as exc:
+                if "locked" not in str(exc) or time.monotonic() >= deadline:
+                    conn.close()
+                    raise
+                time.sleep(0.02)
 
     # -- migrations -----------------------------------------------------------------
 
@@ -195,7 +214,12 @@ class Database:
         return tuple(m.version for m in self.migrations if m.version > current)
 
     def migrate(self) -> MigrationReport:
-        """Apply pending migrations, backing up first if the database holds data."""
+        """Apply pending migrations, backing up first if the database holds data.
+
+        Safe to call from several processes at once: each migration re-reads the
+        schema version after taking the write lock and skips work another process
+        already finished.
+        """
         with closing(self.connect()) as conn:
             current = self.schema_version(conn)
             self._verify_applied(conn, current)
@@ -208,6 +232,8 @@ class Database:
             for migration in todo:
                 try:
                     with transaction(conn):
+                        if self.schema_version(conn) >= migration.version:
+                            continue  # applied by another process while we waited
                         self._ensure_ledger(conn)
                         for statement in split_statements(migration.sql):
                             conn.execute(statement)
@@ -228,7 +254,9 @@ class Database:
                         backup_path=backup_path,
                     ) from exc
                 applied.append(migration.version)
-            return MigrationReport(current, applied[-1], tuple(applied), backup_path)
+            final = self.schema_version(conn)
+            self._verify_applied(conn, final)
+            return MigrationReport(current, final, tuple(applied), backup_path)
 
     def _ensure_ledger(self, conn: sqlite3.Connection) -> None:
         conn.execute(

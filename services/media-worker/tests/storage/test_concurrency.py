@@ -3,12 +3,25 @@
 
 from __future__ import annotations
 
+import multiprocessing
 import threading
 import time
 from contextlib import closing
 from pathlib import Path
 
+import pytest
+
 from openworld_moments.storage import Database, SettingsRepository, transaction
+
+PROCESSES = 4
+
+
+def _open_in_child(path: str, results: multiprocessing.Queue) -> None:  # type: ignore[type-arg]
+    try:
+        Database.open(Path(path))
+        results.put("ok")
+    except Exception as exc:  # reported to the parent
+        results.put(f"{type(exc).__name__}: {exc}")
 
 
 def test_reader_is_not_blocked_by_an_open_write(database: Database) -> None:
@@ -76,3 +89,26 @@ def test_committed_writes_survive_reopen(tmp_path: Path) -> None:
     with closing(reopened.connect()) as conn:
         assert SettingsRepository(conn).get("durable") == {"ok": True}
     assert reopened.health().ok
+
+
+@pytest.mark.parametrize("trial", range(3))
+def test_several_processes_can_open_a_new_library_at_once(tmp_path: Path, trial: int) -> None:
+    """First launch race: every process must succeed and the schema is applied once."""
+    path = tmp_path / f"trial{trial}" / "database.sqlite3"
+    ctx = multiprocessing.get_context("spawn")  # same behavior on every OS
+    results = ctx.Queue()
+    procs = [
+        ctx.Process(target=_open_in_child, args=(str(path), results)) for _ in range(PROCESSES)
+    ]
+    for proc in procs:
+        proc.start()
+    for proc in procs:
+        proc.join(timeout=60)
+    outcomes = [results.get(timeout=10) for _ in procs]
+    assert outcomes == ["ok"] * PROCESSES, outcomes
+
+    database = Database(path)
+    assert database.health().ok
+    with closing(database.connect()) as conn:
+        rows = conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
+    assert [r[0] for r in rows] == [m.version for m in database.migrations]
