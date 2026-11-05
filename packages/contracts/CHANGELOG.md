@@ -2,6 +2,17 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.1 — 2026-11-05 (M03)
+
+Additive; every 1.0 document is valid 1.1.
+
+- `job`: new kind `diagnostic` (synthetic long-running job for tests and UI
+  checks); optional `params` (handler input, kept so interrupted jobs can be
+  requeued) and `attempt` (run counter).
+- `job-event`: new contract for job changes streamed over the worker's
+  `/v1/jobs/events` WebSocket, with a per-process `seq` for ordering and gap
+  detection.
+
 ## 1.0 — 2026-11-05 (M01)
 
 Initial contracts:

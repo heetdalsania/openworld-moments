@@ -101,6 +101,12 @@ jobs:
       # rustup installs the toolchain pinned in rust-toolchain.toml on first use.
       - run: rustup show active-toolchain
       - uses: Swatinem/rust-cache@v2.9.3
+      # Supervisor integration tests start the real Python worker from .venv.
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --all-packages
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked

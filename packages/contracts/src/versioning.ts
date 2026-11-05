@@ -8,7 +8,7 @@ export interface SchemaVersion {
 }
 
 /** Version every versioned contract is currently written at. Kept in sync with Python by a test. */
-export const SUPPORTED_VERSION = { major: 1, minor: 0 } as const;
+export const SUPPORTED_VERSION = { major: 1, minor: 1 } as const;
 
 const VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 

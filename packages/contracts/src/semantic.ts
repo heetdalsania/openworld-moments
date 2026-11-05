@@ -5,6 +5,7 @@ import type {
   Evidence,
   ExportManifest,
   Job,
+  JobEvent,
   Profile,
   Project,
   Region,
@@ -66,6 +67,10 @@ function* job(doc: Job): Generator<string> {
   }
 }
 
+function* jobEvent(doc: JobEvent): Generator<string> {
+  for (const issue of job(doc.job)) yield `job.${issue}`;
+}
+
 function* profile(doc: Profile): Generator<string> {
   for (const [name, r] of Object.entries(doc.regions)) {
     if (r) yield* region(`regions.${name}`, r);
@@ -117,6 +122,7 @@ function* exportManifest(doc: ExportManifest): Generator<string> {
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
   event,
   job,
+  "job-event": jobEvent,
   profile,
   project,
   "render-preset": renderPreset,

@@ -7,6 +7,9 @@ from pathlib import Path
 import pytest
 
 from openworld_moments.storage.__main__ import main
+from openworld_moments.storage.database import bundled_migrations
+
+HEAD = bundled_migrations()[-1].version
 
 
 def _run(capsys: pytest.CaptureFixture[str], *args: str) -> tuple[int, dict[str, object]]:
@@ -21,7 +24,7 @@ def test_status_migrate_and_backup(tmp_path: Path, capsys: pytest.CaptureFixture
     assert code == 1 and "does not exist" in str(out["error"])
 
     code, out = _run(capsys, "migrate", db)
-    assert code == 0 and out["to_version"] == 1 and out["backup_path"] is None
+    assert code == 0 and out["to_version"] == HEAD and out["backup_path"] is None
 
     code, out = _run(capsys, "status", db)
     assert code == 0 and out["ok"] is True and out["pending_migrations"] == []

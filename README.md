@@ -19,6 +19,7 @@ Completed milestones:
 | M00 — Repository foundation | Tauri desktop shell with a planning-stage placeholder, Python media-worker package, CI for TypeScript, Rust, and Python, split licensing |
 | M01 — Contracts and versioning | Versioned JSON Schema contracts (`packages/contracts/`) with generated TypeScript and Pydantic types and a drift check |
 | M02 — Database and migrations | SQLite library database (WAL) with migrations, pre-upgrade backups, and typed repositories ([storage guide](./docs/architecture/storage.md)) |
+| M03 — Worker lifecycle and job engine | Desktop host starts and supervises the Python worker over a loopback, token-protected API; durable cancellable jobs with live progress ([worker guide](./docs/architecture/worker.md)) |
 
 There is no import, analysis, or editing yet; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -318,5 +319,5 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-Next up is [M03 — Worker lifecycle and job engine](./docs/milestones/M03-worker-lifecycle-and-jobs.md): authenticated worker IPC and durable jobs. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
+Next up is [M04 — Media probing](./docs/milestones/M04-media-probing.md): FFprobe capability detection and normalized media metadata, the first real job on the M03 engine. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
 

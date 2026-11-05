@@ -27,6 +27,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 |---|---|---|---|---|
 | Error | `error.schema.json` | `ErrorInfo` | `generated.error_schema.ErrorInfo` | M03 |
 | Job | `job.schema.json` | `Job` | `generated.job_schema.Job` | M03 |
+| Job event | `job-event.schema.json` | `JobEvent` | `generated.job_event_schema.JobEvent` | M03 |
 | Media asset | `media-asset.schema.json` | `MediaAsset` | `generated.media_asset_schema.MediaAsset` | M04, M05 |
 | Event and evidence | `event.schema.json`, `evidence.schema.json` | `Event`, `Evidence` | `generated.event_schema.Event` | M14, M16–M19 |
 | Profile | `profile.schema.json` | `Profile` | `generated.profile_schema.Profile` | M14, M15 |

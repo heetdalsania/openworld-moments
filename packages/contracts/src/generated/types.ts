@@ -87,6 +87,7 @@ export interface ContractsBundle {
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
+  "job-event"?: JobEvent;
   job?: Job;
   "media-asset"?: MediaAsset;
   profile?: Profile;
@@ -302,12 +303,25 @@ export interface ManifestCommand {
   args: string[];
 }
 /**
- * Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema.
+ * Job change pushed by the worker over the /v1/jobs/events WebSocket. 'seq' increases by one for every event a worker process emits, so clients can detect gaps and resynchronize with GET /v1/jobs.
+ */
+export interface JobEvent {
+  schema_version: string;
+  seq: number;
+  emitted_at: UtcTimestamp;
+  /**
+   * 'state' when the job's state changed, 'progress' for progress or message updates within a state.
+   */
+  kind: "state" | "progress";
+  job: Job;
+}
+/**
+ * Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1).
  */
 export interface Job {
   schema_version: string;
   id: JobId;
-  kind: "import" | "analyze" | "proxy" | "transcribe" | "index" | "render";
+  kind: "import" | "analyze" | "proxy" | "transcribe" | "index" | "render" | "diagnostic";
   state:
     | "queued"
     | "probing"
@@ -321,6 +335,14 @@ export interface Job {
     | "ready"
     | "cancelled"
     | "failed";
+  /**
+   * Handler input (JSON object). Must not contain secrets; paths are allowed but never logged.
+   */
+  params?: {};
+  /**
+   * 1 for the first run, incremented on each retry or requeue.
+   */
+  attempt?: number;
   /**
    * Measurable progress; done <= total (checked semantically).
    */

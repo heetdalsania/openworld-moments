@@ -28,6 +28,7 @@ from openworld_moments.storage import (
     StoryRepository,
     transaction,
 )
+from openworld_moments.storage.repositories import SCHEMA_VERSION
 from tests.storage.conftest import contract_fixtures, read_json
 
 # IDs used by the M01 contract fixtures.
@@ -48,6 +49,11 @@ def _asset(asset_id: str = ASSET_ID, sha: str = "3f" * 32) -> MediaAsset:
 
 def _session(session_id: str = SESSION_ID) -> Session:
     return Session(id=session_id, title="Evening session", created_at=NOW)
+
+
+def _expected(raw: dict[str, Any], **defaults: Any) -> Any:
+    """What a repository returns for a stored fixture: current schema_version plus defaults."""
+    return _canonical({**defaults, **raw, "schema_version": SCHEMA_VERSION})
 
 
 def _seed(conn: sqlite3.Connection) -> None:
@@ -82,7 +88,7 @@ def test_asset_round_trip_is_lossless(conn: sqlite3.Connection, path: Path) -> N
     repo = AssetRepository(conn)
     with transaction(conn):
         repo.add(load("media-asset", raw))  # type: ignore[arg-type]
-    assert normalize(repo.get(raw["id"])) == _canonical(raw)
+    assert normalize(repo.get(raw["id"])) == _expected(raw)
 
 
 @pytest.mark.parametrize("path", contract_fixtures("event"), ids=lambda p: p.stem)
@@ -92,7 +98,7 @@ def test_event_round_trip_is_lossless(conn: sqlite3.Connection, path: Path) -> N
     repo = EventRepository(conn)
     with transaction(conn):
         repo.add(load("event", raw))  # type: ignore[arg-type]
-    assert normalize(repo.get(raw["id"])) == _canonical(raw)
+    assert normalize(repo.get(raw["id"])) == _expected(raw)
 
 
 @pytest.mark.parametrize("path", contract_fixtures("job"), ids=lambda p: p.stem)
@@ -101,7 +107,7 @@ def test_job_round_trip_is_lossless(conn: sqlite3.Connection, path: Path) -> Non
     repo = JobRepository(conn)
     with transaction(conn):
         repo.save(load("job", raw))  # type: ignore[arg-type]
-    assert normalize(repo.get(raw["id"])) == _canonical(raw)
+    assert normalize(repo.get(raw["id"])) == _expected(raw, attempt=1)
 
 
 @pytest.mark.parametrize("path", contract_fixtures("project"), ids=lambda p: p.stem)
@@ -249,7 +255,8 @@ def test_duplicate_content_hash_is_rejected(conn: sqlite3.Connection) -> None:
     _seed(conn)
     with pytest.raises(ConflictError), transaction(conn):
         AssetRepository(conn).add(_asset(OTHER_ASSET_ID))
-    assert AssetRepository(conn).find_by_sha256("3f" * 32) == _asset()
+    found = AssetRepository(conn).find_by_sha256("3f" * 32)
+    assert found is not None and found.id == ASSET_ID
 
 
 def test_session_order_is_unique(conn: sqlite3.Connection) -> None:

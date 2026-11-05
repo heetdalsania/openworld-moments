@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.1",
+  "id": "job_01JCBQ00000000000000000004",
+  "kind": "diagnostic",
+  "state": "analyzing",
+  "created_at": "2026-11-20T05:40:10Z",
+  "progress": {
+    "done": 12,
+    "total": 40
+  },
+  "message": "Analyzing frames",
+  "correlation_id": "cor_01JCBQ00000000000000000008",
+  "started_at": "2026-11-20T05:40:11.250Z",
+  "params": {
+    "steps": 5,
+    "step_ms": 20,
+    "fail_at": null,
+    "nested": {
+      "ok": true
+    }
+  },
+  "attempt": 2
+}
