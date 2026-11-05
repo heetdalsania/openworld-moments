@@ -3,7 +3,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ContractError, ContractVersionError } from "./errors.ts";
 import { CONTRACTS, load, normalize, type ContractName } from "./validate.ts";
 import { checkVersion } from "./versioning.ts";
@@ -68,6 +68,20 @@ describe("invalid fixtures", () => {
         paths.join("\n"),
       ).toBe(true);
     }
+  });
+});
+
+describe("load order", () => {
+  // Each contract must load as the very first one in a fresh module, so cross-file $refs never
+  // depend on another contract having been loaded earlier.
+  it.each(Object.keys(CONTRACTS))("%s loads first in a fresh module", async (contract) => {
+    vi.resetModules();
+    const fresh = await import("./validate.ts");
+    const dir = path.join(fixtures, contract, "valid");
+    const first = readdirSync(dir).sort()[0];
+    expect(first, `${contract} has no valid fixture`).toBeDefined();
+    const raw: unknown = JSON.parse(readFileSync(path.join(dir, first ?? ""), "utf8"));
+    expect(() => fresh.load(contract as ContractName, raw)).not.toThrow();
   });
 });
 

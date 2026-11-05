@@ -53,13 +53,22 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
 ajv.addKeyword({ keyword: "tsType", schemaType: "string" }); // generator hint, no validation
-for (const schema of [common, evidence]) ajv.addSchema(schema);
+// Register every schema before compiling any, so cross-file $refs (e.g. job -> error) resolve
+// no matter which contract is loaded first. Mirrors the Python registry.
+const SCHEMAS: { $id: string }[] = [
+  common,
+  evidence,
+  ...Object.values(CONTRACTS).map(([s]) => s as { $id: string }),
+];
+for (const schema of SCHEMAS) ajv.addSchema(schema);
 const validators = new Map<ContractName, ValidateFunction>();
 
 function validator(contract: ContractName): ValidateFunction {
   let fn = validators.get(contract);
   if (!fn) {
-    fn = ajv.compile(CONTRACTS[contract][0]);
+    const id = (CONTRACTS[contract][0] as { $id: string }).$id;
+    fn = ajv.getSchema(id);
+    if (!fn) throw new Error(`schema ${id} is not registered`);
     validators.set(contract, fn);
   }
   return fn;
