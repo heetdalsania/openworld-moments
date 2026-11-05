@@ -6,6 +6,13 @@ updates:
     groups:
       js-dev-tooling:
         dependency-type: development
+    ignore:
+      # Major TypeScript releases wait until typescript-eslint supports them.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      # @types/node tracks the Node major pinned in .node-version.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
   - package-ecosystem: cargo
     directory: /
     schedule: { interval: weekly }
