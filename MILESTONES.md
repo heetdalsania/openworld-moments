@@ -1,6 +1,6 @@
 # OpenWorld Moments Milestones
 
-This document is the execution index for the repository. Every implementation task is called a **milestone** and is designed to fit one focused agent or contributor session. Each milestone should normally produce one branch, one pull request, and one mergeable increment.
+This document is the execution index for the repository. Every implementation task is called a **milestone** and is designed to fit one focused agent or contributor session. The roadmap contains 40 milestones, M00 through M39. Each milestone should normally produce one branch, one pull request, and one mergeable increment.
 
 The detailed product requirements remain in [OPENWORLD_MOMENTS_BUILD_SPEC.md](./OPENWORLD_MOMENTS_BUILD_SPEC.md). Individual briefs live in [docs/milestones](./docs/milestones/).
 
@@ -102,7 +102,7 @@ flowchart TD
     M29 --> M30
     M22 --> M31[M31 Accessibility onboarding and docs]
     M29 --> M31
-    M20 --> M32[M32 Public alpha qualification]
+    M20 --> M32[M32 Windows public alpha qualification]
     M23 --> M32
     M25 --> M32
     M26 --> M32
@@ -110,6 +110,28 @@ flowchart TD
     M28 --> M32
     M30 --> M32
     M31 --> M32
+    M24 --> M33[M33 macOS foundation and CI]
+    M29 --> M33
+    M18 --> M34[M34 macOS worker and media toolchain]
+    M29 --> M34
+    M33 --> M34
+    M07 --> M35[M35 macOS files permissions and lifecycle]
+    M10 --> M35
+    M33 --> M35
+    M34 --> M35
+    M25 --> M36[M36 macOS media and render parity]
+    M33 --> M36
+    M34 --> M36
+    M30 --> M37[M37 macOS signing notarization and DMGs]
+    M34 --> M37
+    M35 --> M37
+    M36 --> M37
+    M31 --> M38[M38 macOS UX accessibility and docs]
+    M35 --> M38
+    M37 --> M38
+    M32 --> M39[M39 Dual-platform release qualification]
+    M37 --> M39
+    M38 --> M39
 ```
 
 ## Parallel work lanes
@@ -121,6 +143,8 @@ Once their dependencies are merged, the following milestones are intentionally p
 - M16, M17, and M18 after M14/M15 as specified.
 - M20, M21, M24, and M26 after their separate prerequisites.
 - M23, M25, M27, and M28 once the editor model/UI is stable.
+- M33 can begin after M24/M29 while independent product milestones continue.
+- M35 and M36 may proceed in parallel after M34, but must coordinate bundle and capability contracts.
 
 Parallel agents must not edit the same generated contract or migration without coordinating first.
 
@@ -175,7 +199,14 @@ required check is skipped.
 | M29 | Windows packaging and model manager | M03, M08, M24 | Installable signed-ready alpha package | [Open](./docs/milestones/M29-windows-packaging-and-models.md) |
 | M30 | Security hardening and SBOM | M10, M29 | Threat-model closure, dependency inventory | [Open](./docs/milestones/M30-security-hardening-and-sbom.md) |
 | M31 | Accessibility, onboarding, and documentation | M22, M29 | Keyboard-complete onboarding and user docs | [Open](./docs/milestones/M31-accessibility-onboarding-docs.md) |
-| M32 | Public alpha qualification | M20, M23, M25–M31 | Release candidate, validation report, release notes | [Open](./docs/milestones/M32-public-alpha-qualification.md) |
+| M32 | Windows public alpha qualification | M20, M23, M25–M31 | Windows release candidate and qualification report | [Open](./docs/milestones/M32-public-alpha-qualification.md) |
+| M33 | macOS foundation and CI | M24, M29 | Native host builds, platform contract, dual-architecture CI | [Open](./docs/milestones/M33-macos-foundation-and-ci.md) |
+| M34 | macOS worker and media toolchain | M18, M29, M33 | Native worker/FFmpeg bundles and model compatibility | [Open](./docs/milestones/M34-macos-worker-and-media-toolchain.md) |
+| M35 | macOS files, permissions, and lifecycle | M07, M10, M33, M34 | Safe imports, watchers, storage, sleep/wake, and phone LAN flow | [Open](./docs/milestones/M35-macos-files-permissions-and-lifecycle.md) |
+| M36 | macOS media and render parity | M25, M33, M34 | Playback, proxy, VideoToolbox, color, and render parity | [Open](./docs/milestones/M36-macos-media-and-render-parity.md) |
+| M37 | macOS signing, notarization, and DMGs | M30, M34–M36 | Signed and notarized native DMGs | [Open](./docs/milestones/M37-macos-signing-notarization-and-dmg.md) |
+| M38 | macOS UX, accessibility, and documentation | M31, M35, M37 | Native conventions, VoiceOver, onboarding, and guides | [Open](./docs/milestones/M38-macos-ux-accessibility-and-docs.md) |
+| M39 | Dual-platform release qualification | M32, M37, M38 | Qualified Windows and macOS release assets | [Open](./docs/milestones/M39-dual-platform-release-qualification.md) |
 
 ## Required quality gates by lane
 
@@ -213,11 +244,12 @@ required check is skipped.
 
 ### Release milestones
 
-- Clean-machine validation.
+- Clean-machine validation on every claimed OS and CPU architecture.
 - Dependency and license inventory.
 - Upgrade/rollback behavior.
 - Security review.
 - Documented known limitations.
+- Signature, notarization, Gatekeeper, checksum, and architecture verification where applicable.
 
 ## Milestone completion ledger
 
@@ -240,7 +272,7 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M08 | Ready | — | — | — | — |
 | M09–M10 | See dependency graph | — | — | — | — |
 | M11 | Ready | — | — | — | — |
-| M12–M32 | See dependency graph | — | — | — | — |
+| M12–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 

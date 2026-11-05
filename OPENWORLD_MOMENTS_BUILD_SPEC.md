@@ -305,9 +305,10 @@ Future native mobile applications may add a share-sheet target, but the QR uploa
 - JSON project and event export.
 - No account, no telemetry, no mandatory cloud services.
 
-### 7.2 P1: required for beta
+### 7.2 P1: required for cross-platform beta
 
-- macOS Apple Silicon package.
+- Notarized macOS package for Apple Silicon.
+- Notarized macOS package for supported Intel Macs.
 - Better session reconstruction using audio correlation.
 - Full-text library search.
 - Optional local transcription.
@@ -1695,9 +1696,31 @@ Exit criteria:
 - Support bundle excludes media by default.
 - Known detector limitations are visible in-product.
 
+### Phase 7: macOS delivery and cross-platform qualification — 3 to 5 weeks
+
+Deliverables:
+
+- Native Apple Silicon and Intel host builds.
+- Bundled architecture-matched worker, FFmpeg, FFprobe, and optional models.
+- macOS-standard storage, file authorization, watchers, and lifecycle recovery.
+- Capability-tested VideoToolbox with correct CPU fallback.
+- Developer ID-signed, hardened, notarized, and stapled DMGs.
+- macOS menus, onboarding, VoiceOver path, troubleshooting, and uninstall guidance.
+- Cross-platform project/database portability report.
+- Combined Windows and macOS release qualification.
+
+Exit criteria:
+
+- Clean Apple Silicon and Intel Macs install and launch without Terminal, Rosetta, or a Gatekeeper bypass.
+- The complete import-to-render workflow passes on both Mac architectures.
+- Both DMGs pass architecture, signature, notarization, stapling, checksum, SBOM, and clean-machine verification.
+- Watched folders and jobs recover safely across permission changes, drive disconnects, sleep/wake, and restart.
+- One supported project/database revision moves between Windows and macOS without data loss.
+- M39's post-download release smoke tests pass on every supported platform/architecture.
+
 #### Expected first useful alpha
 
-Approximately 10 to 13 weeks for a solo developer, with a smaller import/group/manual-edit alpha possible after 4 to 5 weeks. The project should not claim reliable GTA VI detection until it has been evaluated on legitimate captures from the released game.
+Approximately 10 to 13 weeks for a solo developer to reach the Windows alpha, with a smaller import/group/manual-edit alpha possible after 4 to 5 weeks. Plan an additional 3 to 5 weeks plus Apple signing-account readiness and access to physical test Macs for the dual-platform release. These are planning estimates rather than delivery promises. The project should not claim reliable GTA VI detection until it has been evaluated on legitimate captures from the released game.
 
 ---
 
@@ -1984,7 +2007,7 @@ Avoid using GitHub stars as the primary success metric. Useful clips produced, t
 These decisions keep the project buildable:
 
 1. **Desktop first, not console native.**
-2. **Windows first, macOS beta next.**
+2. **Windows alpha first, then native Apple Silicon and Intel macOS packages, followed by dual-platform qualification.**
 3. **Offline file processing first, live capture later.**
 4. **Local-only by default.**
 5. **No account system.**
@@ -2101,6 +2124,7 @@ These references informed the product constraints and competitive analysis. They
 Version 1.0 is complete when:
 
 - A nontechnical Windows user can install the application without a terminal.
+- A nontechnical macOS user can install a signed and notarized native package without a terminal, Rosetta, or a Gatekeeper bypass.
 - The user can import through a watched folder, drag-and-drop, or phone QR upload.
 - Original media is never modified.
 - Exact duplicates and common replay-buffer overlaps are identified.
@@ -2121,7 +2145,7 @@ The product does not need to replace professional editors or identify every poss
 
 ## 27. Agent-session execution plan
 
-Implementation is divided into 33 independently reviewable milestones in [`MILESTONES.md`](./MILESTONES.md). Each milestone is intentionally scoped to one focused agent session and has its own brief under [`docs/milestones/`](./docs/milestones/README.md).
+Implementation is divided into 40 independently reviewable milestones in [`MILESTONES.md`](./MILESTONES.md). Each milestone is intentionally scoped to one focused agent session and has its own brief under [`docs/milestones/`](./docs/milestones/README.md).
 
 Every implementation session must:
 
@@ -2133,4 +2157,19 @@ Every implementation session must:
 6. End with one mergeable commit or pull request; incomplete work is not marked complete.
 
 The build specification remains the source of truth for product behavior. The milestone index is the source of truth for sequencing, ownership, and merge readiness. If they conflict, stop implementation and merge a documentation correction before proceeding.
+
+---
+
+## 28. macOS delivery requirements
+
+The supported macOS release is a direct-download Tauri application distributed as two native packages:
+
+- `arm64` for Apple Silicon Macs.
+- `x86_64` for supported Intel Macs.
+
+Both packages must include architecture-matched worker and media sidecars and must operate without Homebrew, a system Python installation, a user shell `PATH`, or Rosetta. The project will initially distribute outside the Mac App Store using Developer ID signing, Hardened Runtime, Apple notarization, and a stapled ticket.
+
+M33 through M38 implement macOS support without renumbering earlier assignments. M39 qualifies the combined Windows and macOS release. Until M39 passes, macOS builds are development artifacts and the project must not describe macOS as officially supported.
+
+The normative platform plan, support matrix, required Apple credentials, test matrix, application paths, packaging choices, and macOS definition of done are in [`docs/platforms/macos-delivery-plan.md`](./docs/platforms/macos-delivery-plan.md).
 
