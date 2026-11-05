@@ -354,6 +354,9 @@ dev = [
 name = "openworld-moments-worker"
 version = "0.0.0"
 source = { editable = "services/media-worker" }
+dependencies = [
+    { name = "openworld-moments-contracts" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -363,6 +366,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "openworld-moments-contracts", editable = "packages/contracts/python" }]
 
 [package.metadata.requires-dev]
 dev = [

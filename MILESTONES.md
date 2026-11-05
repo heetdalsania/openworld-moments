@@ -15,7 +15,8 @@ An agent assigned a milestone must:
 5. Add or update the tests required by the brief.
 6. Run all milestone validation commands plus repository-wide checks affected by the change.
 7. Update documentation and contracts when behavior changes.
-8. Finish with a handoff summary using the template in [CONTRIBUTING.md](./CONTRIBUTING.md).
+8. Update the README's **Project status** table and **Current next step** section.
+9. Finish with a handoff summary using the template in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 A milestone is not complete when the code merely compiles. It is complete when every acceptance criterion is demonstrably satisfied.
 
@@ -230,8 +231,8 @@ Each milestone pull request updates its own row **in the same pull request**, so
 |---|---|---|---|---|---|
 | M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | — | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
 | M01 | Complete | [#5](https://github.com/heetdalsania/openworld-moments/pull/5) | — | Arun Velkumar | JSON Schema 2020-12 contracts at schema_version 1.0; TS + Pydantic generated; CI drift check |
-| M02 | Ready | — | — | — | — |
-| M03 | Blocked by M02 | — | — | — | — |
+| M02 | Complete | [#6](https://github.com/heetdalsania/openworld-moments/pull/6) | — | Arun Velkumar | SQLite (WAL) schema v1 for all §9.7 tables; in-house migration runner with backups; typed repositories |
+| M03 | Ready | — | — | — | — |
 | M04 | Blocked by M03 | — | — | — | — |
 | M05 | Blocked by M04 | — | — | — | — |
 | M06–M32 | See dependency graph | — | — | — | — |

@@ -42,7 +42,8 @@ Before claiming completion:
 4. Update public contracts and documentation changed by the implementation.
 5. Confirm no secrets, private paths, footage, models, databases, or build outputs are staged.
 6. Update your milestone's row in the `MILESTONES.md` ledger in the same pull request (see the ledger instructions there).
-7. Provide the handoff below.
+7. Update the README's **Project status** table and **Current next step** section to reflect this milestone and the next one.
+8. Provide the handoff below.
 
 ```markdown
 ## Milestone handoff

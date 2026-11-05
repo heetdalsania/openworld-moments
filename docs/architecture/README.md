@@ -8,3 +8,8 @@ open it in the same pull request as the change it justifies.
 |---|---|---|
 | [0001](./adr/0001-multi-process-architecture.md) | Multi-process desktop architecture | Accepted |
 | [0002](./adr/0002-contract-schemas-and-generation.md) | JSON Schema contracts with generated types | Accepted |
+| [0003](./adr/0003-sqlite-migrations.md) | Standard-library SQLite with an in-house migration runner | Accepted |
+
+Other architecture notes:
+
+- [Storage](./storage.md): what lives in SQLite vs on disk, delete policies, migrations, backups.
