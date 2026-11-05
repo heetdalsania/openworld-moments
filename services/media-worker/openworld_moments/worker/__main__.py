@@ -78,8 +78,8 @@ def bind_loopback(host: str, port: int) -> socket.socket:
         )
     family = socket.AF_INET6 if address.version == 6 else socket.AF_INET
     sock = socket.socket(family, socket.SOCK_STREAM)
-    if os.name == "nt":  # refuse to share the port with another process
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)  # type: ignore[attr-defined]
+    if sys.platform == "win32":  # refuse to share the port with another process
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
     try:
         sock.bind((host, port))
     except OSError as exc:

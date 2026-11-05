@@ -4,7 +4,7 @@
 //! Requires the repository's Python environment (`uv sync --all-packages`).
 //! Override the interpreter with OWM_WORKER_PYTHON.
 
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -110,8 +110,9 @@ async fn starts_authenticates_and_stops() {
         supervisor.health().await,
         Err(SupervisorError::NotRunning)
     ));
-    // The port is released once the worker exits.
-    assert!(TcpListener::bind(("127.0.0.1", info.port)).is_ok());
+    // Nothing listens on the port once the worker exits. (A re-bind is not a
+    // reliable check: closed connections may leave the port in TIME_WAIT.)
+    assert!(TcpStream::connect(("127.0.0.1", info.port)).is_err());
 }
 
 #[tokio::test]
