@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/evidence.schema.json",
+  "title": "Evidence",
+  "description": "One piece of support for an event. Discriminated by 'kind'. Embedded in events.",
+  "oneOf": [
+    { "$ref": "#/$defs/RegionTemplateEvidence" },
+    { "$ref": "#/$defs/ColorRuleEvidence" },
+    { "$ref": "#/$defs/OcrEvidence" },
+    { "$ref": "#/$defs/TemporalConsistencyEvidence" },
+    { "$ref": "#/$defs/AudioEvidence" },
+    { "$ref": "#/$defs/TranscriptEvidence" },
+    { "$ref": "#/$defs/ModelFrameEvidence" }
+  ],
+  "$defs": {
+    "RegionTemplateEvidence": {
+      "title": "RegionTemplateEvidence",
+      "description": "Template match inside a normalized frame region.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "region", "score"],
+      "properties": {
+        "kind": { "const": "region_template" },
+        "region": { "$ref": "common.schema.json#/$defs/Region" },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "ColorRuleEvidence": {
+      "title": "ColorRuleEvidence",
+      "description": "Color or shape rule satisfied inside a region.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "region", "score"],
+      "properties": {
+        "kind": { "const": "color_rule" },
+        "region": { "$ref": "common.schema.json#/$defs/Region" },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "OcrEvidence": {
+      "title": "OcrEvidence",
+      "description": "Text recognized inside a region, constrained to a vocabulary.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "region", "text", "score"],
+      "properties": {
+        "kind": { "const": "ocr" },
+        "region": { "$ref": "common.schema.json#/$defs/Region" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "TemporalConsistencyEvidence": {
+      "title": "TemporalConsistencyEvidence",
+      "description": "The state was observed consistently across this many frames.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "frames", "score"],
+      "properties": {
+        "kind": { "const": "temporal_consistency" },
+        "frames": { "type": "integer", "minimum": 1 },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "AudioEvidence": {
+      "title": "AudioEvidence",
+      "description": "Audio energy or spectral event in a time range.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "start_ms", "end_ms", "score"],
+      "properties": {
+        "kind": { "const": "audio" },
+        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "TranscriptEvidence": {
+      "title": "TranscriptEvidence",
+      "description": "Transcribed speech matching a phrase.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "start_ms", "end_ms", "text", "score"],
+      "properties": {
+        "kind": { "const": "transcript" },
+        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    },
+    "ModelFrameEvidence": {
+      "title": "ModelFrameEvidence",
+      "description": "A sampled frame a model looked at when proposing a suggestion.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "frame_ms", "label", "score"],
+      "properties": {
+        "kind": { "const": "model_frame" },
+        "frame_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    }
+  }
+}

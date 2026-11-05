@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "id": "evt_01JCBQ00000000000000000003",
+  "session_id": "ses_01JCBQ00000000000000000002",
+  "asset_id": "ast_01JCBQ00000000000000000001",
+  "type": "openworld.vehicle_crash",
+  "start_ms": 823400,
+  "end_ms": 824100,
+  "confidence": 0.61,
+  "attributes": {},
+  "evidence": [
+    {
+      "kind": "model_frame",
+      "frame_ms": 823900,
+      "label": "vehicle crash",
+      "score": 0.61
+    }
+  ],
+  "source": {
+    "kind": "model",
+    "model_id": "local-vlm-small",
+    "prompt_version": "1.0.0",
+    "sampled_frames_ms": [823500, 823900]
+  },
+  "review_state": "unreviewed"
+}

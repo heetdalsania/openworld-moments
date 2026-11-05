@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "id": "discord-under-25mb",
+  "display_name": "Discord (under 25 MB)",
+  "width": 1280,
+  "height": 720,
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "video": {
+    "codec": "h264",
+    "bitrate_kbps": 2500
+  },
+  "audio": {
+    "codec": "aac",
+    "bitrate_kbps": 96,
+    "sample_rate_hz": 48000
+  },
+  "max_file_size_mb": 25
+}

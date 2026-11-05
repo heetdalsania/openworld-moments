@@ -1,0 +1,14 @@
+{
+  "description": "timestamps are ordered",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.0",
+    "id": "job_01JCBQ00000000000000000004",
+    "kind": "import",
+    "state": "ready",
+    "created_at": "2026-11-20T05:40:10Z",
+    "started_at": "2026-11-20T05:40:11.5Z",
+    "finished_at": "2026-11-20T05:40:11Z"
+  },
+  "message_contains": "finished_at: must not be before started_at"
+}

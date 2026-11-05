@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/render-preset.schema.json",
+  "title": "RenderPreset",
+  "description": "Export preset (spec 11.4). Presets are JSON files so users can contribute new ones.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "display_name", "width", "height", "fps", "video", "audio"],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
+    "id": { "$ref": "common.schema.json#/$defs/Slug" },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "width": { "type": "integer", "minimum": 2, "maximum": 8192, "multipleOf": 2 },
+    "height": { "type": "integer", "minimum": 2, "maximum": 8192, "multipleOf": 2 },
+    "fps": {
+      "description": "'source' keeps the source frame rate; otherwise an exact rational.",
+      "anyOf": [
+        { "type": "string", "const": "source" },
+        { "$ref": "common.schema.json#/$defs/Rational" }
+      ]
+    },
+    "video": {
+      "title": "VideoEncoding",
+      "description": "Exactly one of crf or bitrate_kbps (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codec"],
+      "properties": {
+        "codec": { "type": "string", "enum": ["h264", "hevc"] },
+        "crf": { "type": "integer", "minimum": 0, "maximum": 51 },
+        "bitrate_kbps": { "type": "integer", "minimum": 100, "maximum": 200000 }
+      }
+    },
+    "audio": {
+      "title": "AudioEncoding",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codec", "bitrate_kbps", "sample_rate_hz"],
+      "properties": {
+        "codec": { "type": "string", "enum": ["aac"] },
+        "bitrate_kbps": { "type": "integer", "minimum": 32, "maximum": 512 },
+        "sample_rate_hz": { "type": "integer", "enum": [44100, 48000] }
+      }
+    },
+    "max_file_size_mb": {
+      "description": "Target size cap. Presets that set this must warn about quality loss in the UI.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    }
+  }
+}

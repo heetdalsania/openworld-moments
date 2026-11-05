@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "id": "horizontal-source-fps",
+  "display_name": "Horizontal 1080p, source fps",
+  "width": 1920,
+  "height": 1080,
+  "fps": "source",
+  "video": {
+    "codec": "h264",
+    "crf": 20
+  },
+  "audio": {
+    "codec": "aac",
+    "bitrate_kbps": 192,
+    "sample_rate_hz": 48000
+  }
+}

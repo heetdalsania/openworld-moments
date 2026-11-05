@@ -36,7 +36,7 @@ The repository contains the product specification, the implementation plan, and 
 
 ```bash
 pnpm install
-uv sync --directory services/media-worker
+uv sync --all-packages
 ```
 
 ### Commands
@@ -53,7 +53,9 @@ Run from the repository root:
 | `pnpm test` | Vitest, `cargo test`, and pytest smoke tests |
 | `pnpm build` | Production desktop build without installers |
 | `pnpm build:bundle` | Production build plus platform installers |
-| `pnpm check` | `format:check`, `lint`, `typecheck`, and `test` together |
+| `pnpm contracts:generate` | Regenerate TypeScript and Python types from `packages/contracts/schemas/` |
+| `pnpm contracts:check` | Regenerate and fail if the committed generated files differ |
+| `pnpm check` | `format:check`, `lint`, `typecheck`, `test`, and `contracts:check` together |
 
 Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm test:py`.
 

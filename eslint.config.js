@@ -6,7 +6,15 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/target/**", "**/gen/**", "**/node_modules/**", "services/**"],
+    ignores: [
+      "**/dist/**",
+      "**/target/**",
+      "**/gen/**",
+      "**/node_modules/**",
+      "services/**",
+      "packages/contracts/src/generated/**",
+      "packages/contracts/python/**",
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strict,
@@ -17,7 +25,12 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
   },
   {
-    files: ["*.js", "apps/*/vite.config.ts"],
+    files: [
+      "*.js",
+      "apps/*/vite.config.ts",
+      "packages/*/scripts/**/*.mjs",
+      "packages/*/src/**/*.test.ts",
+    ],
     languageOptions: { globals: globals.node },
   },
 );

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/media-asset.schema.json",
+  "title": "MediaAsset",
+  "description": "Normalized metadata for one imported source file (spec 8.1.4, 8.2.4, 8.3.3). The source file itself is never modified. 'missing_at' is set when a referenced source can no longer be found.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "sha256",
+    "original_name",
+    "source_kind",
+    "import_mode",
+    "duration_ms",
+    "container",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
+    "id": { "$ref": "common.schema.json#/$defs/AssetId" },
+    "sha256": { "$ref": "common.schema.json#/$defs/Sha256" },
+    "fast_hash": {
+      "description": "Partial-content hash for early duplicate screening (lowercase hex).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{16,64}$"
+    },
+    "original_name": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "source_kind": {
+      "type": "string",
+      "enum": ["xbox", "playstation", "obs", "capture_card", "phone_upload", "other"]
+    },
+    "import_mode": { "type": "string", "enum": ["reference", "managed"] },
+    "capture_time": { "$ref": "#/$defs/CaptureTimeEstimate" },
+    "duration_ms": { "$ref": "common.schema.json#/$defs/DurationMs" },
+    "container": {
+      "description": "FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "video": { "$ref": "#/$defs/VideoStream" },
+    "audio": { "type": "array", "items": { "$ref": "#/$defs/AudioStream" } },
+    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+    "missing_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+  },
+  "$defs": {
+    "CaptureTimeEstimate": {
+      "title": "CaptureTimeEstimate",
+      "description": "Estimated capture time and how it was derived.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["captured_at", "confidence", "basis"],
+      "properties": {
+        "captured_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+        "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "basis": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["container_metadata", "filename", "filesystem_mtime", "import_order", "user"]
+          }
+        }
+      }
+    },
+    "VideoStream": {
+      "title": "VideoStream",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codec", "width", "height", "frame_rate", "color"],
+      "properties": {
+        "codec": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 16384 },
+        "frame_rate": { "$ref": "common.schema.json#/$defs/Rational" },
+        "pixel_format": { "type": "string", "maxLength": 64 },
+        "color": { "$ref": "#/$defs/ColorInfo" }
+      }
+    },
+    "ColorInfo": {
+      "title": "ColorInfo",
+      "description": "FFprobe color metadata. 'hdr' is derived from the transfer characteristic (e.g. smpte2084, arib-std-b67).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hdr"],
+      "properties": {
+        "primaries": { "type": "string", "maxLength": 64 },
+        "transfer": { "type": "string", "maxLength": 64 },
+        "matrix": { "type": "string", "maxLength": 64 },
+        "hdr": { "type": "boolean" }
+      }
+    },
+    "AudioStream": {
+      "title": "AudioStream",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codec", "channels", "sample_rate_hz"],
+      "properties": {
+        "codec": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "channels": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "sample_rate_hz": { "type": "integer", "minimum": 1000, "maximum": 768000 }
+      }
+    }
+  }
+}

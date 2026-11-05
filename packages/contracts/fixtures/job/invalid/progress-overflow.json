@@ -1,0 +1,16 @@
+{
+  "description": "done <= total",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.0",
+    "id": "job_01JCBQ00000000000000000004",
+    "kind": "import",
+    "state": "probing",
+    "created_at": "2026-11-20T05:40:10Z",
+    "progress": {
+      "done": 5,
+      "total": 4
+    }
+  },
+  "message_contains": "exceeds total"
+}

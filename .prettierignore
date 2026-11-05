@@ -14,3 +14,7 @@ services/
 *.md
 docs/**/*.md
 LICENSES/
+
+# Generated contract outputs (drift-checked by `pnpm contracts:check` instead)
+packages/contracts/src/generated/
+packages/contracts/python/

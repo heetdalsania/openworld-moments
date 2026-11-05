@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/profile.schema.json",
+  "title": "Profile",
+  "description": "Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "profile_version",
+    "display_name",
+    "game_family",
+    "frame",
+    "regions",
+    "detectors"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
+    "id": { "$ref": "common.schema.json#/$defs/Slug" },
+    "profile_version": { "$ref": "common.schema.json#/$defs/SemVer" },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "game_family": { "$ref": "common.schema.json#/$defs/Slug" },
+    "frame": {
+      "title": "ProfileFrame",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["aspect_ratios", "min_width", "min_height"],
+      "properties": {
+        "aspect_ratios": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[1-9][0-9]*:[1-9][0-9]*$" }
+        },
+        "min_width": { "type": "integer", "minimum": 1 },
+        "min_height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "regions": {
+      "description": "Named normalized regions. Names are slugs.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/Slug" },
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/Region" }
+    },
+    "detectors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/DetectorSettings" }
+    },
+    "safe_zones": {
+      "title": "SafeZones",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preserve"],
+      "properties": {
+        "preserve": {
+          "description": "Region names that vertical layouts must keep visible. Each must be defined in 'regions' (checked semantically).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/Slug" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "DetectorSettings": {
+      "title": "DetectorSettings",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "enabled"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Slug" },
+        "enabled": { "type": "boolean" },
+        "min_confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "confirmation_frames": { "type": "integer", "minimum": 1, "maximum": 600 },
+        "locale": {
+          "description": "BCP 47 language tag, e.g. 'en' or 'pt-BR'.",
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$"
+        }
+      }
+    }
+  }
+}

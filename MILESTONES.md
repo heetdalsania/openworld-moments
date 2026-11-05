@@ -229,8 +229,8 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | Milestone | Status | PR | Commit | Completed by | Notes |
 |---|---|---|---|---|---|
 | M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | — | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
-| M01 | Ready | — | — | — | — |
-| M02 | Blocked by M01 | — | — | — | — |
+| M01 | Complete | PR_PLACEHOLDER | — | Arun Velkumar | JSON Schema 2020-12 contracts at schema_version 1.0; TS + Pydantic generated; CI drift check |
+| M02 | Ready | — | — | — | — |
 | M03 | Blocked by M02 | — | — | — | — |
 | M04 | Blocked by M03 | — | — | — | — |
 | M05 | Blocked by M04 | — | — | — | — |
