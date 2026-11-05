@@ -41,7 +41,7 @@ Before claiming completion:
 3. Add tests for success, failure, cancellation, and boundary cases where applicable.
 4. Update public contracts and documentation changed by the implementation.
 5. Confirm no secrets, private paths, footage, models, databases, or build outputs are staged.
-6. Update the milestone ledger when the pull request is actually merged.
+6. Update your milestone's row in the `MILESTONES.md` ledger in the same pull request (see the ledger instructions there).
 7. Provide the handoff below.
 
 ```markdown

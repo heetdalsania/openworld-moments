@@ -220,11 +220,15 @@ required check is skipped.
 
 ## Milestone completion ledger
 
-Update this table only when the corresponding pull request is merged.
+Each milestone pull request updates its own row **in the same pull request**, so the ledger changes exactly when the milestone merges. No separate ledger PRs.
+
+- Set **Status** to `Complete`, link the **PR**, and fill **Completed by** and **Notes**.
+- Leave **Commit** as `—`; the PR link records the merge commit.
+- Change any milestone whose dependencies are now all complete to `Ready`.
 
 | Milestone | Status | PR | Commit | Completed by | Notes |
 |---|---|---|---|---|---|
-| M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | f56a9c9 | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
+| M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | — | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
 | M01 | Ready | — | — | — | — |
 | M02 | Blocked by M01 | — | — | — | — |
 | M03 | Blocked by M02 | — | — | — | — |

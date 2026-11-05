@@ -13,6 +13,7 @@
 - [ ] Required milestone validation was run (results below).
 - [ ] Documentation and contracts updated where behavior changed.
 - [ ] No secrets, footage, models, databases, or build output committed.
+- [ ] This milestone's row in the `MILESTONES.md` ledger is updated in this PR.
 - [ ] All commits are signed off (`git commit -s`).
 
 ## Milestone handoff
