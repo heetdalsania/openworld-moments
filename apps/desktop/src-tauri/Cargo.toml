@@ -1,0 +1,26 @@
+[package]
+name = "openworld-moments-desktop"
+version = "0.0.0"
+description = "OpenWorld Moments desktop host"
+authors = ["OpenWorld Moments contributors"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+# The `_lib` suffix keeps the library name distinct from the binary on Windows.
+# See https://github.com/rust-lang/cargo/issues/8519
+name = "openworld_moments_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      js-dev-tooling:
+        dependency-type: development
+  - package-ecosystem: cargo
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: uv
+    directory: /services/media-worker
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

@@ -1,0 +1,36 @@
+name: Detector accuracy report
+description: A game-event detector missed an event or reported a false one.
+labels: [detector]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prefer timestamps, resolution, HUD scale, and locale over video files.
+        **Never attach leaked or pre-release footage.**
+  - type: input
+    id: detector
+    attributes:
+      label: Detector and profile (with versions)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Error type
+      options: [Missed event, False event, Wrong timestamp, Wrong confidence]
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Capture details
+      description: Platform, resolution, HDR, HUD scale, language, and the timestamp of the event.
+    validations:
+      required: true
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Footage policy
+      options:
+        - label: Any media referenced is mine to share and is not leaked or pre-release.
+          required: true

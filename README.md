@@ -10,15 +10,54 @@ OpenWorld Moments is **not** a console mod, recorder, cheat, game-memory reader,
 
 ## Project status
 
-**Specification and milestone planning. No usable application has been released yet.**
+**Repository foundation. No usable application has been released yet.**
 
-The repository currently contains the product specification and the implementation plan. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+The repository contains the product specification, the implementation plan, and the M00 scaffold: a Tauri desktop shell that shows a planning-stage placeholder, a Python media-worker package with a health function, and CI for all three toolchains. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
 - [Individual milestone briefs](./docs/milestones/)
+- [Architecture decision records](./docs/architecture/)
 
-The first code milestone is [M00 — Repository foundation](./docs/milestones/M00-repository-foundation.md).
+## Local development
+
+### Prerequisites
+
+| Tool | Version | Notes |
+|---|---|---|
+| Node.js | 22.x (`.node-version`) | |
+| pnpm | 12.16.1 (`packageManager` in `package.json`) | `corepack enable` or install pnpm directly |
+| Rust | 1.97.1 (`rust-toolchain.toml`) | Installed automatically by `rustup` on first `cargo` call |
+| Python | 3.12 (`.python-version`) | `uv` can install it: `uv python install 3.12` |
+| uv | 0.13 or newer | Python dependency management |
+| Tauri system dependencies | — | See [Tauri prerequisites](https://tauri.app/start/prerequisites/): WebView2 + MSVC build tools on Windows, Xcode on macOS, WebKitGTK on Linux |
+
+### Setup
+
+```bash
+pnpm install
+uv sync --directory services/media-worker
+```
+
+### Commands
+
+Run from the repository root:
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Launch the desktop app with hot reload |
+| `pnpm format` | Format TypeScript (Prettier), Rust (rustfmt), and Python (Ruff) |
+| `pnpm format:check` | Check formatting without writing |
+| `pnpm lint` | ESLint, Clippy, Ruff, and REUSE license compliance |
+| `pnpm typecheck` | `tsc` and mypy (Rust is type-checked by Clippy and tests) |
+| `pnpm test` | Vitest, `cargo test`, and pytest smoke tests |
+| `pnpm build` | Production desktop build without installers |
+| `pnpm build:bundle` | Production build plus platform installers |
+| `pnpm check` | `format:check`, `lint`, `typecheck`, and `test` together |
+
+Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm test:py`.
+
+Commits must be signed off (`git commit -s`) under the [Developer Certificate of Origin](https://developercertificate.org/).
 
 ## Why this exists
 
@@ -255,13 +294,13 @@ The application is designed to operate only on media selected by the user. It do
 
 ## License
 
-Licensing is finalized before the first code release. The current product specification recommends:
+OpenWorld Moments uses a split license. See [LICENSE.md](./LICENSE.md) for the full map and [LICENSES/](./LICENSES/) for the texts:
 
 - AGPL-3.0-or-later for the desktop application and media worker.
-- Apache-2.0 for schemas and integration SDKs.
-- CC BY 4.0 for project documentation.
+- Apache-2.0 for schemas, profiles, and integration SDKs (`packages/contracts/`, `profiles/`).
+- CC BY 4.0 for documentation.
 
-Until the corresponding license files are committed, the planning documents remain copyright their contributors with no implied license beyond GitHub's terms. Milestone M00 is responsible for installing the approved license set before accepting implementation contributions.
+[REUSE.toml](./REUSE.toml) is the machine-readable source of truth, checked in CI.
 
 ## Research and prior art
 
@@ -269,5 +308,5 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-Complete [M00 — Repository foundation](./docs/milestones/M00-repository-foundation.md), then proceed through the dependency graph in [MILESTONES.md](./MILESTONES.md).
+After M00 merges, continue with [M01 — Contracts and versioning](./docs/milestones/M01-contracts-and-versioning.md) and the dependency graph in [MILESTONES.md](./MILESTONES.md).
 

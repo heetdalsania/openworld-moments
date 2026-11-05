@@ -46,6 +46,17 @@ A milestone is complete only when:
 - Screenshots or artifacts:
 ```
 
+## Local checks and sign-off
+
+Run `pnpm check` before opening a pull request. Setup steps and per-toolchain
+commands are in the README's "Local development" section.
+
+Every commit needs a Developer Certificate of Origin sign-off (`git commit -s`).
+CI fails pull requests with unsigned commits. New files need license
+information; see [docs/contributing/licensing.md](./docs/contributing/licensing.md).
+
+Architecture changes need an ADR in [docs/architecture/adr/](./docs/architecture/adr/).
+
 ## Pull requests
 
 The pull-request title should begin with the milestone identifier, for example:
