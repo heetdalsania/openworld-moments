@@ -224,8 +224,8 @@ Update this table only when the corresponding pull request is merged.
 
 | Milestone | Status | PR | Commit | Completed by | Notes |
 |---|---|---|---|---|---|
-| M00 | Not started | — | — | — | — |
-| M01 | Blocked by M00 | — | — | — | — |
+| M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | f56a9c9 | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
+| M01 | Ready | — | — | — | — |
 | M02 | Blocked by M01 | — | — | — | — |
 | M03 | Blocked by M02 | — | — | — | — |
 | M04 | Blocked by M03 | — | — | — | — |
