@@ -1,0 +1,16 @@
+# Lockfiles and generated output
+pnpm-lock.yaml
+**/dist/
+**/target/
+**/gen/
+coverage/
+
+# Owned by other formatters
+services/
+**/*.rs
+**/*.py
+
+# Planning documents are reviewed prose; keep their hand formatting
+*.md
+docs/**/*.md
+LICENSES/

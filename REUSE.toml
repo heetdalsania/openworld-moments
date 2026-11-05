@@ -1,0 +1,45 @@
+# Machine-readable license map. Checked by `pnpm lint:licenses` (REUSE).
+# A file's own SPDX header takes precedence over these annotations.
+# Later annotations override earlier ones for the same file.
+version = 1
+SPDX-PackageName = "OpenWorld Moments"
+SPDX-PackageDownloadLocation = "https://github.com/heetdalsania/openworld-moments"
+
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "OpenWorld Moments contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = ["**/*.md", "docs/**", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+SPDX-FileCopyrightText = "OpenWorld Moments contributors"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = ["packages/contracts/**", "profiles/**"]
+SPDX-FileCopyrightText = "OpenWorld Moments contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = [
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "Cargo.lock",
+  "**/uv.lock",
+  "**/package.json",
+  "**/tsconfig*.json",
+  ".node-version",
+  ".python-version",
+  "rust-toolchain.toml",
+  ".editorconfig",
+  ".gitattributes",
+  "**/.gitignore",
+  ".prettierrc.json",
+  ".prettierignore",
+  "REUSE.toml",
+  ".github/dependabot.yml",
+  ".github/CODEOWNERS",
+  ".github/ISSUE_TEMPLATE/config.yml",
+]
+SPDX-FileCopyrightText = "OpenWorld Moments contributors"
+SPDX-License-Identifier = "CC0-1.0"

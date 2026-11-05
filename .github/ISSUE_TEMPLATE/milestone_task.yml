@@ -1,0 +1,21 @@
+name: Milestone task
+description: Track or claim implementation of a milestone.
+labels: [milestone]
+body:
+  - type: input
+    id: milestone
+    attributes:
+      label: Milestone
+      placeholder: MXX — Name
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and their merge status
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes, blockers, or proposed scope changes

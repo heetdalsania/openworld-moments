@@ -1,0 +1,47 @@
+{
+  "name": "openworld-moments",
+  "private": true,
+  "type": "module",
+  "description": "Local-first desktop tool that turns console gameplay captures into searchable sessions and editable stories.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22.12.0 <23",
+    "pnpm": ">=12.16.0"
+  },
+  "scripts": {
+    "format": "pnpm run format:ts && pnpm run format:rs && pnpm run format:py",
+    "format:ts": "prettier --write .",
+    "format:rs": "cargo fmt --all",
+    "format:py": "uv run --locked --directory services/media-worker ruff format .",
+    "format:check": "pnpm run format:check:ts && pnpm run format:check:rs && pnpm run format:check:py",
+    "format:check:ts": "prettier --check .",
+    "format:check:rs": "cargo fmt --all -- --check",
+    "format:check:py": "uv run --locked --directory services/media-worker ruff format --check .",
+    "lint": "pnpm run lint:ts && pnpm run lint:rs && pnpm run lint:py && pnpm run lint:licenses",
+    "lint:ts": "eslint . --max-warnings 0",
+    "lint:rs": "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "lint:py": "uv run --locked --directory services/media-worker ruff check .",
+    "lint:licenses": "uvx --python 3.12 --from reuse[charset-normalizer]==6.2.0 reuse lint",
+    "typecheck": "pnpm run typecheck:ts && pnpm run typecheck:py",
+    "typecheck:ts": "pnpm -r --if-present run typecheck",
+    "typecheck:py": "uv run --locked --directory services/media-worker mypy",
+    "test": "pnpm run test:ts && pnpm run test:rs && pnpm run test:py",
+    "test:ts": "pnpm -r --if-present run test",
+    "test:rs": "cargo test --workspace --locked",
+    "test:py": "uv run --locked --directory services/media-worker pytest",
+    "build": "pnpm --filter @openworld-moments/desktop run tauri build --no-bundle",
+    "build:bundle": "pnpm --filter @openworld-moments/desktop run tauri build",
+    "dev": "pnpm --filter @openworld-moments/desktop run tauri dev",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}

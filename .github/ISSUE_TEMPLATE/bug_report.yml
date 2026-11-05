@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in OpenWorld Moments does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not attach leaked or pre-release footage, game files, or official assets.**
+        Share manifests, logs with personal paths removed, or minimal samples you have the right to share.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Footage policy
+      options:
+        - label: This report contains no leaked footage, game files, or official assets.
+          required: true
