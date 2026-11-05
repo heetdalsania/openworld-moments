@@ -75,11 +75,34 @@ class Cancelled(Exception):
 class JobFailure(Exception):
     """Raised by a handler to fail its job with a contract error."""
 
-    def __init__(self, code: str, message: str, *, retryable: bool = False) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        retryable: bool = False,
+        details: Mapping[str, str | int | float | bool | None] | None = None,
+        stderr_tail: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.retryable = retryable
+        self.details = dict(details) if details else None
+        self.stderr_tail = stderr_tail or None
+
+    def error(self) -> dict[str, Any]:
+        """The contract ``ErrorInfo`` for this failure."""
+        error: dict[str, Any] = {
+            "code": self.code,
+            "message": self.message,
+            "retryable": self.retryable,
+        }
+        if self.details:
+            error["details"] = self.details
+        if self.stderr_tail:
+            error["stderr_tail"] = self.stderr_tail[-8192:]
+        return error
 
 
 class EngineError(Exception):
@@ -97,12 +120,14 @@ class JobHandler:
     """How to run one job kind.
 
     ``validate`` checks params at submit time and returns the normalized params.
+    ``run`` may return a JSON object, stored as the job's ``result`` when it
+    reaches ``ready``.
     ``requeue_on_interrupt`` marks the handler idempotent: if the worker stops
     mid-run, the job is queued again (up to ``max_attempts``) instead of failing.
     """
 
     kind: str
-    run: Callable[[JobContext], None]
+    run: Callable[[JobContext], Mapping[str, Any] | None]
     validate: Callable[[Mapping[str, Any]], dict[str, Any]] = lambda params: dict(params)
     first_state: str = "analyzing"
     requeue_on_interrupt: bool = False
@@ -129,6 +154,11 @@ class JobContext:
     @property
     def cancelled(self) -> bool:
         return self._running.cancel.is_set()
+
+    @property
+    def cancel_event(self) -> threading.Event:
+        """Set when the job is cancelled or the worker stops. Wait on it; never set it."""
+        return self._running.cancel
 
     def check_cancelled(self) -> None:
         if self._running.cancel.is_set():
@@ -352,17 +382,14 @@ class JobEngine:
             "state",
         )
         context = JobContext(self, job, running)
+        result: Mapping[str, Any] | None = None
         try:
-            await asyncio.to_thread(handler.run, context)
+            result = await asyncio.to_thread(handler.run, context)
         except Cancelled:
             pass
         except JobFailure as exc:
             if not running.shutdown:
-                self._finish(
-                    self._repo.get(job_id),
-                    "failed",
-                    error={"code": exc.code, "message": exc.message, "retryable": exc.retryable},
-                )
+                self._finish(self._repo.get(job_id), "failed", error=exc.error())
             return
         except Exception:
             log.exception("job handler crashed", extra={"job_id": job_id, "kind": job.kind})
@@ -384,7 +411,10 @@ class JobEngine:
         if running.shutdown:
             return  # leave the active state on disk; the next start recovers it
         current = self._repo.get(job_id)
-        self._finish(current, "cancelled" if running.cancel.is_set() else "ready")
+        if running.cancel.is_set():
+            self._finish(current, "cancelled")
+        else:
+            self._finish(current, "ready", result=dict(result) if result is not None else None)
 
     # -- state changes (event loop thread only) ------------------------------------------
 
@@ -413,14 +443,23 @@ class JobEngine:
 
     def _requeue(self, job: Job, attempt: int, message: str) -> Job:
         doc = self._doc(job)
-        for key in ("progress", "error", "started_at", "finished_at"):
+        for key in ("progress", "error", "result", "started_at", "finished_at"):
             doc.pop(key, None)
         doc.update(state="queued", attempt=attempt, message=message)
         return self._save(doc, "state")
 
-    def _finish(self, job: Job, state: str, *, error: dict[str, Any] | None = None) -> Job:
+    def _finish(
+        self,
+        job: Job,
+        state: str,
+        *,
+        error: dict[str, Any] | None = None,
+        result: dict[str, Any] | None = None,
+    ) -> Job:
         doc = self._doc(job)
         doc["state"] = state
+        if result is not None:
+            doc["result"] = result
         doc["finished_at"] = _not_before(job.created_at, job.started_at)
         if error is not None:
             if job.correlation_id:

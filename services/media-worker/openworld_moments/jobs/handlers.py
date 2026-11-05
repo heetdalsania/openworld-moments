@@ -1,17 +1,29 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Built-in job handlers.
 
-M03 ships only the synthetic ``diagnostic`` job, used by integration tests and
-the UI to exercise progress, cancellation, failure, and crash recovery without
-touching media. Product handlers (import, analyze, ...) arrive in later milestones.
+* ``diagnostic`` (M03): synthetic job used by integration tests and the UI to
+  exercise progress, cancellation, failure, and crash recovery without media.
+* ``probe`` (M04): read-only FFprobe of one explicitly selected file; the
+  normalized ``MediaProbe`` becomes the job's ``result``.
+
+Product handlers (import, analyze, ...) arrive in later milestones.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
-from openworld_moments.jobs.engine import JobContext, JobFailure, JobHandler
+from openworld_moments.jobs.engine import Cancelled, JobContext, JobFailure, JobHandler
+from openworld_moments.media.probe import (
+    DEFAULT_TIMEOUT_S,
+    ProbeCancelled,
+    ProbeError,
+    check_path_param,
+    probe_file,
+)
+from openworld_moments.media.tools import MediaTools
 
 MAX_STEPS = 10_000
 MAX_STEP_MS = 60_000
@@ -69,3 +81,51 @@ DIAGNOSTIC = JobHandler(
 )
 
 BUILTIN_HANDLERS = {DIAGNOSTIC.kind: DIAGNOSTIC}
+
+
+def validate_probe(params: Mapping[str, Any]) -> dict[str, Any]:
+    unknown = set(params) - {"path"}
+    if unknown:
+        raise ValueError(f"unknown parameter(s): {', '.join(sorted(unknown))}")
+    return {"path": check_path_param(params.get("path"))}
+
+
+def probe_handler(tools: MediaTools, *, timeout_s: float = DEFAULT_TIMEOUT_S) -> JobHandler:
+    """The ``probe`` job. Idempotent (read-only), so it is requeued after a crash."""
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        ctx.check_cancelled()
+        try:
+            return probe_file(
+                Path(ctx.params["path"]),
+                tools.tool("ffprobe"),
+                timeout_s=timeout_s,
+                cancel=ctx.cancel_event,
+            )
+        except ProbeCancelled as exc:
+            raise Cancelled from exc
+        except ProbeError as exc:
+            raise JobFailure(
+                exc.code,
+                exc.message,
+                retryable=exc.retryable,
+                details=exc.details,
+                stderr_tail=exc.stderr_tail,
+            ) from exc
+
+    return JobHandler(
+        kind="probe",
+        run=run,
+        validate=validate_probe,
+        first_state="probing",
+        requeue_on_interrupt=True,
+        max_attempts=3,
+    )
+
+
+def build_handlers(
+    tools: MediaTools, *, probe_timeout_s: float = DEFAULT_TIMEOUT_S
+) -> dict[str, JobHandler]:
+    """Every handler the worker serves."""
+    probe = probe_handler(tools, timeout_s=probe_timeout_s)
+    return {**BUILTIN_HANDLERS, probe.kind: probe}

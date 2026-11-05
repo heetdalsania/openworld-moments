@@ -166,6 +166,7 @@ class AssetRepository:
         capture = d.get("capture_time")
         video = d.get("video")
         audio = d.get("audio")
+        avg = video.get("average_frame_rate") if video else None
         _insert(
             self.conn,
             "media_assets",
@@ -191,6 +192,14 @@ class AssetRepository:
                 "video_codec": video["codec"] if video else None,
                 "pixel_format": video.get("pixel_format") if video else None,
                 "color_metadata_json": _dumps(video["color"]) if video else None,
+                "rotation": video.get("rotation") if video else None,
+                "avg_fps_num": avg["num"] if avg else None,
+                "avg_fps_den": avg["den"] if avg else None,
+                "variable_frame_rate": (
+                    int(video["variable_frame_rate"])
+                    if video and "variable_frame_rate" in video
+                    else None
+                ),
                 "audio_streams_json": _dumps(audio) if audio is not None else None,
                 "audio_codec": audio[0]["codec"] if audio else None,
                 "created_at": d["created_at"],
@@ -260,6 +269,17 @@ class AssetRepository:
                     "frame_rate": {"num": row["fps_num"], "den": row["fps_den"]},
                     "pixel_format": row["pixel_format"],
                     "color": _loads(row["color_metadata_json"]),
+                    "rotation": row["rotation"],
+                    "average_frame_rate": (
+                        {"num": row["avg_fps_num"], "den": row["avg_fps_den"]}
+                        if row["avg_fps_num"] is not None
+                        else None
+                    ),
+                    "variable_frame_rate": (
+                        bool(row["variable_frame_rate"])
+                        if row["variable_frame_rate"] is not None
+                        else None
+                    ),
                 }
             )
         if row["audio_streams_json"] is not None:
@@ -437,6 +457,7 @@ class JobRepository:
             "kind": d["kind"],
             "state": d["state"],
             "params_json": _dumps(d["params"]) if "params" in d else None,
+            "result_json": _dumps(d["result"]) if "result" in d else None,
             "attempt": d.get("attempt", 1),
             "progress_done": progress["done"] if progress else None,
             "progress_total": progress["total"] if progress else None,
@@ -482,6 +503,7 @@ class JobRepository:
                 "kind": row["kind"],
                 "state": row["state"],
                 "params": _loads(row["params_json"]),
+                "result": _loads(row["result_json"]),
                 "attempt": row["attempt"],
                 "progress": progress,
                 "message": row["message"],

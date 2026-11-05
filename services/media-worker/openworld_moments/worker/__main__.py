@@ -34,8 +34,9 @@ from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 from openworld_moments import __version__
 from openworld_moments.api.app import API_VERSION, ApiSettings, create_app
 from openworld_moments.jobs.engine import JobEngine
-from openworld_moments.jobs.handlers import BUILTIN_HANDLERS
+from openworld_moments.jobs.handlers import build_handlers
 from openworld_moments.logs import configure_logging
+from openworld_moments.media.tools import MediaTools
 from openworld_moments.redaction import Redactor
 from openworld_moments.storage import Database, StorageError
 
@@ -122,6 +123,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--log-level", default="info", choices=["debug", "info", "warning", "error"]
     )
+    parser.add_argument("--ffprobe", help="ffprobe executable (default: OWM_FFPROBE, then PATH)")
+    parser.add_argument("--ffmpeg", help="ffmpeg executable (default: OWM_FFMPEG, then PATH)")
     args = parser.parse_args(argv)
 
     redactor = Redactor()
@@ -166,7 +169,13 @@ def main(argv: list[str] | None = None) -> int:
         allowed_hosts=frozenset({authority, f"localhost:{port}"}),
         on_shutdown_request=request_shutdown,
     )
-    app = create_app(JobEngine(database, BUILTIN_HANDLERS), settings, on_ready=on_ready)
+    tools = MediaTools(ffprobe=args.ffprobe, ffmpeg=args.ffmpeg)
+    app = create_app(
+        JobEngine(database, build_handlers(tools)),
+        settings,
+        on_ready=on_ready,
+        capabilities=tools.capabilities,
+    )
     config = uvicorn.Config(
         app,
         log_config=None,

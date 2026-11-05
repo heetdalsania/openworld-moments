@@ -2,6 +2,18 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.2 — 2026-11-05 (M04)
+
+Additive; every 1.1 document is valid 1.2.
+
+- `job`: new kind `probe`; optional `result` (handler output, set on `ready`;
+  a `MediaProbe` for probe jobs).
+- `media-asset`: new `$defs/MediaProbe` (normalized FFprobe result before
+  import). `VideoStream` gains optional `average_frame_rate`,
+  `variable_frame_rate`, and `rotation` (clockwise 0/90/180/270). `ColorInfo`
+  gains optional `range`, `mastering_display`, `content_light_level`, and
+  `dolby_vision`. `AudioStream` gains optional `channel_layout`.
+
 ## 1.1 — 2026-11-05 (M03)
 
 Additive; every 1.0 document is valid 1.1.

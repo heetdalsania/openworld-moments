@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Timeouts, cancellation, output bounds, and cleanup for media tool processes."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+import pytest
+
+from openworld_moments.media.process import (
+    STDERR_TAIL_BYTES,
+    ToolCancelled,
+    ToolNotStarted,
+    ToolOutputTooLarge,
+    ToolTimeout,
+    run_tool,
+)
+from openworld_moments.redaction import Redactor
+
+PY = sys.executable
+SLEEP = "import time; time.sleep(60)"
+
+
+def _capture() -> tuple[list[subprocess.Popen[bytes]], object]:
+    spawned: list[subprocess.Popen[bytes]] = []
+    return spawned, spawned.append
+
+
+def test_success_returns_output_and_exit_code() -> None:
+    result = run_tool(
+        [PY, "-c", "import sys; print('out'); print('err', file=sys.stderr); sys.exit(3)"],
+        timeout_s=30,
+    )
+    assert result.returncode == 3
+    assert result.stdout.strip() == b"out"
+    assert "err" in result.stderr_tail
+
+
+def test_timeout_kills_and_reaps() -> None:
+    spawned, hook = _capture()
+    started = time.monotonic()
+    with pytest.raises(ToolTimeout):
+        run_tool([PY, "-c", SLEEP], timeout_s=0.5, on_spawn=hook)  # type: ignore[arg-type]
+    assert time.monotonic() - started < 10
+    assert spawned[0].poll() is not None, "the process must be dead and reaped"
+
+
+def test_cancel_kills_promptly() -> None:
+    spawned, hook = _capture()
+    cancel = threading.Event()
+    threading.Timer(0.3, cancel.set).start()
+    started = time.monotonic()
+    with pytest.raises(ToolCancelled):
+        run_tool([PY, "-c", SLEEP], timeout_s=60, cancel=cancel, on_spawn=hook)  # type: ignore[arg-type]
+    assert time.monotonic() - started < 5
+    assert spawned[0].poll() is not None
+
+
+def test_already_cancelled_never_waits() -> None:
+    cancel = threading.Event()
+    cancel.set()
+    with pytest.raises(ToolCancelled):
+        run_tool([PY, "-c", SLEEP], timeout_s=60, cancel=cancel)
+
+
+def test_stdout_is_capped() -> None:
+    spawned, hook = _capture()
+    flood = "import sys\nwhile True: sys.stdout.write('x' * 65536)"
+    with pytest.raises(ToolOutputTooLarge):
+        run_tool([PY, "-c", flood], timeout_s=30, max_stdout=200_000, on_spawn=hook)  # type: ignore[arg-type]
+    assert spawned[0].poll() is not None
+
+
+def test_stderr_keeps_a_bounded_redacted_tail(tmp_path: Path) -> None:
+    secret_path = str(tmp_path / "Private Clip.mp4")
+    script = (
+        "import sys\n"
+        "for i in range(5000): print('noise', i, file=sys.stderr)\n"
+        f"print('failed on', {secret_path!r}, file=sys.stderr)\n"
+    )
+    result = run_tool([PY, "-c", script], timeout_s=30, redactor=Redactor([secret_path]))
+    assert len(result.stderr_tail) <= STDERR_TAIL_BYTES
+    assert "failed on" in result.stderr_tail
+    assert secret_path not in result.stderr_tail
+    assert "noise 0\n" not in result.stderr_tail
+
+
+def test_missing_executable_is_not_started(tmp_path: Path) -> None:
+    with pytest.raises(ToolNotStarted):
+        run_tool([str(tmp_path / "no-such-tool")], timeout_s=5)
+
+
+def test_nul_in_arguments_is_refused() -> None:
+    with pytest.raises(ToolNotStarted):
+        run_tool([PY, "-c", "pass", "bad\0arg"], timeout_s=5)
+
+
+def test_shell_metacharacters_are_plain_arguments(tmp_path: Path) -> None:
+    marker = tmp_path / "pwned"
+    nasty = f"; touch {marker} && echo $(id) | cat `whoami`"
+    result = run_tool([PY, "-c", "import sys; print(sys.argv[1])", nasty], timeout_s=30)
+    assert result.stdout.decode().strip() == nasty
+    assert not marker.exists()

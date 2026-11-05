@@ -1,0 +1,20 @@
+{
+  "description": "result is a JSON object",
+  "expect": "schema",
+  "path": "result",
+  "document": {
+    "schema_version": "1.2",
+    "id": "job_01JCBQ00000000000000000013",
+    "kind": "probe",
+    "state": "ready",
+    "params": {
+      "path": "/captures/Capture 2026-11-20 03-14-22.mp4"
+    },
+    "result": ["not", "an", "object"],
+    "attempt": 1,
+    "correlation_id": "cor_01JCBQ00000000000000000008",
+    "created_at": "2026-11-20T05:40:10Z",
+    "started_at": "2026-11-20T05:40:10.100Z",
+    "finished_at": "2026-11-20T05:40:10.400Z"
+  }
+}

@@ -39,7 +39,9 @@ class Job(BaseModel):
             title="JobId",
         ),
     ]
-    kind: Literal["import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic"]
+    kind: Literal[
+        "import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic", "probe"
+    ]
     state: Literal[
         "queued",
         "probing",
@@ -58,6 +60,12 @@ class Job(BaseModel):
         dict[str, Any] | None,
         Field(
             description="Handler input (JSON object). Must not contain secrets; paths are allowed but never logged."
+        ),
+    ] = None
+    result: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Handler output (JSON object), set when the job reaches 'ready'. For 'probe' jobs: a MediaProbe (media-asset.schema.json#/$defs/MediaProbe). Must not contain secrets."
         ),
     ] = None
     attempt: Annotated[

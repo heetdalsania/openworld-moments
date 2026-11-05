@@ -20,8 +20,9 @@ Completed milestones:
 | M01 — Contracts and versioning | Versioned JSON Schema contracts (`packages/contracts/`) with generated TypeScript and Pydantic types and a drift check |
 | M02 — Database and migrations | SQLite library database (WAL) with migrations, pre-upgrade backups, and typed repositories ([storage guide](./docs/architecture/storage.md)) |
 | M03 — Worker lifecycle and job engine | Desktop host starts and supervises the Python worker over a loopback, token-protected API; durable cancellable jobs with live progress ([worker guide](./docs/architecture/worker.md)) |
+| M04 — Media probing | FFmpeg discovery with a `doctor` capability report; a read-only `probe` job that normalizes streams, exact frame rates, rotation, and HDR metadata, with stable error codes ([media guide](./docs/architecture/media.md)) |
 
-There is no import, analysis, or editing yet; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+The worker can probe a single file, but there is no import, analysis, or editing yet; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -39,6 +40,7 @@ There is no import, analysis, or editing yet; those arrive in later milestones. 
 | Rust | 1.97.1 (`rust-toolchain.toml`) | Installed automatically by `rustup` on first `cargo` call |
 | Python | 3.12 (`.python-version`) | `uv` can install it: `uv python install 3.12` |
 | uv | 0.13 or newer | Python dependency management |
+| FFmpeg | 6.0 or newer, with `libx264` | `ffprobe` probes media; `ffmpeg` generates test fixtures. Check with `pnpm media:doctor` ([details](./docs/architecture/media.md#ffmpeg-requirement)) |
 | Tauri system dependencies | — | See [Tauri prerequisites](https://tauri.app/start/prerequisites/): WebView2 + MSVC build tools on Windows, Xcode on macOS, WebKitGTK on Linux |
 
 ### Setup
@@ -64,6 +66,8 @@ Run from the repository root:
 | `pnpm build:bundle` | Production build plus platform installers |
 | `pnpm contracts:generate` | Regenerate TypeScript and Python types from `packages/contracts/schemas/` |
 | `pnpm contracts:check` | Regenerate and fail if the committed generated files differ |
+| `pnpm media:doctor` | Report FFprobe/FFmpeg versions and codecs; exit 1 if media probing cannot work |
+| `pnpm media:fixtures <dir>` | Generate the synthetic test clips (relative to `services/media-worker/`; never commit them) |
 | `pnpm check` | `format:check`, `lint`, `typecheck`, `test`, and `contracts:check` together |
 
 Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm test:py`.
@@ -319,5 +323,5 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-Next up is [M04 — Media probing](./docs/milestones/M04-media-probing.md): FFprobe capability detection and normalized media metadata, the first real job on the M03 engine. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
+Next up is [M05 — Safe import pipeline](./docs/milestones/M05-safe-import-pipeline.md): idempotent reference-in-place and managed-copy imports through a staging boundary, gated by the M04 probe result. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
 

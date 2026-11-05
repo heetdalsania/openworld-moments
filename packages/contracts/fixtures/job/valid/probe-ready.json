@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.2",
+  "id": "job_01JCBQ00000000000000000013",
+  "kind": "probe",
+  "state": "ready",
+  "params": {
+    "path": "/captures/Capture 2026-11-20 03-14-22.mp4"
+  },
+  "result": {
+    "container": "mov,mp4,m4a,3gp,3g2,mj2",
+    "duration_ms": 30030,
+    "size_bytes": 187654321,
+    "bit_rate": 49990000,
+    "creation_time": "2026-11-20T10:14:22Z",
+    "video": {
+      "codec": "hevc",
+      "width": 3840,
+      "height": 2160,
+      "frame_rate": {
+        "num": 60000,
+        "den": 1001
+      },
+      "average_frame_rate": {
+        "num": 60000,
+        "den": 1001
+      },
+      "variable_frame_rate": false,
+      "rotation": 0,
+      "pixel_format": "yuv420p10le",
+      "color": {
+        "primaries": "bt2020",
+        "transfer": "smpte2084",
+        "matrix": "bt2020nc",
+        "range": "tv",
+        "hdr": true,
+        "mastering_display": {
+          "min_luminance_nits": 0.005,
+          "max_luminance_nits": 1000
+        },
+        "content_light_level": {
+          "max_cll": 1000,
+          "max_fall": 400
+        }
+      }
+    },
+    "audio": [
+      {
+        "codec": "aac",
+        "channels": 2,
+        "sample_rate_hz": 48000,
+        "channel_layout": "stereo"
+      }
+    ],
+    "other_streams": 1,
+    "probed_with": {
+      "ffprobe_version": "7.1.1"
+    }
+  },
+  "attempt": 1,
+  "correlation_id": "cor_01JCBQ00000000000000000008",
+  "created_at": "2026-11-20T05:40:10Z",
+  "started_at": "2026-11-20T05:40:10.100Z",
+  "finished_at": "2026-11-20T05:40:10.400Z"
+}
