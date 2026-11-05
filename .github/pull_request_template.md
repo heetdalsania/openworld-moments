@@ -14,6 +14,7 @@
 - [ ] Documentation and contracts updated where behavior changed.
 - [ ] No secrets, footage, models, databases, or build output committed.
 - [ ] This milestone's row in the `MILESTONES.md` ledger is updated in this PR.
+- [ ] README **Project status** and **Current next step** reflect this milestone.
 - [ ] All commits are signed off (`git commit -s`).
 
 ## Milestone handoff

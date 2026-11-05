@@ -10,9 +10,17 @@ OpenWorld Moments is **not** a console mod, recorder, cheat, game-memory reader,
 
 ## Project status
 
-**Repository foundation. No usable application has been released yet.**
+**Foundation lane in progress. No usable application has been released yet.**
 
-The repository contains the product specification, the implementation plan, and the M00 scaffold: a Tauri desktop shell that shows a planning-stage placeholder, a Python media-worker package with a health function, and CI for all three toolchains. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+Completed milestones:
+
+| Milestone | What it delivered |
+|---|---|
+| M00 — Repository foundation | Tauri desktop shell with a planning-stage placeholder, Python media-worker package, CI for TypeScript, Rust, and Python, split licensing |
+| M01 — Contracts and versioning | Versioned JSON Schema contracts (`packages/contracts/`) with generated TypeScript and Pydantic types and a drift check |
+| M02 — Database and migrations | SQLite library database (WAL) with migrations, pre-upgrade backups, and typed repositories ([storage guide](./docs/architecture/storage.md)) |
+
+There is no import, analysis, or editing yet; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -310,5 +318,5 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-After M00 merges, continue with [M01 — Contracts and versioning](./docs/milestones/M01-contracts-and-versioning.md) and the dependency graph in [MILESTONES.md](./MILESTONES.md).
+Next up is [M03 — Worker lifecycle and job engine](./docs/milestones/M03-worker-lifecycle-and-jobs.md): authenticated worker IPC and durable jobs. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
 

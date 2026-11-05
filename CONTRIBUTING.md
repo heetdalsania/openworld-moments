@@ -26,7 +26,7 @@ A milestone is complete only when:
 - Every acceptance criterion in its brief is met.
 - Required automated tests pass.
 - Formatting, linting, type-checking, and build checks pass.
-- Relevant documentation is updated.
+- Relevant documentation is updated, including the README's **Project status** and **Current next step** sections and the `MILESTONES.md` ledger row.
 - No secrets, private footage, or generated build artifacts are committed.
 - A handoff note is added to the pull request or final commit message.
 
