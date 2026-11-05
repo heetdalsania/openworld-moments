@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Verify that every non-merge commit in BASE..HEAD carries a DCO sign-off
-# matching its author. Usage: scripts/check-dco.sh <base-ref> [head-ref]
+# matching its author. Commits authored by trusted automation accounts
+# (Dependabot, GitHub Actions) are exempt because bots cannot certify the DCO.
+# Usage: scripts/check-dco.sh <base-ref> [head-ref]
 set -euo pipefail
 
 base="${1:?usage: check-dco.sh <base-ref> [head-ref]}"
@@ -10,6 +12,13 @@ failed=0
 
 for sha in $(git rev-list --no-merges "${base}..${head}"); do
   author="$(git log -1 --format='%an <%ae>' "$sha")"
+  case "$author" in
+    "dependabot[bot] <"*"+dependabot[bot]@users.noreply.github.com>" | \
+      "github-actions[bot] <"*"+github-actions[bot]@users.noreply.github.com>")
+      echo "Skipping bot commit ${sha:0:12} (${author%% <*})"
+      continue
+      ;;
+  esac
   if ! git log -1 --format='%(trailers:key=Signed-off-by,valueonly)' "$sha" | grep -Fqx "$author"; then
     echo "::error::Commit ${sha:0:12} is missing 'Signed-off-by: ${author}'"
     failed=1
