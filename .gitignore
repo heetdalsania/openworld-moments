@@ -1,0 +1,65 @@
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# JavaScript
+node_modules/
+dist/
+coverage/
+.vite/
+.turbo/
+pnpm-debug.log*
+npm-debug.log*
+
+# Rust
+target/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# Application data and generated media
+library/
+managed-media/
+derived/
+exports/
+models/
+logs/
+*.sqlite
+*.sqlite3
+*.db
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+*.flac
+*.onnx
+*.pt
+*.bin
+
+# Build packages
+*.dmg
+*.msi
+*.exe
+*.AppImage
+*.deb
+*.rpm
+
