@@ -73,8 +73,10 @@ def test_directory_is_not_a_file(ffprobe: ToolInfo, tmp_path: Path) -> None:
     assert caught.value.code == "media.not_a_file"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission bits")
 def test_unreadable_file(media_dir: Path, ffprobe: ToolInfo, tmp_path: Path) -> None:
+    # A sys.platform check (not skipif) so mypy also skips the POSIX-only calls on Windows.
+    if sys.platform == "win32":
+        pytest.skip("POSIX permission bits")
     if os.geteuid() == 0:
         pytest.skip("root can read anything")
     target = tmp_path / "locked.mp4"
