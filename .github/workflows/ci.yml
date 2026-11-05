@@ -42,18 +42,47 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        working-directory: services/media-worker
+        # bash -e on every OS, so a failing command in a multi-line step fails the step.
+        shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
-          cache-dependency-glob: services/media-worker/uv.lock
-      - run: uv sync --locked
-      - run: uv run --locked ruff format --check .
-      - run: uv run --locked ruff check .
-      - run: uv run --locked mypy
-      - run: uv run --locked pytest
+          cache-dependency-glob: uv.lock
+      - run: uv sync --locked --all-packages
+      - name: Media worker
+        working-directory: services/media-worker
+        run: |
+          uv run --locked ruff format --check .
+          uv run --locked ruff check .
+          uv run --locked mypy
+          uv run --locked pytest
+      - name: Contracts (Python)
+        working-directory: packages/contracts/python
+        run: |
+          uv run --locked ruff format --check .
+          uv run --locked ruff check .
+          uv run --locked mypy
+          uv run --locked pytest
+
+  contracts:
+    name: Contracts drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --locked --all-packages
+      - run: pnpm contracts:check
 
   rust:
     name: Rust (${{ matrix.os }})

@@ -17,7 +17,7 @@ updates:
     directory: /
     schedule: { interval: weekly }
   - package-ecosystem: uv
-    directory: /services/media-worker
+    directory: /
     schedule: { interval: weekly }
   - package-ecosystem: github-actions
     directory: /

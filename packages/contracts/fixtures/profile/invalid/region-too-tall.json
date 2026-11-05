@@ -1,0 +1,38 @@
+{
+  "description": "y + height > 1",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.0",
+    "id": "generic-open-world-1080p",
+    "profile_version": "0.1.0",
+    "display_name": "Generic open world, 1080p",
+    "game_family": "generic-open-world",
+    "frame": {
+      "aspect_ratios": ["16:9"],
+      "min_width": 1280,
+      "min_height": 720
+    },
+    "regions": {
+      "wanted_indicator": [0.78, 0.0, 0.22, 0.14],
+      "subtitle": [0.15, 0.9, 0.7, 0.22],
+      "minimap": [0.02, 0.72, 0.18, 0.26]
+    },
+    "detectors": [
+      {
+        "id": "wanted-stars",
+        "enabled": true,
+        "min_confidence": 0.88,
+        "confirmation_frames": 8
+      },
+      {
+        "id": "failure-banner",
+        "enabled": true,
+        "locale": "en"
+      }
+    ],
+    "safe_zones": {
+      "preserve": ["wanted_indicator", "subtitle", "minimap"]
+    }
+  },
+  "message_contains": "bottom edge"
+}

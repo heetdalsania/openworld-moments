@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "id": "evt_01JCBQ00000000000000000003",
+  "session_id": "ses_01JCBQ00000000000000000002",
+  "asset_id": "ast_01JCBQ00000000000000000001",
+  "type": "openworld.reaction",
+  "start_ms": 823400,
+  "end_ms": 824100,
+  "confidence": 0.97,
+  "attributes": {},
+  "evidence": [
+    {
+      "kind": "audio",
+      "start_ms": 823400,
+      "end_ms": 823900,
+      "score": 0.8
+    },
+    {
+      "kind": "transcript",
+      "start_ms": 823500,
+      "end_ms": 824000,
+      "text": "no way",
+      "score": 0.7
+    },
+    {
+      "kind": "ocr",
+      "region": [0.15, 0.2, 0.7, 0.35],
+      "text": "MISSION FAILED",
+      "score": 0.9
+    },
+    {
+      "kind": "color_rule",
+      "region": [0, 0, 1, 1],
+      "score": 0.5
+    }
+  ],
+  "source": {
+    "kind": "detector",
+    "detector_id": "wanted-stars",
+    "detector_version": "0.3.0",
+    "profile_id": "open-world-vi-1080p-en",
+    "profile_version": "1.0.0"
+  },
+  "review_state": "unreviewed"
+}

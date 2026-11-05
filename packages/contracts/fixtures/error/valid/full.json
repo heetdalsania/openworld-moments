@@ -1,0 +1,13 @@
+{
+  "code": "media.probe_failed",
+  "message": "FFprobe could not read the container.",
+  "retryable": true,
+  "details": {
+    "exit_code": 1,
+    "stream_count": 0,
+    "partial": true,
+    "hint": null
+  },
+  "stderr_tail": "moov atom not found",
+  "correlation_id": "cor_01JCBQ00000000000000000008"
+}

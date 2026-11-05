@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/export-manifest.schema.json",
+  "title": "ExportManifest",
+  "description": "Reproducibility record written next to an export (spec 8.9.3). Contains no footage, transcripts, or user paths.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "created_at",
+    "app_version",
+    "sources",
+    "segments",
+    "render",
+    "detectors"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
+    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+    "app_version": { "$ref": "common.schema.json#/$defs/SemVer" },
+    "project_id": { "$ref": "common.schema.json#/$defs/ProjectId" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "title": "ManifestSource",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "original_name"],
+        "properties": {
+          "sha256": { "$ref": "common.schema.json#/$defs/Sha256" },
+          "original_name": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        }
+      }
+    },
+    "segments": {
+      "description": "Each 'source' is an index into 'sources' (checked semantically); out_ms > in_ms.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "title": "ManifestSegment",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "in_ms", "out_ms"],
+        "properties": {
+          "source": { "type": "integer", "minimum": 0 },
+          "in_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+          "out_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" }
+        }
+      }
+    },
+    "render": {
+      "title": "ManifestRender",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "fps", "layout"],
+      "properties": {
+        "preset_id": { "$ref": "common.schema.json#/$defs/Slug" },
+        "width": { "type": "integer", "minimum": 2, "maximum": 8192 },
+        "height": { "type": "integer", "minimum": 2, "maximum": 8192 },
+        "fps": { "$ref": "common.schema.json#/$defs/Rational" },
+        "layout": { "$ref": "common.schema.json#/$defs/Slug" }
+      }
+    },
+    "detectors": {
+      "type": "array",
+      "items": {
+        "title": "ManifestDetector",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/Slug" },
+          "version": { "$ref": "common.schema.json#/$defs/SemVer" }
+        }
+      }
+    },
+    "command": {
+      "title": "ManifestCommand",
+      "description": "Normalized description of the render command (spec 11.2). Paths are replaced with placeholders.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "tool_version", "args"],
+      "properties": {
+        "tool": { "type": "string", "enum": ["ffmpeg"] },
+        "tool_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "args": { "type": "array", "items": { "type": "string", "maxLength": 4000 } }
+      }
+    }
+  }
+}

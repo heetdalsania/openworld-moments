@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/error.schema.json",
+  "title": "ErrorInfo",
+  "description": "Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message", "retryable"],
+  "properties": {
+    "code": {
+      "description": "Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$",
+      "maxLength": 128
+    },
+    "message": {
+      "description": "Human-readable explanation. Must not contain media contents or transcripts.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "retryable": { "type": "boolean" },
+    "details": {
+      "description": "Extra machine-readable context. Values are scalars only.",
+      "type": "object",
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/ScalarValue" }
+    },
+    "stderr_tail": {
+      "description": "Last lines of a tool's stderr (e.g. FFmpeg), already redacted of user paths.",
+      "type": "string",
+      "maxLength": 8192
+    },
+    "correlation_id": { "$ref": "common.schema.json#/$defs/CorrelationId" }
+  }
+}

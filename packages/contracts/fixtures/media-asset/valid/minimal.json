@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "id": "ast_01JCBQ00000000000000000001",
+  "sha256": "3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+  "original_name": "Capture 2026-11-20 03-14-22.mp4",
+  "source_kind": "xbox",
+  "import_mode": "reference",
+  "duration_ms": 30030,
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "created_at": "2026-11-20T10:20:00Z"
+}

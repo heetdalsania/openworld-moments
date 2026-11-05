@@ -1,0 +1,10 @@
+{
+  "description": "codes are dotted snake_case",
+  "expect": "schema",
+  "document": {
+    "code": "Media Probe Failed",
+    "message": "FFprobe could not read the container.",
+    "retryable": false
+  },
+  "path": "code"
+}

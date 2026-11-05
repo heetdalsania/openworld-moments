@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/project.schema.json",
+  "title": "Project",
+  "description": "Non-destructive edit decision list (spec 11.1). References source assets by ID; never stores rendered media.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "created_at",
+    "updated_at",
+    "tracks",
+    "captions",
+    "overlays",
+    "audio"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
+    "id": { "$ref": "common.schema.json#/$defs/ProjectId" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "session_id": { "$ref": "common.schema.json#/$defs/SessionId" },
+    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+    "updated_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+    "tracks": { "type": "array", "items": { "$ref": "#/$defs/VideoTrack" } },
+    "captions": { "type": "array", "items": { "$ref": "#/$defs/Caption" } },
+    "overlays": { "type": "array", "items": { "$ref": "#/$defs/BlurOverlay" } },
+    "audio": { "$ref": "#/$defs/AudioSettings" }
+  },
+  "$defs": {
+    "VideoTrack": {
+      "title": "VideoTrack",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "segments"],
+      "properties": {
+        "kind": { "const": "video" },
+        "segments": { "type": "array", "items": { "$ref": "#/$defs/Segment" } }
+      }
+    },
+    "Segment": {
+      "title": "Segment",
+      "description": "A source range placed on the timeline. source_out_ms > source_in_ms (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "asset_id", "source_in_ms", "source_out_ms", "timeline_start_ms", "crop"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SegmentId" },
+        "asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
+        "source_in_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "source_out_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "timeline_start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "crop": { "$ref": "#/$defs/Crop" }
+      }
+    },
+    "Crop": {
+      "title": "Crop",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "keyframes"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["fit", "fill", "safe", "manual"] },
+        "keyframes": { "type": "array", "items": { "$ref": "#/$defs/CropKeyframe" } }
+      }
+    },
+    "CropKeyframe": {
+      "title": "CropKeyframe",
+      "description": "Crop region at a segment-relative time.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at_ms", "region"],
+      "properties": {
+        "at_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "region": { "$ref": "common.schema.json#/$defs/Region" }
+      }
+    },
+    "Caption": {
+      "title": "Caption",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms", "text"],
+      "properties": {
+        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 }
+      }
+    },
+    "BlurOverlay": {
+      "title": "BlurOverlay",
+      "description": "Privacy blur over a region for a time range.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "start_ms", "end_ms", "region"],
+      "properties": {
+        "kind": { "const": "blur" },
+        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "region": { "$ref": "common.schema.json#/$defs/Region" }
+      }
+    },
+    "AudioSettings": {
+      "title": "AudioSettings",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gain_db", "mute_ranges"],
+      "properties": {
+        "gain_db": { "type": "number", "minimum": -60, "maximum": 24 },
+        "mute_ranges": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/TimeRange" }
+        }
+      }
+    }
+  }
+}

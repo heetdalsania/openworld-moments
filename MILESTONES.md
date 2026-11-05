@@ -220,13 +220,17 @@ required check is skipped.
 
 ## Milestone completion ledger
 
-Update this table only when the corresponding pull request is merged.
+Each milestone pull request updates its own row **in the same pull request**, so the ledger changes exactly when the milestone merges. No separate ledger PRs.
+
+- Set **Status** to `Complete`, link the **PR**, and fill **Completed by** and **Notes**.
+- Leave **Commit** as `—`; the PR link records the merge commit.
+- Change any milestone whose dependencies are now all complete to `Ready`.
 
 | Milestone | Status | PR | Commit | Completed by | Notes |
 |---|---|---|---|---|---|
-| M00 | Not started | — | — | — | — |
-| M01 | Blocked by M00 | — | — | — | — |
-| M02 | Blocked by M01 | — | — | — | — |
+| M00 | Complete | [#1](https://github.com/heetdalsania/openworld-moments/pull/1) | — | Arun Velkumar | Licenses pending maintainer confirmation; CI green on Linux + Windows |
+| M01 | Complete | [#5](https://github.com/heetdalsania/openworld-moments/pull/5) | — | Arun Velkumar | JSON Schema 2020-12 contracts at schema_version 1.0; TS + Pydantic generated; CI drift check |
+| M02 | Ready | — | — | — | — |
 | M03 | Blocked by M02 | — | — | — | — |
 | M04 | Blocked by M03 | — | — | — | — |
 | M05 | Blocked by M04 | — | — | — | — |

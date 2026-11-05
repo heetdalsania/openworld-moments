@@ -1,0 +1,3 @@
+# uv workspace root. Not a package itself; members carry their own metadata and tool config.
+[tool.uv.workspace]
+members = ["services/media-worker", "packages/contracts/python"]

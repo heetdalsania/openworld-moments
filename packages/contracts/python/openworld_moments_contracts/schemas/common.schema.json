@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/common.schema.json",
+  "title": "Common",
+  "description": "Shared primitives. Not a document on its own.",
+  "$defs": {
+    "Ulid": {
+      "title": "Ulid",
+      "description": "Crockford base32 ULID body (26 characters, uppercase).",
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "AssetId": {
+      "title": "AssetId",
+      "description": "Opaque media asset ID: 'ast_' + ULID.",
+      "type": "string",
+      "pattern": "^ast_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "SessionId": {
+      "title": "SessionId",
+      "description": "Opaque session ID: 'ses_' + ULID.",
+      "type": "string",
+      "pattern": "^ses_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "EventId": {
+      "title": "EventId",
+      "description": "Opaque event ID: 'evt_' + ULID.",
+      "type": "string",
+      "pattern": "^evt_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "JobId": {
+      "title": "JobId",
+      "description": "Opaque job ID: 'job_' + ULID.",
+      "type": "string",
+      "pattern": "^job_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "ProjectId": {
+      "title": "ProjectId",
+      "description": "Opaque project ID: 'prj_' + ULID.",
+      "type": "string",
+      "pattern": "^prj_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "SegmentId": {
+      "title": "SegmentId",
+      "description": "Opaque timeline segment ID: 'seg_' + ULID.",
+      "type": "string",
+      "pattern": "^seg_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "CorrelationId": {
+      "title": "CorrelationId",
+      "description": "Opaque request/log correlation ID: 'cor_' + ULID.",
+      "type": "string",
+      "pattern": "^cor_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "Slug": {
+      "title": "Slug",
+      "description": "Lowercase identifier for profiles, presets, detectors, and regions.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "SemVer": {
+      "title": "SemVer",
+      "description": "Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "UtcTimestamp": {
+      "title": "UtcTimestamp",
+      "description": "RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,3})?Z$"
+    },
+    "TimelineMs": {
+      "title": "TimelineMs",
+      "description": "Position on a media or session timeline in integer milliseconds from its start.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "DurationMs": {
+      "title": "DurationMs",
+      "description": "Non-negative duration in integer milliseconds.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "Rational": {
+      "title": "Rational",
+      "description": "Exact rational number, used for frame rates (e.g. 30000/1001).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer", "minimum": 1 },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Confidence": {
+      "title": "Confidence",
+      "description": "Probability-like score in [0, 1].",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "Region": {
+      "title": "Region",
+      "description": "Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
+      "type": "array",
+      "tsType": "[x: number, y: number, width: number, height: number]",
+      "prefixItems": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "Sha256": {
+      "title": "Sha256",
+      "description": "Lowercase hex SHA-256 digest.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ScalarValue": {
+      "title": "ScalarValue",
+      "description": "Primitive value allowed in open attribute maps.",
+      "type": ["string", "integer", "number", "boolean", "null"]
+    },
+    "TimeRange": {
+      "title": "TimeRange",
+      "description": "Inclusive start, exclusive end, in timeline milliseconds. end_ms >= start_ms (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms"],
+      "properties": {
+        "start_ms": { "$ref": "#/$defs/TimelineMs" },
+        "end_ms": { "$ref": "#/$defs/TimelineMs" }
+      }
+    }
+  }
+}

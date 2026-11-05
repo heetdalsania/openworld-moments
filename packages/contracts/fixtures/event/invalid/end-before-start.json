@@ -1,0 +1,39 @@
+{
+  "description": "negative duration",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.0",
+    "id": "evt_01JCBQ00000000000000000003",
+    "session_id": "ses_01JCBQ00000000000000000002",
+    "asset_id": "ast_01JCBQ00000000000000000001",
+    "type": "openworld.wanted_level_changed",
+    "start_ms": 823400,
+    "end_ms": 800000,
+    "confidence": 0.97,
+    "attributes": {
+      "from": 2,
+      "to": 4
+    },
+    "evidence": [
+      {
+        "kind": "region_template",
+        "region": [0.78, 0.02, 0.2, 0.12],
+        "score": 0.98
+      },
+      {
+        "kind": "temporal_consistency",
+        "frames": 18,
+        "score": 0.96
+      }
+    ],
+    "source": {
+      "kind": "detector",
+      "detector_id": "wanted-stars",
+      "detector_version": "0.3.0",
+      "profile_id": "open-world-vi-1080p-en",
+      "profile_version": "1.0.0"
+    },
+    "review_state": "unreviewed"
+  },
+  "message_contains": "end (800000) must be at least start"
+}
