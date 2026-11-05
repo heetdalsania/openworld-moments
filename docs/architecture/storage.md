@@ -40,7 +40,7 @@ Rules:
 | `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy) |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |
 | `EventRepository` | `events` | contract `Event` |
-| `JobRepository` | `jobs` | contract `Job` |
+| `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002) |
 | `StoryRepository` | `stories` | `Story`, whose `timeline` is a contract `Project` with the same ID |
 | `SettingsRepository` | `settings` | JSON values |
 

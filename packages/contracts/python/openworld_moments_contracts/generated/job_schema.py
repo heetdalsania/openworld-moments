@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,7 +24,7 @@ class Progress(BaseModel):
 
 class Job(BaseModel):
     """
-    Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema.
+    Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1).
     """
 
     model_config = ConfigDict(
@@ -39,7 +39,7 @@ class Job(BaseModel):
             title="JobId",
         ),
     ]
-    kind: Literal["import", "analyze", "proxy", "transcribe", "index", "render"]
+    kind: Literal["import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic"]
     state: Literal[
         "queued",
         "probing",
@@ -54,6 +54,16 @@ class Job(BaseModel):
         "cancelled",
         "failed",
     ]
+    params: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Handler input (JSON object). Must not contain secrets; paths are allowed but never logged."
+        ),
+    ] = None
+    attempt: Annotated[
+        int | None,
+        Field(description="1 for the first run, incremented on each retry or requeue.", ge=1),
+    ] = None
     progress: Annotated[
         Progress | None,
         Field(description="Measurable progress; done <= total (checked semantically)."),

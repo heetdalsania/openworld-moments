@@ -1,0 +1,22 @@
+-- SPDX-License-Identifier: AGPL-3.0-or-later
+-- Data at schema version 2. Loaded on top of migrations 1..2 by test_migrations.py.
+-- Never edit after a later migration exists; add data_vNNNN.sql for new versions instead.
+BEGIN;
+-- Rows are in table-name order; references are checked at COMMIT.
+PRAGMA defer_foreign_keys = ON;
+INSERT INTO "collection_items" VALUES(1,1,'ses_01JCBQ00000000000000000002',NULL,NULL,0,'2026-11-20T05:40:10Z');
+INSERT INTO "collections" VALUES(1,'Best of','2026-11-20T05:40:10Z');
+INSERT INTO "events" VALUES('evt_01JCBQ00000000000000000003','ses_01JCBQ00000000000000000002','ast_01JCBQ00000000000000000001','openworld.wanted_level_changed',823400,824100,0.97,'{"from":2,"to":4}','[{"kind":"region_template","region":[0.78,0.02,0.2,0.12],"score":0.98},{"frames":18,"kind":"temporal_consistency","score":0.96}]','detector','wanted-stars','0.3.0','open-world-vi-1080p-en','1.0.0',NULL,NULL,NULL,'unreviewed');
+INSERT INTO "events" VALUES('evt_01JCBQ00000000000000000011','ses_01JCBQ00000000000000000002','ast_01JCBQ00000000000000000001','openworld.vehicle_crash',823400,824100,0.61,'{}','[{"frame_ms":823900,"kind":"model_frame","label":"vehicle crash","score":0.61}]','model',NULL,NULL,NULL,NULL,'local-vlm-small','1.0.0','[823500,823900]','unreviewed');
+INSERT INTO "jobs" VALUES('job_01JCBQ00000000000000000004','analyze','analyzing',NULL,1,12,40,'Analyzing frames',NULL,'cor_01JCBQ00000000000000000008','2026-11-20T05:40:10Z','2026-11-20T05:40:11.250Z',NULL);
+INSERT INTO "jobs" VALUES('job_01JCBQ00000000000000000012','diagnostic','analyzing','{"fail_at":null,"nested":{"ok":true},"step_ms":20,"steps":5}',2,12,40,'Analyzing frames',NULL,'cor_01JCBQ00000000000000000008','2026-11-20T05:40:10Z','2026-11-20T05:40:11.250Z',NULL);
+INSERT INTO "media_assets" VALUES('ast_01JCBQ00000000000000000001','3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f','a1b2c3d4e5f60718','Capture 2026-11-20 03-14-22.mp4','/captures/Capture 2026-11-20 03-14-22.mp4',NULL,'xbox','reference',NULL,'2026-11-20T10:14:22Z',0.62,'["filename","filesystem_mtime"]',30030,'mov,mp4,m4a,3gp,3g2,mj2',3840,2160,60000,1001,'hevc','yuv420p10le','{"hdr":true,"matrix":"bt2020nc","primaries":"bt2020","transfer":"smpte2084"}','[{"channels":2,"codec":"aac","sample_rate_hz":48000}]','aac','2026-11-20T10:20:00Z',NULL);
+INSERT INTO "render_jobs" VALUES('job_01JCBQ00000000000000000010','prj_01JCBQ00000000000000000005','vertical-1080x1920-30','queued',0.0,NULL,NULL,NULL,'2026-11-20T05:40:10Z');
+INSERT INTO "session_assets" VALUES('ses_01JCBQ00000000000000000002','ast_01JCBQ00000000000000000001',0,0,0,30030,0,0.9);
+INSERT INTO "sessions" VALUES('ses_01JCBQ00000000000000000002','Evening session','2026-11-20T10:14:22Z',NULL,NULL,NULL,0.8,'unreviewed','2026-11-20T05:40:10Z');
+INSERT INTO "settings" VALUES('import.mode','"reference"','2026-11-05T07:41:40.211Z');
+INSERT INTO "stories" VALUES('prj_01JCBQ00000000000000000005','ses_01JCBQ00000000000000000002','Six-star escape','short',0.8,'{"setup_coverage":0.9}','{"audio":{"gain_db":-3.5,"mute_ranges":[{"end_ms":21000,"start_ms":20000}]},"captions":[{"end_ms":2500,"start_ms":1000,"text":"Here we go"}],"created_at":"2026-11-20T05:40:10Z","id":"prj_01JCBQ00000000000000000005","overlays":[{"end_ms":5000,"kind":"blur","region":[0.0,0.0,0.25,0.08],"start_ms":0}],"schema_version":"1.0","session_id":"ses_01JCBQ00000000000000000002","title":"Six-star escape","tracks":[{"kind":"video","segments":[{"asset_id":"ast_01JCBQ00000000000000000001","crop":{"keyframes":[{"at_ms":0,"region":[0.21875,0.0,0.5625,1.0]}],"mode":"safe"},"id":"seg_01JCBQ00000000000000000006","source_in_ms":12500,"source_out_ms":44800,"timeline_start_ms":0},{"asset_id":"ast_01JCBQ00000000000000000001","crop":{"keyframes":[],"mode":"fit"},"id":"seg_01JCBQ00000000000000000007","source_in_ms":50000,"source_out_ms":61000,"timeline_start_ms":32300}]}],"updated_at":"2026-11-20T05:45:00Z"}',NULL,'suggested','2026-11-20T05:40:10Z','2026-11-20T05:40:10Z');
+INSERT INTO "tags" VALUES(1,'funny','2026-11-20T05:40:10Z');
+INSERT INTO "transcript_segments" VALUES(1,'ses_01JCBQ00000000000000000002',823500,824000,'player','no way','en',0.7,NULL);
+INSERT INTO "watched_folders" VALUES(1,'/captures','xbox',1,'2026-11-20T05:40:10Z');
+COMMIT;

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //! Desktop host for OpenWorld Moments.
 //!
-//! M00 only opens the UI. Worker management, watched folders, and tokens arrive
-//! in later milestones (see MILESTONES.md).
+//! Opens the UI and supervises the Python media worker (M03). Watched folders
+//! and other OS integration arrive in later milestones (see MILESTONES.md).
 
 use serde::Serialize;
+
+mod host;
+pub mod worker;
 
 /// Lifecycle stage reported to the UI until a release exists.
 pub const STAGE: &str = "planning";
@@ -37,9 +40,17 @@ mod commands {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![commands::app_info])
-        .run(tauri::generate_context!())
-        .expect("error while running OpenWorld Moments");
+        .setup(|app| host::setup(app.handle()))
+        .invoke_handler(tauri::generate_handler![
+            commands::app_info,
+            host::worker_status,
+            host::worker_start_diagnostic,
+            host::worker_cancel_job,
+            host::worker_list_jobs,
+        ])
+        .build(tauri::generate_context!())
+        .expect("error while building OpenWorld Moments")
+        .run(host::on_run_event);
 }
 
 #[cfg(test)]

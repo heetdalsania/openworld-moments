@@ -7,6 +7,7 @@ import error from "../schemas/error.schema.json" with { type: "json" };
 import event from "../schemas/event.schema.json" with { type: "json" };
 import evidence from "../schemas/evidence.schema.json" with { type: "json" };
 import exportManifest from "../schemas/export-manifest.schema.json" with { type: "json" };
+import jobEvent from "../schemas/job-event.schema.json" with { type: "json" };
 import job from "../schemas/job.schema.json" with { type: "json" };
 import mediaAsset from "../schemas/media-asset.schema.json" with { type: "json" };
 import profile from "../schemas/profile.schema.json" with { type: "json" };
@@ -18,6 +19,7 @@ import type {
   Event,
   ExportManifest,
   Job,
+  JobEvent,
   MediaAsset,
   Profile,
   Project,
@@ -32,6 +34,7 @@ export interface ContractTypes {
   event: Event;
   "export-manifest": ExportManifest;
   job: Job;
+  "job-event": JobEvent;
   "media-asset": MediaAsset;
   profile: Profile;
   project: Project;
@@ -45,6 +48,7 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   event: [event, true],
   "export-manifest": [exportManifest, true],
   job: [job, true],
+  "job-event": [jobEvent, true],
   "media-asset": [mediaAsset, true],
   profile: [profile, true],
   project: [project, true],

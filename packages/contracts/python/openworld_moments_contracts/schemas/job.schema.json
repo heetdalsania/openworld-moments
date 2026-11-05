@@ -2,16 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/heetdalsania/openworld-moments/contracts/job.schema.json",
   "title": "Job",
-  "description": "Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema.",
+  "description": "Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1).",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "id", "kind", "state", "created_at"],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
-    "id": { "$ref": "common.schema.json#/$defs/JobId" },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/JobId"
+    },
     "kind": {
       "type": "string",
-      "enum": ["import", "analyze", "proxy", "transcribe", "index", "render"]
+      "enum": ["import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic"]
     },
     "state": {
       "type": "string",
@@ -30,21 +35,49 @@
         "failed"
       ]
     },
+    "params": {
+      "description": "Handler input (JSON object). Must not contain secrets; paths are allowed but never logged.",
+      "type": "object"
+    },
+    "attempt": {
+      "description": "1 for the first run, incremented on each retry or requeue.",
+      "type": "integer",
+      "minimum": 1
+    },
     "progress": {
       "description": "Measurable progress; done <= total (checked semantically).",
       "type": "object",
       "additionalProperties": false,
       "required": ["done", "total"],
       "properties": {
-        "done": { "type": "integer", "minimum": 0 },
-        "total": { "type": "integer", "minimum": 1 }
+        "done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-    "message": { "type": "string", "maxLength": 2000 },
-    "error": { "$ref": "error.schema.json" },
-    "correlation_id": { "$ref": "common.schema.json#/$defs/CorrelationId" },
-    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "started_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "finished_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+    "message": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "error": {
+      "$ref": "error.schema.json"
+    },
+    "correlation_id": {
+      "$ref": "common.schema.json#/$defs/CorrelationId"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "started_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "finished_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    }
   }
 }

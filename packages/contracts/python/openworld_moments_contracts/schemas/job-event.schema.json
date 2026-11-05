@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/job-event.schema.json",
+  "title": "JobEvent",
+  "description": "Job change pushed by the worker over the /v1/jobs/events WebSocket. 'seq' increases by one for every event a worker process emits, so clients can detect gaps and resynchronize with GET /v1/jobs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "seq", "emitted_at", "kind", "job"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "emitted_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "kind": {
+      "description": "'state' when the job's state changed, 'progress' for progress or message updates within a state.",
+      "type": "string",
+      "enum": ["state", "progress"]
+    },
+    "job": {
+      "$ref": "job.schema.json"
+    }
+  }
+}

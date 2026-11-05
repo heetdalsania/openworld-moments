@@ -436,6 +436,8 @@ class JobRepository:
             "id": d["id"],
             "kind": d["kind"],
             "state": d["state"],
+            "params_json": _dumps(d["params"]) if "params" in d else None,
+            "attempt": d.get("attempt", 1),
             "progress_done": progress["done"] if progress else None,
             "progress_total": progress["total"] if progress else None,
             "message": d.get("message"),
@@ -452,6 +454,12 @@ class JobRepository:
         if row is None:
             raise NotFoundError(f"job {job_id} not found")
         return self._from_row(row)
+
+    def all(self, *, limit: int = 200) -> list[Job]:
+        rows = self.conn.execute(
+            "SELECT * FROM jobs ORDER BY created_at DESC, id DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [self._from_row(r) for r in rows]
 
     def list_unfinished(self) -> list[Job]:
         rows = self.conn.execute(
@@ -473,6 +481,8 @@ class JobRepository:
                 "id": row["id"],
                 "kind": row["kind"],
                 "state": row["state"],
+                "params": _loads(row["params_json"]),
+                "attempt": row["attempt"],
                 "progress": progress,
                 "message": row["message"],
                 "error": _loads(row["error_json"]),

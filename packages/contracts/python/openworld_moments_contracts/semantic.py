@@ -58,6 +58,11 @@ def _job(doc: Document) -> Iterable[str]:
             yield f"{later}: must not be before {earlier}"
 
 
+def _job_event(doc: Document) -> Iterable[str]:
+    for issue in _job(doc["job"]):
+        yield f"job.{issue}"
+
+
 def _profile(doc: Document) -> Iterable[str]:
     for name, region in doc["regions"].items():
         yield from _region(f"regions.{name}", region)
@@ -107,6 +112,7 @@ def _export_manifest(doc: Document) -> Iterable[str]:
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "event": _event,
     "job": _job,
+    "job-event": _job_event,
     "profile": _profile,
     "project": _project,
     "render-preset": _render_preset,
