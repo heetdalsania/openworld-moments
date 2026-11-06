@@ -98,6 +98,9 @@ class _Scanner:
         self.entries.append(entry)
 
     def candidate(self, source: int, path: Path, rel: str | None, info: os.stat_result) -> None:
+        if not info.st_ino:
+            # Windows: DirEntry.stat() leaves st_ino/st_dev at 0; a full stat fills them.
+            info = path.stat()
         identity = (info.st_dev, info.st_ino)
         if info.st_ino and identity in self._seen:
             return

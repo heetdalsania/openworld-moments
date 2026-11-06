@@ -21,6 +21,9 @@ from openworld_moments.storage import Database, JobRepository, transaction
 from tests.media.test_import import FixedTools
 from tests.worker.conftest import wait_for
 
+# Absolute on every OS ("/x.mp4" has no drive on Windows). Never opened.
+ABSOLUTE = str(Path(__file__).resolve().parent / "x.mp4")
+
 
 def _make_client(library: Path, ffprobe: ToolInfo) -> TestClient:
     token = secrets.token_hex(32)
@@ -109,14 +112,14 @@ def test_failed_import_keeps_its_report(api: TestClient, media_dir: Path, tmp_pa
     [
         ({"paths": ["relative/clip.mp4"], "mode": "reference"}, "'paths[0]' must be absolute"),
         ({"paths": [], "mode": "reference"}, "'paths' must be a list"),
-        ({"paths": ["/x.mp4"], "mode": "reference", "source_kind": "vhs"}, "'source_kind'"),
+        ({"paths": [ABSOLUTE], "mode": "reference", "source_kind": "vhs"}, "'source_kind'"),
     ],
 )
 def test_invalid_import_requests(api: TestClient, body: dict[str, Any], fragment: str) -> None:
     response = api.post("/v1/imports", json=body)
     assert response.status_code == 422
     assert fragment in response.json()["message"]
-    assert api.post("/v1/imports", json={"paths": ["/x.mp4"], "mode": "move"}).status_code == 422
+    assert api.post("/v1/imports", json={"paths": [ABSOLUTE], "mode": "move"}).status_code == 422
 
 
 def test_relink_and_source_check_endpoints(api: TestClient, clip: Path) -> None:
