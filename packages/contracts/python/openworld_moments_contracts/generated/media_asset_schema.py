@@ -247,6 +247,13 @@ class MediaAsset(BaseModel):
             description="Non-negative duration in integer milliseconds.", ge=0, title="DurationMs"
         ),
     ]
+    size_bytes: Annotated[
+        int | None,
+        Field(
+            description="Size of the source file in bytes when it was imported (1.3). Used to notice a referenced file that was replaced.",
+            ge=0,
+        ),
+    ] = None
     container: Annotated[
         str,
         Field(

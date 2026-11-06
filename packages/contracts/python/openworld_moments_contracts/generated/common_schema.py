@@ -25,6 +25,17 @@ class Ulid(RootModel[str]):
     ]
 
 
+class AssetId(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Opaque media asset ID: 'ast_' + ULID.",
+            pattern="^ast_[0-9A-HJKMNP-TV-Z]{26}$",
+            title="AssetId",
+        ),
+    ]
+
+
 class Slug(RootModel[str]):
     root: Annotated[
         str,

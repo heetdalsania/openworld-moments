@@ -16,3 +16,4 @@ Other architecture notes:
 - [Storage](./storage.md): what lives in SQLite vs on disk, delete policies, migrations, backups.
 - [Worker lifecycle and jobs](./worker.md): process lifecycle, API, job handlers, cancellation, retry rules.
 - [Media probing](./media.md): FFmpeg discovery and minimum version, `doctor`, the probe job, normalized metadata, error codes, fixtures.
+- [Safe import pipeline](./import.md): reference and managed imports, staging and atomic promotion, idempotency, provenance, missing sources and relink, error codes.

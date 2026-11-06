@@ -51,6 +51,11 @@
     "duration_ms": {
       "$ref": "common.schema.json#/$defs/DurationMs"
     },
+    "size_bytes": {
+      "description": "Size of the source file in bytes when it was imported (1.3). Used to notice a referenced file that was replaced.",
+      "type": "integer",
+      "minimum": 0
+    },
     "container": {
       "description": "FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.",
       "type": "string",

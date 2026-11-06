@@ -145,6 +145,31 @@ class Story(_Model):
     updated_at: str
 
 
+class AssetLocation(_Model):
+    """Where an asset's bytes live. Paths are local data: never log them."""
+
+    id: str
+    import_mode: Literal["reference", "managed"]
+    original_path: str | None
+    managed_path: str | None
+    size_bytes: int | None
+    missing_at: str | None
+
+
+class AssetImport(_Model):
+    """Provenance: one place an asset's bytes were imported from."""
+
+    asset_id: str
+    import_mode: Literal["reference", "managed"]
+    source_kind: str
+    source_path: str
+    size_bytes: int = Field(ge=0)
+    mtime_ns: int
+    job_id: str | None = None
+    first_seen_at: str
+    last_seen_at: str
+
+
 # -- assets ---------------------------------------------------------------------------
 
 
@@ -202,6 +227,7 @@ class AssetRepository:
                 ),
                 "audio_streams_json": _dumps(audio) if audio is not None else None,
                 "audio_codec": audio[0]["codec"] if audio else None,
+                "size_bytes": d.get("size_bytes"),
                 "created_at": d["created_at"],
                 "missing_at": d.get("missing_at"),
             },
@@ -220,6 +246,52 @@ class AssetRepository:
     def all(self) -> list[MediaAsset]:
         rows = self.conn.execute("SELECT * FROM media_assets ORDER BY created_at, id").fetchall()
         return [self._from_row(r) for r in rows]
+
+    def query(
+        self, *, missing: bool | None = None, limit: int = 200, offset: int = 0
+    ) -> list[MediaAsset]:
+        """Assets oldest first. ``missing`` filters on whether ``missing_at`` is set."""
+        where = {None: "", True: "WHERE missing_at IS NOT NULL", False: "WHERE missing_at IS NULL"}
+        rows = self.conn.execute(
+            f"SELECT * FROM media_assets {where[missing]} "  # noqa: S608 - fixed fragments
+            "ORDER BY created_at, id LIMIT ? OFFSET ?",
+            (limit, offset),
+        ).fetchall()
+        return [self._from_row(r) for r in rows]
+
+    def locations(self) -> list[AssetLocation]:
+        """Where every asset's bytes should be, for the missing-source check."""
+        rows = self.conn.execute(
+            "SELECT id, import_mode, original_path, managed_path, size_bytes, missing_at "
+            "FROM media_assets ORDER BY created_at, id"
+        ).fetchall()
+        return [AssetLocation(**dict(r)) for r in rows]
+
+    def location(self, asset_id: str) -> AssetLocation:
+        row = self.conn.execute(
+            "SELECT id, import_mode, original_path, managed_path, size_bytes, missing_at "
+            "FROM media_assets WHERE id = ?",
+            (asset_id,),
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(f"asset {asset_id} not found")
+        return AssetLocation(**dict(row))
+
+    def set_original_path(self, asset_id: str, path: str) -> None:
+        """Point a referenced asset at a verified new location and clear ``missing_at``."""
+        cur = self.conn.execute(
+            "UPDATE media_assets SET original_path = ?, missing_at = NULL WHERE id = ?",
+            (path, asset_id),
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"asset {asset_id} not found")
+
+    def clear_missing(self, asset_id: str) -> None:
+        cur = self.conn.execute(
+            "UPDATE media_assets SET missing_at = NULL WHERE id = ?", (asset_id,)
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"asset {asset_id} not found")
 
     def original_path(self, asset_id: str) -> str | None:
         row = self.conn.execute(
@@ -251,6 +323,7 @@ class AssetRepository:
             "import_mode": row["import_mode"],
             "duration_ms": row["duration_ms"],
             "container": row["container"],
+            "size_bytes": row["size_bytes"],
             "created_at": row["created_at"],
             "missing_at": row["missing_at"],
         }
@@ -285,6 +358,62 @@ class AssetRepository:
         if row["audio_streams_json"] is not None:
             doc["audio"] = _loads(row["audio_streams_json"])
         return load("media-asset", _drop_none(doc))  # type: ignore[return-value]
+
+
+class AssetImportRepository:
+    """asset_imports. One row per (asset, source path); re-imports refresh it."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def record(
+        self,
+        *,
+        asset_id: str,
+        import_mode: str,
+        source_kind: str,
+        source_path: str,
+        size_bytes: int,
+        mtime_ns: int,
+        job_id: str | None,
+        when: str | None = None,
+    ) -> None:
+        now = when or utc_now()
+        try:
+            self.conn.execute(
+                "INSERT INTO asset_imports (asset_id, import_mode, source_kind, source_path, "
+                "size_bytes, mtime_ns, job_id, first_seen_at, last_seen_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT (asset_id, source_path) DO UPDATE SET "
+                "import_mode = excluded.import_mode, source_kind = excluded.source_kind, "
+                "size_bytes = excluded.size_bytes, mtime_ns = excluded.mtime_ns, "
+                "job_id = excluded.job_id, last_seen_at = excluded.last_seen_at",
+                (
+                    asset_id,
+                    import_mode,
+                    source_kind,
+                    source_path,
+                    size_bytes,
+                    mtime_ns,
+                    job_id,
+                    now,
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def for_asset(self, asset_id: str) -> list[AssetImport]:
+        rows = self.conn.execute(
+            "SELECT asset_id, import_mode, source_kind, source_path, size_bytes, mtime_ns, "
+            "job_id, first_seen_at, last_seen_at FROM asset_imports WHERE asset_id = ? "
+            "ORDER BY first_seen_at, id",
+            (asset_id,),
+        ).fetchall()
+        return [AssetImport(**dict(r)) for r in rows]
+
+    def count(self) -> int:
+        return int(self.conn.execute("SELECT count(*) FROM asset_imports").fetchone()[0])
 
 
 # -- sessions -------------------------------------------------------------------------
@@ -467,8 +596,13 @@ class JobRepository:
             "created_at": d["created_at"],
             "started_at": d.get("started_at"),
             "finished_at": d.get("finished_at"),
+            "idempotency_key": d.get("idempotency_key"),
         }
         _insert(self.conn, "jobs", row, upsert=True, keep=("id",))
+
+    def find_by_idempotency_key(self, key: str) -> Job | None:
+        row = self.conn.execute("SELECT * FROM jobs WHERE idempotency_key = ?", (key,)).fetchone()
+        return None if row is None else self._from_row(row)
 
     def get(self, job_id: str) -> Job:
         row = self.conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
@@ -512,6 +646,7 @@ class JobRepository:
                 "created_at": row["created_at"],
                 "started_at": row["started_at"],
                 "finished_at": row["finished_at"],
+                "idempotency_key": row["idempotency_key"],
             }
         )
         return load("job", doc)  # type: ignore[return-value]

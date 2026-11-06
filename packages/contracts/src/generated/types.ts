@@ -70,6 +70,13 @@ export type ProjectId = string;
  */
 export type Sha256 = string;
 /**
+ * 'reference' keeps the file where it is; 'managed' copies it into the library's content-addressed storage. Moving is not offered (spec 8.1.3).
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "ImportMode".
+ */
+export type ImportMode = "reference" | "managed";
+/**
  * Opaque job ID: 'job_' + ULID.
  */
 export type JobId = string;
@@ -91,6 +98,7 @@ export interface ContractsBundle {
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
+  import?: ImportResult;
   "job-event"?: JobEvent;
   job?: Job;
   "media-asset"?: MediaAsset;
@@ -307,6 +315,118 @@ export interface ManifestCommand {
   args: string[];
 }
 /**
+ * Per-file report of one import batch (spec 8.1, M05): the 'result' of an 'import' job. Every candidate file appears exactly once; failures are never dropped. Items name files only relative to the request root they came from; full paths stay in the job params and are never logged. Consistency between 'totals' and 'items' is checked semantically.
+ */
+export interface ImportResult {
+  schema_version: string;
+  mode: ImportMode;
+  totals: ImportTotals;
+  /**
+   * @maxItems 10000
+   */
+  items: ImportItem[];
+}
+/**
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "ImportTotals".
+ */
+export interface ImportTotals {
+  /**
+   * Number of items.
+   */
+  files: number;
+  imported: number;
+  existing: number;
+  relinked: number;
+  skipped: number;
+  failed: number;
+}
+/**
+ * Outcome for one file. 'imported', 'existing' (same bytes already in the library), and 'relinked' (a missing asset found again) carry 'asset_id'; 'skipped' (not attempted: not a media file, or a link leaving the selected folder) and 'failed' carry 'error'.
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "ImportItem".
+ */
+export interface ImportItem {
+  /**
+   * Index into the request's 'paths'.
+   */
+  source: number;
+  /**
+   * For files found in a folder: '/'-separated path relative to that folder. Absent when the request path was the file itself.
+   */
+  relative_path?: string;
+  outcome: "imported" | "existing" | "relinked" | "skipped" | "failed";
+  asset_id?: AssetId;
+  error?: ErrorInfo;
+}
+/**
+ * Parameters of an 'import' job. Each path is a file or a folder; folders are scanned for media files ('recursive' includes subfolders). Paths must be absolute (checked by the worker).
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "ImportRequest".
+ */
+export interface ImportRequest {
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  paths: [string, ...string[]];
+  mode: ImportMode;
+  /**
+   * Scan subfolders of folder paths. Default false.
+   */
+  recursive?: boolean;
+  /**
+   * Where the captures come from. Default 'other'.
+   */
+  source_kind?: "xbox" | "playstation" | "obs" | "capture_card" | "phone_upload" | "other";
+}
+/**
+ * Parameters of a 'relink' job: point a referenced asset at a file in a new location. The file must be verified as the same content before the link changes.
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "RelinkRequest".
+ */
+export interface RelinkRequest {
+  asset_id: AssetId;
+  path: string;
+}
+/**
+ * Result of a 'relink' job. 'verified_by' names the identity check that matched; M05 compares size and the full SHA-256.
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "RelinkResult".
+ */
+export interface RelinkResult {
+  asset_id: AssetId;
+  verified_by: "sha256";
+}
+/**
+ * Result of a 'check_sources' job: which assets' original (reference) or library copy (managed) can no longer be found.
+ *
+ * This interface was referenced by `ImportResult`'s JSON-Schema
+ * via the `definition` "SourceCheckResult".
+ */
+export interface SourceCheckResult {
+  checked: number;
+  /**
+   * Assets missing after the check.
+   */
+  missing: number;
+  newly_missing: number;
+  /**
+   * Assets marked missing before that were found again.
+   */
+  restored: number;
+  /**
+   * Up to 1000 missing assets, oldest first.
+   *
+   * @maxItems 1000
+   */
+  missing_asset_ids: AssetId[];
+}
+/**
  * Job change pushed by the worker over the /v1/jobs/events WebSocket. 'seq' increases by one for every event a worker process emits, so clients can detect gaps and resynchronize with GET /v1/jobs.
  */
 export interface JobEvent {
@@ -320,12 +440,22 @@ export interface JobEvent {
   job: Job;
 }
 /**
- * Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1).
+ * Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1). 'idempotency_key' makes resubmission safe (1.3).
  */
 export interface Job {
   schema_version: string;
   id: JobId;
-  kind: "import" | "analyze" | "proxy" | "transcribe" | "index" | "render" | "diagnostic" | "probe";
+  kind:
+    | "import"
+    | "analyze"
+    | "proxy"
+    | "transcribe"
+    | "index"
+    | "render"
+    | "diagnostic"
+    | "probe"
+    | "relink"
+    | "check_sources";
   state:
     | "queued"
     | "probing"
@@ -344,9 +474,13 @@ export interface Job {
    */
   params?: {};
   /**
-   * Handler output (JSON object), set when the job reaches 'ready'. For 'probe' jobs: a MediaProbe (media-asset.schema.json#/$defs/MediaProbe). Must not contain secrets.
+   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs). Must not contain secrets.
    */
   result?: {};
+  /**
+   * Client-chosen key (1.3). Submitting the same key again returns this job instead of creating a new one; reusing it for a different request is refused.
+   */
+  idempotency_key?: string;
   /**
    * 1 for the first run, incremented on each retry or requeue.
    */
@@ -381,6 +515,10 @@ export interface MediaAsset {
   import_mode: "reference" | "managed";
   capture_time?: CaptureTimeEstimate;
   duration_ms: DurationMs;
+  /**
+   * Size of the source file in bytes when it was imported (1.3). Used to notice a referenced file that was replaced.
+   */
+  size_bytes?: number;
   /**
    * FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.
    */

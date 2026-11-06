@@ -24,7 +24,7 @@ class Progress(BaseModel):
 
 class Job(BaseModel):
     """
-    Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1).
+    Durable long-running work item (spec 9.5). Transitions are enforced by the job engine (M03), not by this schema. 'params' holds the handler input so interrupted jobs can be requeued; 'attempt' counts runs (1.1). 'idempotency_key' makes resubmission safe (1.3).
     """
 
     model_config = ConfigDict(
@@ -40,7 +40,16 @@ class Job(BaseModel):
         ),
     ]
     kind: Literal[
-        "import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic", "probe"
+        "import",
+        "analyze",
+        "proxy",
+        "transcribe",
+        "index",
+        "render",
+        "diagnostic",
+        "probe",
+        "relink",
+        "check_sources",
     ]
     state: Literal[
         "queued",
@@ -65,7 +74,14 @@ class Job(BaseModel):
     result: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Handler output (JSON object), set when the job reaches 'ready'. For 'probe' jobs: a MediaProbe (media-asset.schema.json#/$defs/MediaProbe). Must not contain secrets."
+            description="Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs). Must not contain secrets."
+        ),
+    ] = None
+    idempotency_key: Annotated[
+        str | None,
+        Field(
+            description="Client-chosen key (1.3). Submitting the same key again returns this job instead of creating a new one; reusing it for a different request is refused.",
+            pattern="^[A-Za-z0-9._:-]{1,128}$",
         ),
     ] = None
     attempt: Annotated[

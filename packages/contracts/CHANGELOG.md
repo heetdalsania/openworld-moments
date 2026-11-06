@@ -2,6 +2,19 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.3 — 2026-11-05 (M05)
+
+Additive; every 1.2 document is valid 1.3.
+
+- `import` (new): `ImportResult`, the per-file report of an import job, with
+  `$defs` `ImportRequest` (import job params), `ImportItem`, `ImportTotals`,
+  `RelinkRequest`, `RelinkResult`, and `SourceCheckResult`. Semantic rules:
+  items with an asset carry `asset_id` and no `error`; skipped and failed items
+  carry `error`; `totals` match `items`.
+- `job`: new kinds `relink` and `check_sources`; optional `idempotency_key`;
+  `result` may also be set on a failed import.
+- `media-asset`: optional `size_bytes` (source size at import).
+
 ## 1.2 — 2026-11-05 (M04)
 
 Additive; every 1.1 document is valid 1.2.

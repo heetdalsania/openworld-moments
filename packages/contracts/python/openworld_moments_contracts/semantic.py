@@ -109,6 +109,32 @@ def _export_manifest(doc: Document) -> Iterable[str]:
         yield from _range(f"segments[{i}].out_ms", seg["in_ms"], seg["out_ms"], strict=True)
 
 
+_WITH_ASSET = frozenset({"imported", "existing", "relinked"})
+
+
+def _import(doc: Document) -> Iterable[str]:
+    counts = dict.fromkeys(("imported", "existing", "relinked", "skipped", "failed"), 0)
+    for i, item in enumerate(doc["items"]):
+        outcome = item["outcome"]
+        counts[outcome] += 1
+        if outcome in _WITH_ASSET:
+            if "asset_id" not in item:
+                yield f"items[{i}].asset_id: '{outcome}' items must name their asset"
+            if "error" in item:
+                yield f"items[{i}].error: '{outcome}' items must not carry an error"
+        else:
+            if "error" not in item:
+                yield f"items[{i}].error: '{outcome}' items must explain why"
+            if "asset_id" in item:
+                yield f"items[{i}].asset_id: '{outcome}' items must not name an asset"
+    totals = doc["totals"]
+    if totals["files"] != len(doc["items"]):
+        yield f"totals.files: {totals['files']} does not match {len(doc['items'])} items"
+    for outcome, count in counts.items():
+        if totals[outcome] != count:
+            yield f"totals.{outcome}: {totals[outcome]} does not match {count} items"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "event": _event,
     "job": _job,
@@ -117,6 +143,7 @@ RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "project": _project,
     "render-preset": _render_preset,
     "export-manifest": _export_manifest,
+    "import": _import,
 }
 
 

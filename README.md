@@ -21,8 +21,9 @@ Completed milestones:
 | M02 — Database and migrations | SQLite library database (WAL) with migrations, pre-upgrade backups, and typed repositories ([storage guide](./docs/architecture/storage.md)) |
 | M03 — Worker lifecycle and job engine | Desktop host starts and supervises the Python worker over a loopback, token-protected API; durable cancellable jobs with live progress ([worker guide](./docs/architecture/worker.md)) |
 | M04 — Media probing | FFmpeg discovery with a `doctor` capability report; a read-only `probe` job that normalizes streams, exact frame rates, rotation, and HDR metadata, with stable error codes ([media guide](./docs/architecture/media.md)) |
+| M05 — Safe import pipeline | Idempotent reference and managed-copy imports of files and folders, gated by the probe; staged copies promoted atomically into content-addressed storage; provenance, missing-source detection, and verified relink ([import guide](./docs/architecture/import.md)) |
 
-The worker can probe a single file, but there is no import, analysis, or editing yet; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+The worker can import files and folders through its API, but there is no user interface for it yet, and no analysis or editing; those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -323,5 +324,9 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-Next up is [M05 — Safe import pipeline](./docs/milestones/M05-safe-import-pipeline.md): idempotent reference-in-place and managed-copy imports through a staging boundary, gated by the M04 probe result. See the dependency graph in [MILESTONES.md](./MILESTONES.md) for what follows.
+M06, M07, and M08 are now ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
+
+- [M06 — Fingerprints and duplicate detection](./docs/milestones/M06-fingerprints-and-duplicates.md): fast partial hashes, perceptual and audio fingerprints, and duplicate candidates on top of the SHA-256 identity from M05.
+- [M07 — Watched folders and Xbox onboarding](./docs/milestones/M07-watched-folders-and-xbox.md): stable folder watching that hands completed files to the M05 import.
+- [M08 — Proxies, thumbnails, and waveforms](./docs/milestones/M08-derived-media.md): the derived-media pipeline.
 

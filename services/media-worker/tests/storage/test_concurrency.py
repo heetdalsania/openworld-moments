@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from openworld_moments.storage import Database, SettingsRepository, transaction
+from openworld_moments.storage.database import bundled_migrations
 
 PROCESSES = 4
 
@@ -112,3 +113,29 @@ def test_several_processes_can_open_a_new_library_at_once(tmp_path: Path, trial:
     with closing(database.connect()) as conn:
         rows = conn.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall()
     assert [r[0] for r in rows] == [m.version for m in database.migrations]
+
+
+def test_migration_committed_between_version_and_ledger_reads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: another process finishing a migration right after this one read the
+    schema version must not look like an inconsistent ledger."""
+    path = tmp_path / "database.sqlite3"
+    migrations = bundled_migrations()
+    Database(path, migrations=migrations[:2]).migrate()
+    real = Database.schema_version
+    calls = [0]
+
+    def version_then_other_process_migrates(self: Database, conn: object) -> int:
+        version = real(self, conn)  # type: ignore[arg-type]
+        calls[0] += 1
+        if calls[0] == 1:  # "another process" commits migration 3 right now
+            monkeypatch.setattr(Database, "schema_version", real)
+            Database(path, migrations=migrations[:3]).migrate()
+            monkeypatch.setattr(Database, "schema_version", version_then_other_process_migrates)
+        return version
+
+    monkeypatch.setattr(Database, "schema_version", version_then_other_process_migrates)
+    report = Database(path).migrate()
+    assert report.to_version == migrations[-1].version
+    assert 3 not in report.applied  # applied by the other process, skipped here
