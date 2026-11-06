@@ -321,10 +321,16 @@ async fn worker_sink_round_trip() {
         size: 18,
         mtime_ns: 1_700_000_000_000_000_000,
     };
-    assert_eq!(sink.report_file(id, "clip.mp4", meta).await.unwrap(), "queued");
+    assert_eq!(
+        sink.report_file(id, "clip.mp4", meta).await.unwrap(),
+        "queued"
+    );
     let again = sink.report_file(id, "clip.mp4", meta).await.unwrap();
     assert!(again == "in_progress" || again == "known", "{again}");
-    assert_eq!(sink.report_file(id, "notes.txt", meta).await.unwrap(), "ignored");
+    assert_eq!(
+        sink.report_file(id, "notes.txt", meta).await.unwrap(),
+        "ignored"
+    );
     assert!(sink.report_file(id, "../escape.mp4", meta).await.is_err());
     sink.report_scan(id, true, true, None).await.unwrap();
 
@@ -337,5 +343,8 @@ async fn worker_sink_round_trip() {
         .count();
     assert_eq!(imports, 1);
     supervisor.stop().await;
-    assert!(watched.join("clip.mp4").exists(), "the watched file is never touched");
+    assert!(
+        watched.join("clip.mp4").exists(),
+        "the watched file is never touched"
+    );
 }
