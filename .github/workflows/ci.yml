@@ -119,9 +119,18 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
       - run: uv sync --locked --all-packages
+      # The import-to-playback E2E test (M09) imports and proxies a synthetic clip.
+      - name: Install FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
+        env:
+          OWM_REQUIRE_FFMPEG: "1" # the E2E test fails instead of skipping without FFmpeg
 
   desktop-build:
     name: Desktop production build (Windows)

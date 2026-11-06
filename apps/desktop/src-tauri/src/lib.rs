@@ -2,11 +2,13 @@
 //! Desktop host for OpenWorld Moments.
 //!
 //! Opens the UI, supervises the Python media worker (M03), and watches
-//! user-approved folders for new captures (M07).
+//! user-approved folders for new captures (M07). The UI reaches the worker through
+//! allow-listed routes and plays media over the `owm-media://` protocol (M09).
 
 use serde::Serialize;
 
 mod host;
+pub mod media;
 pub mod watch;
 pub mod worker;
 
@@ -42,6 +44,9 @@ mod commands {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .register_asynchronous_uri_scheme_protocol(media::SCHEME, |ctx, request, responder| {
+            host::media_protocol(ctx.app_handle(), request, responder)
+        })
         .setup(|app| host::setup(app.handle()))
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
@@ -49,6 +54,7 @@ pub fn run() {
             host::worker_start_diagnostic,
             host::worker_cancel_job,
             host::worker_list_jobs,
+            host::worker_api,
             host::watched_folders_list,
             host::watched_folder_add,
             host::watched_folder_update,

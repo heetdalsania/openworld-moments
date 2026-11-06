@@ -528,3 +528,62 @@ def test_derived_endpoints_and_job(
     bad = client.post(f"/v1/assets/{asset}/derived", json={"artifacts": ["frames"]})
     assert bad.status_code == 422
     assert client.post(f"/v1/assets/{asset}/derived", json={"path": "/x"}).status_code == 422
+
+
+# -- host media lookup (M09) ----------------------------------------------------------
+
+
+def test_media_lookup_serves_only_checked_files(
+    library: Library, media_dir: Path, tmp_path: Path
+) -> None:
+    from openworld_moments.derived.service import MediaUnavailable
+
+    source = _copy(media_dir, "h264_aac.mkv", tmp_path / "captures")
+    asset = library.add(source)
+    lookup = library.derived.media_file
+
+    with contextlib.closing(library.database.connect()) as conn:
+        original = lookup(conn, asset, "original")
+        assert Path(original["path"]) == source
+        assert original["content_type"] == "video/x-matroska"
+        assert original["size_bytes"] == source.stat().st_size
+        with pytest.raises(MediaUnavailable) as caught:
+            lookup(conn, asset, "proxy")
+        assert caught.value.code == "derived.not_ready"
+
+    library.generate(asset)
+    with contextlib.closing(library.database.connect()) as conn:
+        proxy = lookup(conn, asset, "proxy")
+        assert proxy["content_type"] == "video/mp4"
+        assert Path(proxy["path"]).is_relative_to(library.root / "derived" / asset)
+        thumb = lookup(conn, asset, "thumbnail", 1)
+        assert thumb["content_type"] == "image/jpeg" and thumb["path"].endswith("0001.jpg")
+        assert lookup(conn, asset, "waveform")["size_bytes"] > 16
+        for variant, index in (
+            ("thumbnail", 0),
+            ("thumbnail", 2),
+            ("thumbnail", None),
+            ("frames", None),
+        ):
+            with pytest.raises(MediaUnavailable) as caught:
+                lookup(conn, asset, variant, index)
+            assert caught.value.code == "media.unknown_variant"
+
+    source.unlink()  # moved away: the original is reported missing, the proxy still serves
+    with contextlib.closing(library.database.connect()) as conn:
+        with pytest.raises(MediaUnavailable) as caught:
+            lookup(conn, asset, "original")
+        assert caught.value.code == "media.source_missing"
+        assert lookup(conn, asset, "proxy")["size_bytes"] > 0
+
+
+def test_media_endpoint(api: tuple[TestClient, Library], media_dir: Path, tmp_path: Path) -> None:
+    client, library = api
+    asset = library.add(_copy(media_dir, "h264_aac.mp4", tmp_path / "captures"))
+    found = client.get(f"/v1/assets/{asset}/media/original")
+    assert found.status_code == 200 and found.json()["content_type"] == "video/mp4"
+    missing = client.get(f"/v1/assets/{asset}/media/proxy")
+    assert missing.status_code == 404 and missing.json()["code"] == "derived.not_ready"
+    assert client.get(f"/v1/assets/{asset}/media/../../x").status_code == 404
+    unknown = client.get("/v1/assets/ast_01JCBQ00000000000000000099/media/original")
+    assert unknown.status_code == 404 and unknown.json()["code"] == "asset.not_found"

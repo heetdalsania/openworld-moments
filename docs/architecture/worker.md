@@ -75,7 +75,7 @@ that created them, and every event and log line for that job carries it.
 | POST | `/v1/jobs/{id}/retry` | `Job` back in `queued` |
 | POST | `/v1/imports` | Import request → `Job` (kind `import`); see [import](./import.md) |
 | GET | `/v1/imports/{id}` | Import `Job` with its `ImportResult` |
-| GET | `/v1/assets?missing=bool` | `MediaAsset[]` |
+| GET | `/v1/assets?missing=bool&order=oldest\|newest&after=<asset-id>&limit=N` | `MediaAsset[]`. `after` is a keyset cursor (stable while new assets arrive); unknown cursor → 404 |
 | GET | `/v1/assets/{id}` | `MediaAsset` |
 | POST | `/v1/assets/{id}/relink` | `{path}` → `Job` (kind `relink`) |
 | POST | `/v1/assets/check-sources` | → `Job` (kind `check_sources`) |
@@ -86,6 +86,7 @@ that created them, and every event and log line for that job carries it.
 | POST | `/v1/fingerprints/backfill` | `{asset_ids?, force?}` → `Job` (kind `fingerprint`) |
 | GET | `/v1/assets/{id}/derived` | `AssetDerivedMedia`: proxy decision and artifact states; see [derived media](./derived-media.md) |
 | POST | `/v1/assets/{id}/derived` | `{artifacts?, proxy_policy?, force?, idempotency_key?}` → `Job` (kind `proxy`) |
+| GET | `/v1/assets/{id}/media/{original\|proxy\|thumbnail\|waveform}?index=n` | **Host only** (not reachable from the UI): `{path, content_type, size_bytes}` of a checked file for the `owm-media` protocol; `media.source_missing`, `derived.not_ready`, `media.unknown_variant` (404). See [desktop UI](./desktop-ui.md) |
 | POST | `/v1/derived/cleanup` | `DerivedCleanupResult` (removes only unreferenced files in `derived/`) |
 | GET / POST | `/v1/watched-folders` | `WatchedFolder[]` / create; see [watched folders](./watched-folders.md) |
 | GET / PATCH / DELETE | `/v1/watched-folders/{id}` | Read, change, stop watching (files untouched) |

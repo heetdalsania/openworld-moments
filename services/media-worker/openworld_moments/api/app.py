@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from openworld_moments import __version__
-from openworld_moments.derived.service import DerivedMedia
+from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
@@ -316,13 +316,28 @@ def create_app(
 
     @app.get("/v1/assets")
     async def list_assets(
-        missing: bool | None = None, limit: int = 200, offset: int = 0
+        missing: bool | None = None,
+        limit: int = 200,
+        offset: int = 0,
+        order: Literal["oldest", "newest"] = "oldest",
+        after: str | None = None,
     ) -> list[dict[str, Any]]:
         bounded = max(1, min(limit, 1000))
-        assets = await asyncio.to_thread(
-            read_assets,
-            lambda repo: repo.query(missing=missing, limit=bounded, offset=max(0, offset)),
-        )
+        try:
+            assets = await asyncio.to_thread(
+                read_assets,
+                lambda repo: repo.query(
+                    missing=missing,
+                    limit=bounded,
+                    offset=max(0, offset),
+                    newest=order == "newest",
+                    after=after,
+                ),
+            )
+        except NotFoundError as exc:
+            raise EngineError(
+                "asset.not_found", "The 'after' asset does not exist.", status=404
+            ) from exc
         return [normalize(a) for a in assets]
 
     @app.post("/v1/assets/check-sources", status_code=201)
@@ -393,6 +408,21 @@ def create_app(
         if body.artifacts is not None:
             params["artifacts"] = body.artifacts
         return await submit_job("proxy", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/assets/{asset_id}/media/{variant}")
+    async def media_file(asset_id: str, variant: str, index: int | None = None) -> dict[str, Any]:
+        """Host only (the UI cannot reach it): the checked local path of an asset's
+        original, proxy, thumbnail, or waveform for the host's media protocol."""
+        service = derived_service()
+        try:
+            found: dict[str, Any] = await asyncio.to_thread(
+                with_conn, lambda conn: service.media_file(conn, asset_id, variant, index)
+            )
+        except NotFoundError as exc:
+            raise EngineError("asset.not_found", f"asset {asset_id} not found", status=404) from exc
+        except MediaUnavailable as exc:
+            raise EngineError(exc.code, exc.message, status=404) from exc
+        return found
 
     @app.post("/v1/derived/cleanup")
     async def cleanup_derived() -> dict[str, Any]:

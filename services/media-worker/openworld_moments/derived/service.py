@@ -124,6 +124,29 @@ class DerivedCancelled(Exception):
     pass
 
 
+class MediaUnavailable(Exception):
+    """A media file the host asked for cannot be served (stable ``code``, no paths)."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+#: Content types for originals the host may serve to the player, by extension.
+CONTENT_TYPES = {
+    ".mp4": "video/mp4",
+    ".m4v": "video/mp4",
+    ".mov": "video/quicktime",
+    ".mkv": "video/x-matroska",
+    ".webm": "video/webm",
+    ".ts": "video/mp2t",
+    ".m2ts": "video/mp2t",
+    ".avi": "video/x-msvideo",
+}
+MEDIA_VARIANTS = ("original", "proxy", "thumbnail", "waveform")
+
+
 @dataclass(frozen=True)
 class Plan:
     kind: str
@@ -877,6 +900,61 @@ class DerivedMedia:
                 )
             if previous is not None and previous.relpath and previous.relpath != relpath:
                 self.paths.remove_artifact(previous.relpath)
+
+    # -- serving (host only) ----------------------------------------------------------
+
+    def media_file(
+        self, conn: sqlite3.Connection, asset_id: str, variant: str, index: int | None = None
+    ) -> dict[str, Any]:
+        """Where the host's media protocol reads an asset's original, proxy, thumbnail
+        (1-based ``index``), or waveform: ``{path, content_type, size_bytes}``.
+
+        Only checked paths come back: originals through the import record (the size
+        must still match), derived files only when their row is ready and the path is
+        exactly a derived artifact. Raises NotFoundError or MediaUnavailable.
+        """
+        if variant not in MEDIA_VARIANTS:
+            raise MediaUnavailable("media.unknown_variant", f"Unknown media variant '{variant}'.")
+        assets = AssetRepository(conn)
+        assets.get(asset_id)
+        if variant == "original":
+            path = readable_source(self.library, assets.location(asset_id))
+            if path is None:
+                raise MediaUnavailable(
+                    "media.source_missing",
+                    "The original file is missing, offline, or has changed since import.",
+                )
+            content_type = CONTENT_TYPES.get(path.suffix.lower(), "application/octet-stream")
+        else:
+            kind = {"proxy": "proxy", "thumbnail": "filmstrip", "waveform": "waveform"}[variant]
+            row = DerivedArtifactRepository(conn).get(asset_id, kind)  # type: ignore[arg-type]
+            if row is None or not self._present(row) or row.relpath is None:
+                raise MediaUnavailable(
+                    "derived.not_ready", f"The {variant} for this asset is not available yet."
+                )
+            found = self.paths.resolve(row.relpath)
+            if found is None:  # pragma: no cover - _present checked it
+                raise MediaUnavailable("derived.not_ready", "Invalid artifact path.")
+            path = found
+            content_type = "video/mp4" if kind == "proxy" else "application/octet-stream"
+            if kind == "filmstrip":
+                count = int((row.info or {}).get("count", 0))
+                if index is None or not 1 <= index <= count:
+                    raise MediaUnavailable(
+                        "media.unknown_variant", f"Thumbnail index must be 1 to {count}."
+                    )
+                path = path / f"{index:04d}.jpg"
+                content_type = "image/jpeg"
+        try:
+            info = path.stat()
+        except OSError as exc:
+            raise MediaUnavailable(
+                "media.source_missing" if variant == "original" else "derived.not_ready",
+                "The file disappeared before it could be read.",
+            ) from exc
+        if not path.is_file() or path.is_symlink():
+            raise MediaUnavailable("media.unknown_variant", "Not a regular file.")
+        return {"path": str(path), "content_type": content_type, "size_bytes": info.st_size}
 
     # -- cleanup ----------------------------------------------------------------------
 

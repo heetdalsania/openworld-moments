@@ -184,3 +184,31 @@ def test_interrupted_import_is_requeued_and_completes(
     assert job["state"] == "ready" and job["attempt"] == 2
     assert job["result"]["totals"]["imported"] == 1
     assert not leftover.exists()
+
+
+def test_assets_page_newest_first_with_a_stable_cursor(
+    api: TestClient, media_dir: Path, tmp_path: Path
+) -> None:
+    folder = tmp_path / "many"
+    folder.mkdir()
+    names = ["h264_aac.mp4", "h264_aac.mov", "h264_aac.mkv", "no_audio.mp4"]
+    for name in names:
+        shutil.copyfile(media_dir / name, folder / name)
+    job = _finished(
+        api,
+        api.post("/v1/imports", json={"paths": [str(folder)], "mode": "reference"}).json()["id"],
+    )
+    assert job["state"] == "ready"
+    oldest = [a["id"] for a in api.get("/v1/assets").json()]
+    newest = [a["id"] for a in api.get("/v1/assets", params={"order": "newest"}).json()]
+    assert newest == list(reversed(oldest)) and len(newest) == 4
+
+    first = api.get("/v1/assets", params={"order": "newest", "limit": 2}).json()
+    rest = api.get(
+        "/v1/assets", params={"order": "newest", "limit": 2, "after": first[-1]["id"]}
+    ).json()
+    assert [a["id"] for a in first + rest] == newest
+    after_oldest = api.get("/v1/assets", params={"after": oldest[0]}).json()
+    assert [a["id"] for a in after_oldest] == oldest[1:]
+    unknown = api.get("/v1/assets", params={"after": "ast_01JCBQ00000000000000000099"})
+    assert unknown.status_code == 404
