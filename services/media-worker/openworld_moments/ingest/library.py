@@ -14,6 +14,10 @@ import shutil
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from openworld_moments.storage import AssetLocation
 
 MANAGED_DIR = "managed-media"
 STAGING_DIR = "staging"
@@ -60,6 +64,26 @@ class LibraryPaths:
         no import is running)."""
         target = self.job_staging(job_id) if job_id else self.import_staging
         shutil.rmtree(target, ignore_errors=True)
+
+
+def readable_source(library: LibraryPaths, location: AssetLocation) -> Path | None:
+    """Where an asset's bytes can be read now (managed copy or original), or None when
+    the file is gone or its size no longer matches (replaced: not this asset's bytes)."""
+    if location.import_mode == "managed" and location.managed_path:
+        path = library.resolve_managed(location.managed_path)
+    elif location.original_path:
+        path = Path(location.original_path)
+    else:
+        path = None
+    if path is None:
+        return None
+    try:
+        info = path.stat()
+    except OSError:
+        return None
+    if location.size_bytes is not None and info.st_size != location.size_bytes:
+        return None
+    return path
 
 
 def fsync_directory(path: Path) -> None:

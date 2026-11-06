@@ -105,3 +105,41 @@ def test_shell_metacharacters_are_plain_arguments(tmp_path: Path) -> None:
     result = run_tool([PY, "-c", "import sys; print(sys.argv[1])", nasty], timeout_s=30)
     assert result.stdout.decode().strip() == nasty
     assert not marker.exists()
+
+
+def test_streamed_stdout_is_not_collected_or_capped(tmp_path: Path) -> None:
+    received: list[bytes] = []
+    script = "import sys; sys.stdout.buffer.write(b'x' * 300000); sys.stdout.flush()"
+    result = run_tool([PY, "-c", script], timeout_s=30, max_stdout=10, on_stdout=received.append)
+    assert result.returncode == 0 and result.stdout == b""
+    assert sum(len(b) for b in received) == 300000  # max_stdout does not apply when streaming
+
+
+def test_cwd_lets_arguments_name_local_files(tmp_path: Path) -> None:
+    run_tool([PY, "-c", "open('made.txt', 'w').write('ok')"], timeout_s=30, cwd=tmp_path)
+    assert (tmp_path / "made.txt").read_text() == "ok"
+
+
+def test_failing_stdout_callback_kills_the_tool() -> None:
+    spawned, hook = _capture()
+
+    def explode(_: bytes) -> None:
+        raise RuntimeError("bad data")
+
+    script = "import sys, time\nwhile True:\n    print('tick', flush=True)\n    time.sleep(0.01)"
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match="bad data"):
+        run_tool([PY, "-c", script], timeout_s=30, on_stdout=explode, on_spawn=hook)  # type: ignore[arg-type]
+    assert time.monotonic() - started < 10
+    assert spawned[0].poll() is not None
+
+
+def test_cancel_while_streaming() -> None:
+    cancel = threading.Event()
+
+    def stop(_: bytes) -> None:
+        cancel.set()
+
+    script = "import time\nwhile True:\n    print('tick', flush=True)\n    time.sleep(0.01)"
+    with pytest.raises(ToolCancelled):
+        run_tool([PY, "-c", script], timeout_s=30, cancel=cancel, on_stdout=stop)

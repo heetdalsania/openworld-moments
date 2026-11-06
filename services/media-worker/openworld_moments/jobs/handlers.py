@@ -7,8 +7,11 @@
   normalized ``MediaProbe`` becomes the job's ``result``.
 * ``import``, ``relink``, ``check_sources`` (M05): the safe import pipeline
   (``openworld_moments.ingest``). They need the library database.
+* ``fingerprint`` (M06): restartable fingerprint backfill.
+* ``proxy`` (M08): one asset's derived playback media (proxy, filmstrip,
+  waveform), ``openworld_moments.derived``.
 
-Later product handlers (analyze, proxy, ...) arrive in their milestones.
+Later product handlers (analyze, transcribe, ...) arrive in their milestones.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from openworld_moments.derived.service import DerivedCancelled, DerivedFailure, DerivedMedia
 from openworld_moments.fingerprints.service import (
     FingerprintCancelled,
     Fingerprinter,
@@ -221,6 +225,59 @@ def fingerprint_handler(fingerprinter: Fingerprinter) -> JobHandler:
     return JobHandler("fingerprint", run, validate_fingerprint, "fingerprinting", True, 3)
 
 
+DERIVED_KINDS = ("proxy", "filmstrip", "waveform")
+
+
+def validate_derived(params: Mapping[str, Any]) -> dict[str, Any]:
+    """DerivedMediaRequest (contract derived-media.schema.json#/$defs/DerivedMediaRequest)."""
+    _reject_unknown(params, {"asset_id", "artifacts", "proxy_policy", "force"})
+    asset_id = params.get("asset_id")
+    if not isinstance(asset_id, str) or not _ASSET_ID.match(asset_id):
+        raise ValueError("'asset_id' must be an asset ID")
+    clean: dict[str, Any] = {"asset_id": asset_id}
+    artifacts = params.get("artifacts", list(DERIVED_KINDS))
+    if (
+        not isinstance(artifacts, list)
+        or not 1 <= len(artifacts) <= len(DERIVED_KINDS)
+        or any(a not in DERIVED_KINDS for a in artifacts)
+        or len(set(artifacts)) != len(artifacts)
+    ):
+        raise ValueError("'artifacts' must list distinct kinds: proxy, filmstrip, waveform")
+    clean["artifacts"] = [k for k in DERIVED_KINDS if k in artifacts]
+    policy = params.get("proxy_policy", "auto")
+    if policy not in ("auto", "always"):
+        raise ValueError("'proxy_policy' must be 'auto' or 'always'")
+    clean["proxy_policy"] = policy
+    force = params.get("force", False)
+    if not isinstance(force, bool):
+        raise ValueError("'force' must be true or false")
+    clean["force"] = force
+    return clean
+
+
+def derived_handler(derived: DerivedMedia) -> JobHandler:
+    """The ``proxy`` job. Artifacts are committed one by one and current ones are cache
+    hits, so a requeued job continues where it stopped."""
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return derived.generate(
+                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except DerivedCancelled as exc:
+            raise Cancelled from exc
+        except DerivedFailure as exc:
+            raise JobFailure(
+                exc.code,
+                exc.message,
+                retryable=exc.retryable,
+                details=exc.details,
+                stderr_tail=exc.stderr_tail,
+            ) from exc
+
+    return JobHandler("proxy", run, validate_derived, "proxying", True, 3)
+
+
 def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
     _reject_unknown(params, set())
     return {}
@@ -283,8 +340,10 @@ def build_handlers(
     *,
     probe_timeout_s: float = DEFAULT_TIMEOUT_S,
     database: Database | None = None,
+    derived: DerivedMedia | None = None,
 ) -> dict[str, JobHandler]:
-    """Every handler the worker serves. Import handlers need the library ``database``."""
+    """Every handler the worker serves. Import handlers need the library ``database``.
+    Pass the API's ``derived`` service so jobs and cleanup share one lock."""
     probe = probe_handler(tools, timeout_s=probe_timeout_s)
     handlers = {**BUILTIN_HANDLERS, probe.kind: probe}
     if database is not None:
@@ -292,4 +351,6 @@ def build_handlers(
         handlers.update(import_handlers(importer))
         fingerprint = fingerprint_handler(importer.fingerprinter)
         handlers[fingerprint.kind] = fingerprint
+        proxy = derived_handler(derived or DerivedMedia(database, tools))
+        handlers[proxy.kind] = proxy
     return handlers

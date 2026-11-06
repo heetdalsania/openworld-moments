@@ -34,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from openworld_moments import __version__
+from openworld_moments.derived.service import DerivedMedia
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
@@ -181,6 +182,16 @@ class SubmitImport(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class SubmitDerived(BaseModel):
+    """DerivedMediaRequest without asset_id (it is in the path), plus an idempotency key."""
+
+    model_config = ConfigDict(extra="forbid")
+    artifacts: list[Any] | None = None
+    proxy_policy: str = "auto"
+    force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
 class SubmitBackfill(BaseModel):
     """FingerprintRequest plus an optional idempotency key. Params are checked by the handler."""
 
@@ -207,6 +218,7 @@ def create_app(
     *,
     on_ready: Callable[[], None] | None = None,
     capabilities: Callable[..., dict[str, Any]] | None = None,
+    derived: DerivedMedia | None = None,
 ) -> ASGIApp:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -349,6 +361,43 @@ def create_app(
         if body.asset_ids is not None:
             params["asset_ids"] = body.asset_ids
         return await submit_job("fingerprint", params, body.idempotency_key, request, response)
+
+    # -- derived media (M08) ------------------------------------------------------------
+
+    def derived_service() -> DerivedMedia:
+        if derived is None:
+            raise EngineError("request.not_found", "Derived media is not available.", status=404)
+        return derived
+
+    @app.get("/v1/assets/{asset_id}/derived")
+    async def get_derived(asset_id: str) -> dict[str, Any]:
+        service = derived_service()
+        try:
+            doc: dict[str, Any] = await asyncio.to_thread(
+                with_conn, lambda conn: service.status_doc(conn, asset_id)
+            )
+        except NotFoundError as exc:
+            raise EngineError("asset.not_found", f"asset {asset_id} not found", status=404) from exc
+        return doc
+
+    @app.post("/v1/assets/{asset_id}/derived", status_code=201)
+    async def submit_derived(
+        asset_id: str, body: SubmitDerived, request: Request, response: Response
+    ) -> dict[str, Any]:
+        derived_service()
+        params: dict[str, Any] = {
+            "asset_id": asset_id,
+            "proxy_policy": body.proxy_policy,
+            "force": body.force,
+        }
+        if body.artifacts is not None:
+            params["artifacts"] = body.artifacts
+        return await submit_job("proxy", params, body.idempotency_key, request, response)
+
+    @app.post("/v1/derived/cleanup")
+    async def cleanup_derived() -> dict[str, Any]:
+        service = derived_service()
+        return await asyncio.to_thread(service.cleanup)
 
     @app.get("/v1/duplicates")
     async def list_duplicates(

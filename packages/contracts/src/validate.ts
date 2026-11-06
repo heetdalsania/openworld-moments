@@ -3,6 +3,7 @@
 // Mirrors validate.py.
 import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import common from "../schemas/common.schema.json" with { type: "json" };
+import derivedMedia from "../schemas/derived-media.schema.json" with { type: "json" };
 import error from "../schemas/error.schema.json" with { type: "json" };
 import event from "../schemas/event.schema.json" with { type: "json" };
 import evidence from "../schemas/evidence.schema.json" with { type: "json" };
@@ -18,6 +19,7 @@ import renderPreset from "../schemas/render-preset.schema.json" with { type: "js
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
+  AssetDerivedMedia,
   AssetFingerprints,
   ErrorInfo,
   Event,
@@ -36,6 +38,7 @@ import { checkVersion } from "./versioning.ts";
 
 /** Top-level contracts and their TypeScript types. */
 export interface ContractTypes {
+  "derived-media": AssetDerivedMedia;
   error: ErrorInfo;
   event: Event;
   "export-manifest": ExportManifest;
@@ -53,6 +56,7 @@ export type ContractName = keyof ContractTypes;
 
 /** Top-level contracts: name -> [schema, carries schema_version]. */
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
+  "derived-media": [derivedMedia, true],
   error: [error, false],
   event: [event, true],
   "export-manifest": [exportManifest, true],

@@ -15,6 +15,7 @@ from referencing.jsonschema import DRAFT202012
 
 from openworld_moments_contracts.errors import ContractError
 from openworld_moments_contracts.generated import (
+    derived_media_schema,
     error_schema,
     event_schema,
     export_manifest_schema,
@@ -33,6 +34,7 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "derived-media": (derived_media_schema.AssetDerivedMedia, True),
     "error": (error_schema.ErrorInfo, False),
     "event": (event_schema.Event, True),
     "export-manifest": (export_manifest_schema.ExportManifest, True),

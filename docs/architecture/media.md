@@ -57,6 +57,7 @@ like every endpoint; `?refresh=true` re-runs discovery). Fields:
 | `source` | `flag`, `env`, or `path` |
 | `decoders` | `{h264, hevc, av1, vp9, aac, opus}` → bool (from `ffprobe -decoders`) |
 | `encoders` | `{libx264, libx265, aac}` → bool (from `ffmpeg -encoders`) |
+| `derived` | `{ready, missing}`: whether proxies, thumbnails, and waveforms can be made (M08); `missing` lists absent `encoder:…` / `filter:…` components ([derived media](./derived-media.md#minimum-ffmpeg-capabilities)) |
 
 The report is not a versioned contract yet. The first-run system doctor in packaging (M29) is its first UI consumer and may promote it to one.
 

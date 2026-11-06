@@ -4,6 +4,34 @@
 // Regenerate with: pnpm contracts:generate
 
 /**
+ * Opaque media asset ID: 'ast_' + ULID.
+ */
+export type AssetId = string;
+/**
+ * 'auto': a proxy only when the policy finds a reason. 'always': a proxy for every asset.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "ProxyPolicy".
+ */
+export type ProxyPolicy = "auto" | "always";
+/**
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedKind".
+ */
+export type DerivedKind = "proxy" | "filmstrip" | "waveform";
+/**
+ * Lowercase hex SHA-256 digest.
+ */
+export type Sha256 = string;
+/**
+ * Lowercase hex SHA-256 digest.
+ */
+export type Sha2561 = string;
+/**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp = string;
+/**
  * Primitive value allowed in open attribute maps.
  */
 export type ScalarValue = string | number | boolean | null;
@@ -12,6 +40,15 @@ export type ScalarValue = string | number | boolean | null;
  */
 export type CorrelationId = string;
 /**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs = number;
+/**
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedOutcome".
+ */
+export type DerivedOutcome = "generated" | "cached" | "not_needed" | "not_applicable";
+/**
  * Opaque event ID: 'evt_' + ULID.
  */
 export type EventId = string;
@@ -19,14 +56,6 @@ export type EventId = string;
  * Opaque session ID: 'ses_' + ULID.
  */
 export type SessionId = string;
-/**
- * Opaque media asset ID: 'ast_' + ULID.
- */
-export type AssetId = string;
-/**
- * Position on a media or session timeline in integer milliseconds from its start.
- */
-export type TimelineMs = number;
 /**
  * Probability-like score in [0, 1].
  */
@@ -58,17 +87,9 @@ export type Slug = string;
  */
 export type SemVer = string;
 /**
- * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
- */
-export type UtcTimestamp = string;
-/**
  * Opaque project ID: 'prj_' + ULID.
  */
 export type ProjectId = string;
-/**
- * Lowercase hex SHA-256 digest.
- */
-export type Sha256 = string;
 /**
  * This interface was referenced by `AssetFingerprints`'s JSON-Schema
  * via the `definition` "AlgorithmVersion".
@@ -117,7 +138,8 @@ export type Patterns = string[];
 export type UtcTimestamp2 = string;
 
 export interface ContractsBundle {
-  error?: ErrorInfo;
+  "derived-media"?: AssetDerivedMedia;
+  error?: ErrorInfo1;
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
@@ -132,9 +154,389 @@ export interface ContractsBundle {
   "watched-folder"?: WatchedFolder;
 }
 /**
- * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
+ * Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under library/derived/<asset-id>/; 'path' is relative to the library folder. Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.
+ */
+export interface AssetDerivedMedia {
+  schema_version: string;
+  asset_id: AssetId;
+  proxy_decision: ProxyDecision;
+  /**
+   * Exactly one entry per kind, in the order proxy, filmstrip, waveform (checked semantically).
+   *
+   * @minItems 3
+   * @maxItems 3
+   */
+  artifacts: [DerivedArtifact, DerivedArtifact, DerivedArtifact];
+}
+/**
+ * Whether the embedded player needs a proxy, with every reason. 'needed' is true exactly when 'reasons' is non-empty and does not only contain 'no_video' (checked semantically).
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "ProxyDecision".
+ */
+export interface ProxyDecision {
+  needed: boolean;
+  policy: ProxyPolicy;
+  policy_version: number;
+  /**
+   * @maxItems 16
+   */
+  reasons:
+    | []
+    | [ProxyReason]
+    | [ProxyReason, ProxyReason]
+    | [ProxyReason, ProxyReason, ProxyReason]
+    | [ProxyReason, ProxyReason, ProxyReason, ProxyReason]
+    | [ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason]
+    | [ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason]
+    | [ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason, ProxyReason]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ]
+    | [
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason,
+        ProxyReason
+      ];
+}
+/**
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "ProxyReason".
+ */
+export interface ProxyReason {
+  code:
+    | "requested"
+    | "container"
+    | "codec"
+    | "pixel_format"
+    | "hdr"
+    | "resolution"
+    | "frame_rate"
+    | "audio_codec"
+    | "no_video";
+  detail: string;
+}
+/**
+ * One artifact's state. 'ready': complete and current. 'stale': complete but made with an older preset, policy, or FFmpeg build (still playable; regenerate to update). 'missing': recorded but the file is gone (rebuildable). 'failed': never produced; see last_error. 'not_generated': not made yet. 'not_needed': no proxy is needed. 'not_applicable': no waveform for an asset without audio. Complete states (ready, stale, missing) carry path, size, digest, recipe, and the kind's info object (checked semantically).
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedArtifact".
+ */
+export interface DerivedArtifact {
+  kind: DerivedKind;
+  status:
+    "ready" | "stale" | "missing" | "failed" | "not_generated" | "not_needed" | "not_applicable";
+  cache_key?: Sha256;
+  /**
+   * Relative to the library folder: derived/<asset-id>/<kind>-<key16>[.mp4|.bin]. A filmstrip path is a folder.
+   */
+  path?: string;
+  size_bytes?: number;
+  sha256?: Sha2561;
+  created_at?: UtcTimestamp;
+  recipe?: Recipe;
+  last_error?: ErrorInfo;
+  proxy?: ProxyInfo;
+  filmstrip?: FilmstripInfo;
+  waveform?: WaveformInfo;
+}
+/**
+ * How an artifact was made: the versioned preset, the FFmpeg build, and the parameters chosen for this asset. Part of the cache key.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "Recipe".
+ */
+export interface Recipe {
+  /**
+   * The preset as used, with all of its parameters (open: each preset id defines its own fields; 'version' changes whenever they do).
+   */
+  preset: {
+    id: string;
+    version: number;
+    [k: string]: unknown | undefined;
+  };
+  policy_version?: number;
+  tool: {
+    ffmpeg: string | null;
+    libraries: {
+      [k: string]: string | undefined;
+    };
+  };
+  output?: {
+    [k: string]: ScalarValue | undefined;
+  };
+  tone_map?: ToneMap | null;
+  /**
+   * Filmstrip input: the proxy (by cache key) or the original file.
+   */
+  source?: {
+    kind: "proxy" | "original";
+    cache_key?: Sha256;
+  };
+}
+/**
+ * The deterministic HDR-to-SDR mapping used for a proxy: a 3D LUT computed by the worker and applied with FFmpeg's lut3d filter. Same settings give a byte-identical LUT ('lut_sha256').
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "ToneMap".
+ */
+export interface ToneMap {
+  /**
+   * Source transfer: PQ (HDR10) or HLG.
+   */
+  transfer: "smpte2084" | "arib-std-b67";
+  method: "lut3d";
+  curve: "hable";
+  source_peak_nits: number;
+  reference_white_nits: number;
+  output_primaries: "bt709";
+  output_transfer: "bt709";
+  lut_size: number;
+  interpolation: "tetrahedral" | "trilinear" | "nearest";
+  version: number;
+  lut_sha256: Sha256;
+}
+/**
+ * The latest failed attempt. A failed regeneration keeps the previous artifact.
  */
 export interface ErrorInfo {
+  /**
+   * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
+   */
+  code: string;
+  /**
+   * Human-readable explanation. Must not contain media contents or transcripts.
+   */
+  message: string;
+  retryable: boolean;
+  /**
+   * Extra machine-readable context. Values are scalars only.
+   */
+  details?: {
+    [k: string]: ScalarValue | undefined;
+  };
+  /**
+   * Last lines of a tool's stderr (e.g. FFmpeg), already redacted of user paths.
+   */
+  stderr_tail?: string;
+  correlation_id?: CorrelationId;
+}
+/**
+ * The proxy (preset proxy-h264-sdr): H.264 8-bit yuv420p, longer edge at most 1280 px, upright (rotation applied), source timing unless faster than 60 fps, AAC stereo, fast-start MP4.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "ProxyInfo".
+ */
+export interface ProxyInfo {
+  width: number;
+  height: number;
+  video_codec: "h264";
+  pixel_format: "yuv420p";
+  audio: boolean;
+  duration_ms: number;
+  /**
+   * 'source': same timing as the source (VFR stays VFR); otherwise a constant rate cap.
+   */
+  frame_rate: string;
+  tone_mapped: boolean;
+  tone_map?: ToneMap;
+}
+/**
+ * Thumbnails 0001.jpg ... in the artifact folder; thumbnail i (1-based) shows the asset at times_ms[i-1], the middle of its slice. 'count' equals the length of times_ms, which ascend (checked semantically).
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "FilmstripInfo".
+ */
+export interface FilmstripInfo {
+  count: number;
+  width: number;
+  height: number;
+  format: "jpeg";
+  /**
+   * @minItems 1
+   * @maxItems 120
+   */
+  times_ms: [TimelineMs, ...TimelineMs[]];
+  source: "proxy" | "original";
+}
+/**
+ * Binary 'owm-waveform' v1: a 16-byte header (magic OWMW, version, buckets per second, sample rate, bucket count) and one (peak, rms) byte pair per bucket of the first audio stream mixed to mono.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "WaveformInfo".
+ */
+export interface WaveformInfo {
+  format: "owm-waveform";
+  format_version: number;
+  buckets_per_second: number;
+  sample_rate_hz: number;
+  bucket_count: number;
+}
+/**
+ * Params of a 'proxy' job: prepare one asset's derived media. 'artifacts' defaults to all three; a filmstrip of an asset that needs a proxy also creates the proxy. 'force' regenerates even current artifacts.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedMediaRequest".
+ */
+export interface DerivedMediaRequest {
+  asset_id: AssetId;
+  /**
+   * @minItems 1
+   * @maxItems 3
+   */
+  artifacts?: [DerivedKind] | [DerivedKind, DerivedKind] | [DerivedKind, DerivedKind, DerivedKind];
+  proxy_policy?: ProxyPolicy;
+  force?: boolean;
+}
+/**
+ * Result of a 'proxy' job: what happened to each artifact it handled.
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedMediaResult".
+ */
+export interface DerivedMediaResult {
+  asset_id: AssetId;
+  proxy_decision: ProxyDecision;
+  outcomes: {
+    proxy?: DerivedOutcome;
+    filmstrip?: DerivedOutcome;
+    waveform?: DerivedOutcome;
+  };
+}
+/**
+ * What the derived-media cleanup removed. It only ever removes entries inside library/derived/ that no artifact row points at, and never follows links (a link is removed as a link and counted in skipped_links).
+ *
+ * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
+ * via the `definition` "DerivedCleanupResult".
+ */
+export interface DerivedCleanupResult {
+  removed_files: number;
+  removed_dirs: number;
+  freed_bytes: number;
+  skipped_links: number;
+}
+/**
+ * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
+ */
+export interface ErrorInfo1 {
   /**
    * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
    */
@@ -536,7 +938,7 @@ export interface ImportItem {
   relative_path?: string;
   outcome: "imported" | "existing" | "relinked" | "skipped" | "failed";
   asset_id?: AssetId;
-  error?: ErrorInfo;
+  error?: ErrorInfo1;
   /**
    * Other assets that look like the same content (perceptual duplicate candidates, 1.4). Reported for review only; nothing is merged.
    *
@@ -845,7 +1247,7 @@ export interface Job {
    */
   params?: {};
   /**
-   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs). Must not contain secrets.
+   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs); 'proxy': DerivedMediaResult (derived-media.schema.json#/$defs). Must not contain secrets.
    */
   result?: {};
   /**
@@ -864,7 +1266,7 @@ export interface Job {
     total: number;
   };
   message?: string;
-  error?: ErrorInfo;
+  error?: ErrorInfo1;
   correlation_id?: CorrelationId;
   created_at: UtcTimestamp;
   started_at?: UtcTimestamp;
@@ -1233,13 +1635,13 @@ export interface WatchedFolder {
    * Reported by the host: whether the folder could be read at the last check.
    */
   availability?: "unknown" | "available" | "unavailable";
-  last_error?: ErrorInfo1;
+  last_error?: ErrorInfo2;
   stats: WatchedFolderStats;
 }
 /**
  * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
  */
-export interface ErrorInfo1 {
+export interface ErrorInfo2 {
   /**
    * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
    */
@@ -1324,7 +1726,7 @@ export interface WatchedFile {
   attempts: number;
   job_id?: JobId;
   asset_id?: AssetId;
-  error?: ErrorInfo;
+  error?: ErrorInfo1;
   retry_at?: UtcTimestamp;
   updated_at: UtcTimestamp;
 }
@@ -1340,5 +1742,5 @@ export interface ScanReport {
    * True when a full reconciliation scan finished (sets last_scan_at).
    */
   scanned?: boolean;
-  error?: ErrorInfo;
+  error?: ErrorInfo1;
 }

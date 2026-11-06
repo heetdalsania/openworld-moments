@@ -9,7 +9,7 @@ from conftest import CONTRACTS_ROOT
 from openworld_moments_contracts import SUPPORTED_VERSION, ContractVersionError, check_version
 
 
-@pytest.mark.parametrize("version", ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"])
+@pytest.mark.parametrize("version", ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"])
 def test_supported_versions_pass(version: str) -> None:
     assert str(check_version("event", {"schema_version": version})) == version
 
@@ -23,7 +23,7 @@ def test_supported_versions_pass(version: str) -> None:
         ({"schema_version": "1"}, "malformed"),
         ({"schema_version": "01.0"}, "malformed"),
         ({"schema_version": "0.9"}, "older than the supported 1.x"),
-        ({"schema_version": "1.6"}, "reads up to 1.5"),
+        ({"schema_version": "1.7"}, "reads up to 1.6"),
         ({"schema_version": "2.0"}, "newer OpenWorld Moments"),
     ],
 )

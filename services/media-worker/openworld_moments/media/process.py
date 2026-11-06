@@ -3,7 +3,8 @@
 
 * Commands are argument lists; nothing is passed through a shell.
 * stdout is capped (the tool is killed past the cap) and stderr keeps only a
-  redacted tail, so a hostile file cannot exhaust memory.
+  redacted tail, so a hostile file cannot exhaust memory. Long runs can stream
+  stdout to a callback instead (``on_stdout``), which keeps nothing in memory.
 * A timeout or a set cancel event kills the process; it is always reaped
   before :func:`run_tool` returns or raises.
 """
@@ -18,6 +19,7 @@ import threading
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 from openworld_moments.redaction import BoundedTail, Redactor
 
@@ -78,8 +80,16 @@ def run_tool(
     max_stdout: int = DEFAULT_MAX_STDOUT,
     redactor: Redactor | None = None,
     on_spawn: Callable[[subprocess.Popen[bytes]], None] | None = None,
+    on_stdout: Callable[[bytes], None] | None = None,
+    cwd: Path | None = None,
 ) -> ToolResult:
     """Run ``argv`` to completion and return its exit code, stdout, and stderr tail.
+
+    With ``on_stdout``, each stdout block is passed to the callback (on a reader
+    thread, in order) instead of being collected, so ``stdout`` is empty and
+    ``max_stdout`` does not apply. An exception in the callback kills the tool and
+    is re-raised. ``cwd`` runs the tool in that directory, so arguments can name
+    files there without embedding a path.
 
     Raises :class:`ToolTimeout`, :class:`ToolCancelled`, :class:`ToolOutputTooLarge`,
     or :class:`ToolNotStarted`. A non-zero exit code is *not* an error here.
@@ -95,6 +105,7 @@ def run_tool(
             stderr=subprocess.PIPE,
             close_fds=True,
             env=_child_env(),
+            cwd=cwd,
             **_popen_kwargs(),  # type: ignore[call-overload]
         )
     except OSError as exc:
@@ -106,6 +117,7 @@ def run_tool(
 
     chunks: list[bytes] = []
     overflow = threading.Event()
+    callback_errors: list[BaseException] = []
 
     stdout, stderr = proc.stdout, proc.stderr
     if stdout is None or stderr is None:  # pragma: no cover - both are PIPE
@@ -114,7 +126,18 @@ def run_tool(
 
     def read_stdout() -> None:
         size = 0
-        while block := stdout.read(65536):
+        # read1 returns whatever is available, so small periodic output (FFmpeg
+        # -progress lines) reaches on_stdout promptly instead of waiting for 64 KiB.
+        while block := stdout.read1(65536):
+            if on_stdout is not None:
+                if callback_errors:
+                    continue  # drain until the killed tool closes the pipe
+                try:
+                    on_stdout(block)
+                except BaseException as exc:  # re-raised by run_tool
+                    callback_errors.append(exc)
+                    _kill(proc)
+                continue
             size += len(block)
             if size > max_stdout:
                 overflow.set()
@@ -139,6 +162,8 @@ def run_tool(
     outcome: type[ToolError] | None = None
     try:
         while proc.poll() is None:
+            if callback_errors:
+                break
             if cancel is not None and cancel.is_set():
                 outcome = ToolCancelled
                 break
@@ -157,6 +182,8 @@ def run_tool(
 
     if outcome is ToolCancelled:
         raise ToolCancelled("cancelled", tail.text())
+    if callback_errors:
+        raise callback_errors[0]
     if outcome is ToolTimeout:
         raise ToolTimeout(f"timed out after {timeout_s:g}s", tail.text())
     if overflow.is_set():

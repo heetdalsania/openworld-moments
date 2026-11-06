@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  AssetDerivedMedia,
   Event,
   Evidence,
   ExportManifest,
@@ -168,8 +169,66 @@ function* watchedFolder(doc: WatchedFolder): Generator<string> {
   }
 }
 
+const KINDS = ["proxy", "filmstrip", "waveform"] as const;
+const COMPLETE = ["ready", "stale", "missing"];
+const COMPLETE_FIELDS = ["cache_key", "path", "size_bytes", "sha256", "created_at", "recipe"];
+
+function* derivedMedia(doc: AssetDerivedMedia): Generator<string> {
+  const decision = doc.proxy_decision;
+  const real = decision.reasons.filter((r) => r.code !== "no_video");
+  if (decision.needed !== real.length > 0) {
+    yield "proxy_decision.needed: must be true exactly when there is a reason";
+  }
+  const kinds = doc.artifacts.map((a) => a.kind);
+  if (kinds.join() !== KINDS.join()) {
+    yield `artifacts: kinds must be ${KINDS.join(", ")} in that order, got ${kinds.join(", ")}`;
+  }
+  for (const [i, artifact] of doc.artifacts.entries()) {
+    yield* derivedArtifact(artifact as unknown as Record<string, unknown>, i);
+  }
+}
+
+function* derivedArtifact(art: Record<string, unknown>, i: number): Generator<string> {
+  const kind = String(art.kind);
+  const status = String(art.status);
+  const others = KINDS.filter((k) => k !== kind && k in art);
+  if (others.length > 0) {
+    yield `artifacts[${i}]: a ${kind} artifact cannot carry ${others.join(", ")} info`;
+  }
+  if (COMPLETE.includes(status)) {
+    for (const field of [...COMPLETE_FIELDS, kind]) {
+      if (!(field in art)) yield `artifacts[${i}].${field}: required when status is '${status}'`;
+    }
+    const path = art.path;
+    if (typeof path === "string" && !(path.split("/").pop() ?? "").startsWith(`${kind}-`)) {
+      yield `artifacts[${i}].path: does not name a ${kind} artifact`;
+    }
+  } else {
+    for (const field of ["path", "size_bytes", "sha256", "created_at", kind]) {
+      if (field in art) yield `artifacts[${i}].${field}: not allowed when status is '${status}'`;
+    }
+  }
+  if (status === "failed" && !("last_error" in art)) {
+    yield `artifacts[${i}].last_error: required when status is 'failed'`;
+  }
+  const info = art[kind] as Record<string, unknown> | undefined;
+  if (kind === "filmstrip" && info !== undefined) {
+    const times = info.times_ms as number[];
+    if (info.count !== times.length) {
+      yield `artifacts[${i}].filmstrip.count: ${String(info.count)} != ${times.length} times`;
+    }
+    if (times.some((t, j) => j > 0 && t <= (times[j - 1] ?? -1))) {
+      yield `artifacts[${i}].filmstrip.times_ms: must strictly ascend`;
+    }
+  }
+  if (kind === "proxy" && info !== undefined && info.tone_mapped !== "tone_map" in info) {
+    yield `artifacts[${i}].proxy.tone_map: present exactly when tone_mapped is true`;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "derived-media": derivedMedia,
   event,
   job,
   "job-event": jobEvent,

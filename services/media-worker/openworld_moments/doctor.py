@@ -44,6 +44,14 @@ def render(report: dict[str, Any]) -> str:
         f"  encoders  {', '.join(yes) or '-'}" + (f"   missing: {', '.join(no)}" if no else "")
     )
     lines.append("")
+    derived = report.get("derived", {})
+    if derived.get("ready"):
+        lines.append("Derived media (proxies, thumbnails, waveforms): ready")
+    else:
+        missing = ", ".join(derived.get("missing", [])) or "FFmpeg"
+        lines.append(
+            f"Derived media (proxies, thumbnails, waveforms): NOT READY, missing {missing}"
+        )
     if report["probe_ready"]:
         lines.append("Media probing: ready")
     else:

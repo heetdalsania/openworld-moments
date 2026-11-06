@@ -19,7 +19,8 @@ Rules:
 - Binary data never goes into SQLite. Rows reference files by path or hash.
   Fingerprints are small JSON metadata (a few KB per asset), not media.
 - Anything under `derived/` may be deleted at any time; the database must not
-  depend on it existing.
+  depend on it existing. A deleted derived file shows as `missing` and is
+  rebuilt from the asset ([derived media](./derived-media.md)).
 - Settings hold small JSON values only, never secrets or footage.
 - Support bundles may include `DatabaseHealth`, which contains no paths or user
   data (spec §14.3).
@@ -41,6 +42,7 @@ Rules:
 | `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, since 0005 `set_fast_hash`, `ids_by_fast_hash`, `ids_with_duration`, plus `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
 | `FingerprintRepository` | `asset_fingerprints` (0005) | One versioned fingerprint per (asset, kind): `fast`, `frames`, `audio`; small canonical JSON, never media. Cascades with its asset ([fingerprints](./fingerprints.md)) |
 | `DuplicateCandidateRepository` | `duplicate_candidates` (0005) | Perceptual look-alike pairs (`asset_a < asset_b`). Re-recording refreshes score and evidence but never `review_state`. Cascades with either asset; never deletes media |
+| `DerivedArtifactRepository` | `derived_artifacts` (0007) | One row per (asset, kind) for the proxy, filmstrip, and waveform: status (`ready` or `failed`), cache key, recipe, kind-specific info, the artifact's path relative to the library (`derived/<asset-id>/…`), size, digest, and the last error. A failed regeneration keeps the previous ready artifact. Cascades with the asset; rows never delete files ([derived media](./derived-media.md)) |
 | `WatchedFolderRepository` | `watched_folders` (0001, extended in 0006), `watched_files` (0006) | Folder settings (mode, recursion, include/exclude, availability, last scan) and the latest version (size, mtime) of each file with its import job. Deleting a folder deletes only these rows ([watched folders](./watched-folders.md)) |
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |

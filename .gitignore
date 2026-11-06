@@ -39,6 +39,8 @@ htmlcov/
 library/
 managed-media/
 derived/
+# ...but not the worker's derived-media source package (M08).
+!services/media-worker/openworld_moments/derived/
 exports/
 models/
 media-fixtures/
