@@ -39,10 +39,13 @@ from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
 from openworld_moments.storage import (
     AssetRepository,
+    ConflictError,
     DuplicateCandidateRepository,
     NotFoundError,
+    WatchedFolderRepository,
     transaction,
 )
+from openworld_moments.watched import service as watched
 
 API_VERSION = 1
 _CORRELATION = re.compile(r"^cor_[0-9A-HJKMNP-TV-Z]{26}$")
@@ -394,6 +397,140 @@ def create_app(
                 "duplicate.not_found", f"duplicate candidate {candidate_id} not found", status=404
             ) from exc
         return candidate_doc(row)
+
+    # -- watched folders (M07) ----------------------------------------------------------
+
+    @app.exception_handler(watched.WatchError)
+    async def watch_error(request: Request, exc: watched.WatchError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=exc.status
+        )
+
+    def folder_or_404(conn: Any, folder_id: int) -> Any:
+        try:
+            return WatchedFolderRepository(conn).get(folder_id)
+        except NotFoundError as exc:
+            raise watched.WatchError(
+                "watch.folder_not_found", f"watched folder {folder_id} not found", status=404
+            ) from exc
+
+    @app.get("/v1/watched-folders")
+    async def list_watched() -> list[dict[str, Any]]:
+        def read(conn: Any) -> list[dict[str, Any]]:
+            return [watched.folder_doc(conn, f) for f in WatchedFolderRepository(conn).all()]
+
+        result: list[dict[str, Any]] = await asyncio.to_thread(with_conn, read)
+        return result
+
+    @app.post("/v1/watched-folders", status_code=201)
+    async def add_watched(body: dict[str, Any]) -> dict[str, Any]:
+        clean = watched.validate_changes(body, creating=True)
+
+        def create(conn: Any) -> dict[str, Any]:
+            with transaction(conn):
+                try:
+                    row = WatchedFolderRepository(conn).create(**clean)
+                except ConflictError as exc:
+                    raise watched.WatchError(
+                        "watch.already_watched", "This folder is already watched.", status=409
+                    ) from exc
+            return watched.folder_doc(conn, row)
+
+        result: dict[str, Any] = await asyncio.to_thread(with_conn, create)
+        return result
+
+    @app.get("/v1/watched-folders/{folder_id}")
+    async def get_watched(folder_id: int) -> dict[str, Any]:
+        result: dict[str, Any] = await asyncio.to_thread(
+            with_conn, lambda conn: watched.folder_doc(conn, folder_or_404(conn, folder_id))
+        )
+        return result
+
+    @app.patch("/v1/watched-folders/{folder_id}")
+    async def change_watched(folder_id: int, body: dict[str, Any]) -> dict[str, Any]:
+        changes = watched.validate_changes(body, creating=False)
+
+        def update(conn: Any) -> dict[str, Any]:
+            folder_or_404(conn, folder_id)
+            with transaction(conn):
+                row = (
+                    WatchedFolderRepository(conn).update(folder_id, changes)
+                    if changes
+                    else (WatchedFolderRepository(conn).get(folder_id))
+                )
+            return watched.folder_doc(conn, row)
+
+        result: dict[str, Any] = await asyncio.to_thread(with_conn, update)
+        return result
+
+    @app.delete("/v1/watched-folders/{folder_id}", status_code=204)
+    async def remove_watched(folder_id: int) -> Response:
+        """Stops watching. The folder and its files on disk are never touched."""
+
+        def delete(conn: Any) -> None:
+            folder_or_404(conn, folder_id)
+            with transaction(conn):
+                WatchedFolderRepository(conn).delete(folder_id)
+
+        await asyncio.to_thread(with_conn, delete)
+        return Response(status_code=204)
+
+    @app.post("/v1/watched-folders/{folder_id}/scans")
+    async def report_scan(folder_id: int, body: dict[str, Any]) -> dict[str, Any]:
+        available, scanned, error = watched.scan_error(body)
+
+        def record(conn: Any) -> dict[str, Any]:
+            folder_or_404(conn, folder_id)
+            with transaction(conn):
+                row = WatchedFolderRepository(conn).record_scan(
+                    folder_id, available=available, scanned=scanned, error=error
+                )
+            return watched.folder_doc(conn, row)
+
+        result: dict[str, Any] = await asyncio.to_thread(with_conn, record)
+        return result
+
+    @app.get("/v1/watched-folders/{folder_id}/files")
+    async def watched_files(
+        folder_id: int, limit: int = 200, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        def read(conn: Any) -> list[dict[str, Any]]:
+            folder_or_404(conn, folder_id)
+            rows = WatchedFolderRepository(conn).files(
+                folder_id, limit=max(1, min(limit, 1000)), offset=max(0, offset)
+            )
+            return [watched.file_doc(conn, r) for r in rows]
+
+        result: list[dict[str, Any]] = await asyncio.to_thread(with_conn, read)
+        return result
+
+    @app.post("/v1/watched-folders/{folder_id}/files")
+    async def report_file(folder_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """A stable file reported by the host: import it unless this version is known."""
+        rel, size, mtime = watched.validate_report(body)
+
+        def check(conn: Any) -> tuple[Any, int | None, dict[str, Any]]:
+            folder = folder_or_404(conn, folder_id)
+            attempt, decision = watched.decide(conn, folder, rel, size, mtime)
+            return folder, attempt, decision
+
+        checked: tuple[Any, int | None, dict[str, Any]] = await asyncio.to_thread(with_conn, check)
+        folder, attempt, decision = checked
+        if attempt is None:
+            return decision
+        job, _ = await engine.submit_once(
+            "import",
+            watched.import_params(folder, rel),
+            cid(request),
+            idempotency_key=watched.idempotency_key(folder_id, rel, size, mtime, attempt),
+        )
+
+        def record(conn: Any) -> dict[str, Any]:
+            with transaction(conn):
+                return watched.record_submission(conn, folder, rel, size, mtime, attempt, job.id)
+
+        result: dict[str, Any] = await asyncio.to_thread(with_conn, record)
+        return result
 
     @app.post("/v1/assets/{asset_id}/relink", status_code=201)
     async def relink(

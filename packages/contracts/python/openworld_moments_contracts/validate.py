@@ -26,6 +26,7 @@ from openworld_moments_contracts.generated import (
     profile_schema,
     project_schema,
     render_preset_schema,
+    watched_folder_schema,
 )
 from openworld_moments_contracts.semantic import semantic_issues
 from openworld_moments_contracts.versioning import check_version
@@ -43,6 +44,7 @@ CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
     "profile": (profile_schema.Profile, True),
     "project": (project_schema.Project, True),
     "render-preset": (render_preset_schema.RenderPreset, True),
+    "watched-folder": (watched_folder_schema.WatchedFolder, True),
 }
 
 

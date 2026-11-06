@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.5",
+  "id": 2,
+  "path": "/Volumes/Capture Drive/OBS",
+  "source_kind": "obs",
+  "mode": "reference",
+  "recursive": true,
+  "include": [],
+  "exclude": [".*", "**/.*/**"],
+  "enabled": false,
+  "created_at": "2026-11-20T05:40:10Z",
+  "updated_at": "2026-11-20T05:40:10Z",
+  "availability": "unavailable",
+  "stats": {
+    "tracked": 0,
+    "imported": 0,
+    "in_progress": 0,
+    "failed": 0
+  },
+  "last_error": {
+    "code": "watch.folder_unavailable",
+    "message": "The folder cannot be read. It may be on a disconnected drive.",
+    "retryable": true
+  }
+}

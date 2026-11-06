@@ -41,6 +41,7 @@ Rules:
 | `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, since 0005 `set_fast_hash`, `ids_by_fast_hash`, `ids_with_duration`, plus `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
 | `FingerprintRepository` | `asset_fingerprints` (0005) | One versioned fingerprint per (asset, kind): `fast`, `frames`, `audio`; small canonical JSON, never media. Cascades with its asset ([fingerprints](./fingerprints.md)) |
 | `DuplicateCandidateRepository` | `duplicate_candidates` (0005) | Perceptual look-alike pairs (`asset_a < asset_b`). Re-recording refreshes score and evidence but never `review_state`. Cascades with either asset; never deletes media |
+| `WatchedFolderRepository` | `watched_folders` (0001, extended in 0006), `watched_files` (0006) | Folder settings (mode, recursion, include/exclude, availability, last scan) and the latest version (size, mtime) of each file with its import job. Deleting a folder deletes only these rows ([watched folders](./watched-folders.md)) |
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |
 | `EventRepository` | `events` | contract `Event` |
@@ -52,9 +53,9 @@ Rows read back are validated through the contracts' `load()`, so storage
 cannot return a document that breaks its contract. Errors: `NotFoundError`,
 `ConflictError` (uniqueness or reference), and `InUseError` (delete refused).
 
-`transcript_segments`, `render_jobs`, `tags`, `collections`,
-`collection_items`, and `watched_folders` have tables and constraints now;
-their repositories arrive with the milestones that use them (M07, M18, M24, M26).
+`transcript_segments`, `render_jobs`, `tags`, `collections`, and
+`collection_items` have tables and constraints now; their repositories arrive
+with the milestones that use them (M18, M24, M26).
 
 ## Delete policies
 

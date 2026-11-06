@@ -1,0 +1,138 @@
+{
+  "description": "Watched-folder pattern cases shared by the Rust host and the Python worker. A path is a candidate when it has a supported video extension, matches 'include' (or include is empty), and matches no 'exclude' pattern.",
+  "default_exclude": [".*", "**/.*/**"],
+  "cases": [
+    {
+      "path": "clip.mp4",
+      "include": [],
+      "exclude": [".*", "**/.*/**"],
+      "candidate": true
+    },
+    {
+      "path": "Clip.MP4",
+      "include": [],
+      "exclude": [".*", "**/.*/**"],
+      "candidate": true
+    },
+    {
+      "path": "notes.txt",
+      "include": [],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": "clip.mp4.part",
+      "include": [],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": ".hidden.mp4",
+      "include": [],
+      "exclude": [".*", "**/.*/**"],
+      "candidate": false
+    },
+    {
+      "path": "sub/.cache/clip.mp4",
+      "include": [],
+      "exclude": [".*", "**/.*/**"],
+      "candidate": false
+    },
+    {
+      "path": "sub/clip.mp4",
+      "include": [],
+      "exclude": [".*", "**/.*/**"],
+      "candidate": true
+    },
+    {
+      "path": "Halo/2026/clip.mkv",
+      "include": ["Halo/**"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "Forza/clip.mkv",
+      "include": ["Halo/**"],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": "a/b/c/clip.mov",
+      "include": ["**/c/*.mov"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "c/clip.mov",
+      "include": ["**/c/*.mov"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "a/clip.mov",
+      "include": ["*.mov"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "clip-01.mp4",
+      "include": ["clip-??.mp4"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "clip-1.mp4",
+      "include": ["clip-??.mp4"],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": "raw/clip.mp4",
+      "include": [],
+      "exclude": ["raw/*"],
+      "candidate": false
+    },
+    {
+      "path": "raw/deep/clip.mp4",
+      "include": [],
+      "exclude": ["raw/*"],
+      "candidate": true
+    },
+    {
+      "path": "raw/deep/clip.mp4",
+      "include": [],
+      "exclude": ["raw/**"],
+      "candidate": false
+    },
+    {
+      "path": "Screenshot.png",
+      "include": ["*"],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": "a/xyz/b.mp4",
+      "include": ["a/x**z/*.mp4"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "a/x/q/z/b.mp4",
+      "include": ["a/x**z/*.mp4"],
+      "exclude": [],
+      "candidate": false
+    },
+    {
+      "path": "deep/er/clip.mp4",
+      "include": ["**"],
+      "exclude": [],
+      "candidate": true
+    },
+    {
+      "path": "Clip.MKV",
+      "include": ["*.mkv"],
+      "exclude": ["CLIP.*"],
+      "candidate": false
+    }
+  ]
+}

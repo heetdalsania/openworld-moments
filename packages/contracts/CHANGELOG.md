@@ -2,6 +2,19 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.5 — 2026-11-06 (M07)
+
+Additive; every 1.4 document is valid 1.5.
+
+- `watched-folder` (new): `WatchedFolder` (path, source kind, mode, recursion,
+  include/exclude patterns, enabled, availability, last scan, last error,
+  per-state file counts), with `$defs` `WatchedFolderRequest`,
+  `WatchedFileReport`, `WatchedFileDecision`, `WatchedFile`, `ScanReport`,
+  `Patterns`, and `SourceKind`. Semantic rule: per-state counts fit in
+  `stats.tracked`.
+- Shared pattern cases for host and worker:
+  `fixtures/watched-folder/patterns.json`.
+
 ## 1.4 — 2026-11-06 (M06)
 
 Additive; every 1.3 document is valid 1.4.

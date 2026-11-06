@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type AppInfo, fetchAppInfo } from "./appInfo";
+import { WatchedFolders } from "./WatchedFolders";
+import type { WatchedFolderView } from "./watched";
+import { XboxOnboarding } from "./XboxOnboarding";
 import { describeWorker, fetchWorkerStatus, onWorkerStatus, type WorkerStatus } from "./worker";
 
 type HostState =
@@ -9,6 +12,10 @@ type HostState =
 export function App() {
   const [host, setHost] = useState<HostState>({ status: "loading" });
   const [worker, setWorker] = useState<WorkerStatus | null>(null);
+  const [folders, setFolders] = useState<WatchedFolderView[] | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const onFolders = useCallback((views: WatchedFolderView[]) => setFolders(views), []);
+  const hasXbox = folders?.some((v) => v.folder.source_kind === "xbox") ?? true;
 
   useEffect(() => {
     let cancelled = false;
@@ -45,10 +52,10 @@ export function App() {
   return (
     <main className="placeholder">
       <h1>OpenWorld Moments</h1>
-      <p className="stage">Planning stage — no product features yet.</p>
+      <p className="stage">Planning stage — early features only.</p>
       <p>
-        This window confirms the desktop shell builds and runs. Import, sessions, and editing arrive
-        in later milestones.
+        Watched folders can import new captures. The library, sessions, and editing arrive in later
+        milestones.
       </p>
       <p className="host" role="status">
         {host.status === "loading" && "Connecting to desktop host…"}
@@ -58,6 +65,12 @@ export function App() {
       <p className="host" data-testid="worker-status">
         {describeWorker(worker)}
       </p>
+      {worker?.status === "ready" && (
+        <>
+          {!hasXbox && <XboxOnboarding onAdded={() => setRefreshKey((k) => k + 1)} />}
+          <WatchedFolders onChange={onFolders} refreshKey={refreshKey} />
+        </>
+      )}
       <p className="notice">
         Unofficial community project. Not affiliated with or endorsed by Rockstar Games.
       </p>

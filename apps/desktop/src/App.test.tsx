@@ -7,14 +7,17 @@ const invoke = vi.hoisted(() => vi.fn());
 const listen = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
 
 type Listener = (event: { payload: unknown }) => void;
 let statusListener: Listener | undefined;
 
-function mockHost(appInfo: Promise<unknown>, worker: unknown) {
-  invoke.mockImplementation((cmd: string) =>
-    cmd === "app_info" ? appInfo : Promise.resolve(worker),
-  );
+function mockHost(appInfo: Promise<unknown>, worker: unknown, folders: unknown[] = []) {
+  invoke.mockImplementation((cmd: string) => {
+    if (cmd === "app_info") return appInfo;
+    if (cmd === "watched_folders_list") return Promise.resolve({ folders, status: [] });
+    return Promise.resolve(worker);
+  });
   listen.mockImplementation((_name: string, cb: Listener) => {
     statusListener = cb;
     return Promise.resolve(() => undefined);
@@ -70,5 +73,45 @@ describe("App placeholder", () => {
       });
     });
     expect(screen.getByText("Worker unavailable: crashed")).toBeTruthy();
+  });
+
+  it("offers Xbox onboarding once the worker is ready and no Xbox folder exists", async () => {
+    window.localStorage.clear();
+    const ready = { status: "ready", port: 1, pid: 2, restarts: 0 };
+    mockHost(
+      Promise.resolve({ name: "OpenWorld Moments", version: "0.0.0", stage: "planning" }),
+      ready,
+    );
+    render(<App />);
+    expect(await screen.findByRole("region", { name: /Import Xbox captures/ })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: "Watched folders" })).toBeTruthy();
+  });
+
+  it("hides Xbox onboarding when an Xbox folder is already watched", async () => {
+    window.localStorage.clear();
+    const ready = { status: "ready", port: 1, pid: 2, restarts: 0 };
+    const xbox = {
+      schema_version: "1.5",
+      id: 1,
+      path: "/OneDrive/Xbox",
+      source_kind: "xbox",
+      mode: "reference",
+      recursive: true,
+      include: [],
+      exclude: [],
+      enabled: true,
+      created_at: "2026-11-20T05:40:10Z",
+      updated_at: "2026-11-20T05:40:10Z",
+      availability: "available",
+      stats: { tracked: 0, imported: 0, in_progress: 0, failed: 0 },
+    };
+    mockHost(
+      Promise.resolve({ name: "OpenWorld Moments", version: "0.0.0", stage: "planning" }),
+      ready,
+      [xbox],
+    );
+    render(<App />);
+    expect(await screen.findByText("/OneDrive/Xbox")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: /Import Xbox captures/ })).toBeNull();
   });
 });

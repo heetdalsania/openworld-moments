@@ -34,6 +34,9 @@ from openworld_moments.storage.repositories import (
     StoredFingerprint,
     Story,
     StoryRepository,
+    WatchedFileRow,
+    WatchedFolderRepository,
+    WatchedFolderRow,
 )
 
 __all__ = [
@@ -62,6 +65,9 @@ __all__ = [
     "StoredFingerprint",
     "Story",
     "StoryRepository",
+    "WatchedFileRow",
+    "WatchedFolderRepository",
+    "WatchedFolderRow",
     "transaction",
     "utc_now",
 ]
