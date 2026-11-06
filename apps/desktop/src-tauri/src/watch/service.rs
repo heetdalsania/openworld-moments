@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
 
+use notify::event::{AccessKind, AccessMode, EventKind};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use serde_json::json;
@@ -103,6 +104,21 @@ struct Folder {
 
 type Event = (i64, PathBuf);
 
+/// Most events handled per loop iteration, so a storm cannot keep the loop from
+/// ticking, publishing status, or stopping. Anything left waits for the next tick.
+const MAX_EVENTS_PER_TICK: usize = 10_000;
+
+/// Whether a native event can mean a file appeared or changed. Opens, reads, and
+/// read-only closes cannot. They are dropped, otherwise the watcher's own scans
+/// (which open folders and files) would feed back into new events on Linux.
+fn is_change_hint(kind: &EventKind) -> bool {
+    match kind {
+        EventKind::Access(AccessKind::Close(AccessMode::Write)) => true,
+        EventKind::Access(_) => false,
+        _ => true,
+    }
+}
+
 /// Cheap to clone; clones share the loop's status and refresh signal.
 #[derive(Clone)]
 pub struct WatchService<S: Sink> {
@@ -151,7 +167,17 @@ impl<S: Sink> WatchService<S> {
                 }
                 reload = false;
             }
-            while let Ok((id, path)) = rx.try_recv() {
+            // Events are hints: one check per distinct path per tick is enough.
+            let mut hinted: HashSet<Event> = HashSet::new();
+            while hinted.len() < MAX_EVENTS_PER_TICK {
+                match rx.try_recv() {
+                    Ok(event) => {
+                        hinted.insert(event);
+                    }
+                    Err(_) => break,
+                }
+            }
+            for (id, path) in hinted {
                 if let Some(folder) = folders.get_mut(&id) {
                     self.on_event(folder, &path);
                 }
@@ -354,7 +380,9 @@ impl<S: Sink> WatchService<S> {
         let id = cfg.id;
         let mut watcher =
             notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-                if let Ok(event) = res {
+                if let Ok(event) = res
+                    && is_change_hint(&event.kind)
+                {
                     for path in event.paths {
                         let _ = tx.send((id, path));
                     }
@@ -426,5 +454,31 @@ impl<S: Sink> WatchService<S> {
         if let Ok(mut status) = self.status.lock() {
             *status = out;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use notify::event::{CreateKind, ModifyKind, RenameMode};
+
+    #[test]
+    fn only_events_that_can_change_files_are_hints() {
+        assert!(is_change_hint(&EventKind::Create(CreateKind::Any)));
+        assert!(is_change_hint(&EventKind::Modify(ModifyKind::Name(
+            RenameMode::To
+        ))));
+        assert!(is_change_hint(&EventKind::Access(AccessKind::Close(
+            AccessMode::Write
+        ))));
+        assert!(is_change_hint(&EventKind::Any));
+        // The watcher's own scans open folders and files; that must not loop.
+        assert!(!is_change_hint(&EventKind::Access(AccessKind::Open(
+            AccessMode::Any
+        ))));
+        assert!(!is_change_hint(&EventKind::Access(AccessKind::Close(
+            AccessMode::Read
+        ))));
+        assert!(!is_change_hint(&EventKind::Access(AccessKind::Read)));
     }
 }

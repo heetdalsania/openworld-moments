@@ -123,6 +123,10 @@ The host uses the `notify` crate's recommended backend for each platform:
   only)". New files are then found by the 15-minute reconciliation scan.
 - **Events are only hints:** every candidate is re-checked by its metadata, so
   lost, duplicated, or coalesced events never cause a wrong or repeated import.
+  Access events (open, read, read-only close) are dropped because they cannot
+  change a file; on Linux the watcher's own scans would otherwise trigger new
+  events. Each tick handles at most 10,000 distinct event paths, so an event
+  storm cannot stall the loop.
 - **Links are never followed** inside a watched folder, so a file is never
   reached through a symlink or junction.
 

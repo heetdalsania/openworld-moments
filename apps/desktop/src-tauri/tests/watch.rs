@@ -92,7 +92,10 @@ impl Running {
     }
     async fn stop(self) {
         self.service.stop();
-        let _ = self.task.await;
+        tokio::time::timeout(Duration::from_secs(5), self.task)
+            .await
+            .expect("the watch loop stops promptly")
+            .expect("the watch loop does not panic");
     }
 }
 
