@@ -70,6 +70,11 @@ export type ProjectId = string;
  */
 export type Sha256 = string;
 /**
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "AlgorithmVersion".
+ */
+export type AlgorithmVersion = number;
+/**
  * 'reference' keeps the file where it is; 'managed' copies it into the library's content-addressed storage. Moving is not offered (spec 8.1.3).
  *
  * This interface was referenced by `ImportResult`'s JSON-Schema
@@ -98,6 +103,7 @@ export interface ContractsBundle {
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
+  fingerprint?: AssetFingerprints;
   import?: ImportResult;
   "job-event"?: JobEvent;
   job?: Job;
@@ -315,6 +321,159 @@ export interface ManifestCommand {
   args: string[];
 }
 /**
+ * Identity and similarity fingerprints of one asset (spec 8.1.4, M06). 'sha256' is exact identity. 'fast_hash' screens for exact duplicates cheaply. 'frames' and 'audio' cover bounded head and tail windows for duplicate candidates and overlap alignment (M12). Every fingerprint names its algorithm and version; rows written by an older version are stale and recomputed by the 'fingerprint' backfill job.
+ */
+export interface AssetFingerprints {
+  schema_version: string;
+  asset_id: AssetId;
+  sha256: Sha256;
+  fast_hash?: FastHash;
+  frames?: FrameFingerprint;
+  audio?: AudioFingerprint;
+}
+/**
+ * 'owm-fast': SHA-256 over the file size (8 bytes, little-endian) and its first and last MiB. Equal values only suggest identical files; the full SHA-256 decides.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "FastHash".
+ */
+export interface FastHash {
+  algorithm: "owm-fast";
+  version: AlgorithmVersion;
+  value: string;
+  computed_at: UtcTimestamp;
+}
+/**
+ * 'dhash256': difference hash of a 17x16 grayscale downscale, sampled at 'sample_fps' over the first and last 'window_ms' of the asset (the windows overlap for short assets).
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "FrameFingerprint".
+ */
+export interface FrameFingerprint {
+  algorithm: "dhash256";
+  version: AlgorithmVersion;
+  sample_fps: number;
+  window_ms: number;
+  /**
+   * @maxItems 1800
+   */
+  head: FrameHash[];
+  /**
+   * @maxItems 1800
+   */
+  tail: FrameHash[];
+  computed_at: UtcTimestamp;
+}
+/**
+ * One sampled frame: its time in the asset and a 256-bit perceptual hash (64 lowercase hex digits). 'flat' marks a near-uniform frame (black, white, fades) that carries no identity and is ignored when comparing.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "FrameHash".
+ */
+export interface FrameHash {
+  t_ms: TimelineMs;
+  hash: string;
+  flat?: boolean;
+}
+/**
+ * 'energy-envelope': loudness of the first audio stream, mixed to mono at 8 kHz, as one value per 1/'rate_hz' seconds (0 = silence, 255 = full scale; 0.5 dB steps over a 127.5 dB range) over the same windows as the frame fingerprint. Compact enough for cross-correlation when refining overlaps. Absent when the asset has no audio.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "AudioFingerprint".
+ */
+export interface AudioFingerprint {
+  algorithm: "energy-envelope";
+  version: AlgorithmVersion;
+  rate_hz: number;
+  window_ms: number;
+  head_start_ms: TimelineMs;
+  /**
+   * @maxItems 3000
+   */
+  head: number[];
+  tail_start_ms: TimelineMs;
+  /**
+   * @maxItems 3000
+   */
+  tail: number[];
+  computed_at: UtcTimestamp;
+}
+/**
+ * Two distinct assets whose sampled frames look the same (same content in another file: a remux, a re-encode, a re-download). Only ever reported: nothing is merged or deleted. A person decides with 'review_state'; an automatic recomputation never overrides that decision.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "DuplicateCandidate".
+ */
+export interface DuplicateCandidate {
+  id: number;
+  /**
+   * The two assets, in ascending order.
+   *
+   * @minItems 2
+   * @maxItems 2
+   */
+  asset_ids: [AssetId, AssetId];
+  kind: "perceptual";
+  score: Confidence;
+  evidence: DuplicateEvidence;
+  algorithm: "perceptual-match";
+  version: AlgorithmVersion;
+  review_state: "unreviewed" | "duplicate" | "distinct";
+  created_at: UtcTimestamp;
+  updated_at: UtcTimestamp;
+}
+/**
+ * Why two assets are candidates: how many informative head/tail frame pairs were compared, how many matched (Hamming distance at most 'max_distance'), their mean distance, and the duration difference. 'audio_correlation' (-1..1) is added when both have audio; it informs review but does not decide.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "DuplicateEvidence".
+ */
+export interface DuplicateEvidence {
+  compared_frames: number;
+  matching_frames: number;
+  mean_distance: number;
+  max_distance: number;
+  duration_delta_ms: number;
+  audio_correlation?: number;
+}
+/**
+ * Parameters of a 'fingerprint' (backfill) job. Without 'asset_ids', every asset is considered. Without 'force', only missing or stale (older-version) fingerprints are computed, so a restarted job continues where it stopped.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "FingerprintRequest".
+ */
+export interface FingerprintRequest {
+  /**
+   * @minItems 1
+   * @maxItems 10000
+   */
+  asset_ids?: [AssetId, ...AssetId[]];
+  force?: boolean;
+}
+/**
+ * Result of a 'fingerprint' job.
+ *
+ * This interface was referenced by `AssetFingerprints`'s JSON-Schema
+ * via the `definition` "FingerprintResult".
+ */
+export interface FingerprintResult {
+  considered: number;
+  /**
+   * Assets that got at least one new fingerprint.
+   */
+  updated: number;
+  up_to_date: number;
+  /**
+   * Assets whose bytes could not be read (missing source).
+   */
+  unavailable: number;
+  /**
+   * Assets whose fingerprinting failed (for example, undecodable frames).
+   */
+  failed: number;
+  new_candidates: number;
+}
+/**
  * Per-file report of one import batch (spec 8.1, M05): the 'result' of an 'import' job. Every candidate file appears exactly once; failures are never dropped. Items name files only relative to the request root they came from; full paths stay in the job params and are never logged. Consistency between 'totals' and 'items' is checked semantically.
  */
 export interface ImportResult {
@@ -359,6 +518,198 @@ export interface ImportItem {
   outcome: "imported" | "existing" | "relinked" | "skipped" | "failed";
   asset_id?: AssetId;
   error?: ErrorInfo;
+  /**
+   * Other assets that look like the same content (perceptual duplicate candidates, 1.4). Reported for review only; nothing is merged.
+   *
+   * @maxItems 20
+   */
+  candidate_asset_ids?:
+    | []
+    | [AssetId]
+    | [AssetId, AssetId]
+    | [AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId, AssetId]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ]
+    | [
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId,
+        AssetId
+      ];
 }
 /**
  * Parameters of an 'import' job. Each path is a file or a folder; folders are scanned for media files ('recursive' includes subfolders). Paths must be absolute (checked by the worker).
@@ -455,7 +806,8 @@ export interface Job {
     | "diagnostic"
     | "probe"
     | "relink"
-    | "check_sources";
+    | "check_sources"
+    | "fingerprint";
   state:
     | "queued"
     | "probing"
@@ -474,7 +826,7 @@ export interface Job {
    */
   params?: {};
   /**
-   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs). Must not contain secrets.
+   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs). Must not contain secrets.
    */
   result?: {};
   /**

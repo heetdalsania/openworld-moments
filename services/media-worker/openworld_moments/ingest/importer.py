@@ -19,10 +19,12 @@ only its provenance ``last_seen_at`` changes.
 from __future__ import annotations
 
 import contextlib
+import os
 import shutil
 import sqlite3
 import stat
 import threading
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -33,6 +35,14 @@ from openworld_moments_contracts import load, normalize
 from openworld_moments_contracts.generated.import_schema import RelinkResult, SourceCheckResult
 from openworld_moments_contracts.generated.media_asset_schema import MediaAsset
 
+from openworld_moments.fingerprints import algorithms as fp_alg
+from openworld_moments.fingerprints.service import (
+    CURRENT,
+    FingerprintCancelled,
+    Fingerprinter,
+    FingerprintFailure,
+    is_current,
+)
 from openworld_moments.ids import new_id
 from openworld_moments.ingest.files import (
     FileStepError,
@@ -59,7 +69,9 @@ from openworld_moments.storage import (
     AssetRepository,
     ConflictError,
     Database,
+    FingerprintRepository,
     NotFoundError,
+    StoredFingerprint,
     transaction,
     utc_now,
 )
@@ -67,6 +79,10 @@ from openworld_moments.storage.repositories import SCHEMA_VERSION
 
 Mode = Literal["reference", "managed"]
 Progress = Callable[[int, int, str], None]
+SetState = Callable[[str], None]
+ReportFor = Callable[[int], Callable[[int], None]]
+#: Seconds between byte-progress updates while hashing or copying one large file.
+BYTE_PROGRESS_INTERVAL_S = 0.5
 
 #: Largest file one import accepts. Far above any console capture; stops absurd inputs.
 MAX_FILE_BYTES = 1 << 40  # 1 TiB
@@ -226,6 +242,7 @@ class Importer:
         self.max_file_bytes = max_file_bytes
         self.probe_timeout_s = probe_timeout_s
         self.free_space_margin = free_space_margin
+        self.fingerprinter = Fingerprinter(database, tools, library=self.library)
 
     # -- import -----------------------------------------------------------------------
 
@@ -236,9 +253,13 @@ class Importer:
         job_id: str,
         cancel: threading.Event,
         progress: Progress,
+        set_state: SetState | None = None,
     ) -> dict[str, Any]:
         """Import a batch. Returns the ImportResult, or raises ImportFailure (with the
-        result attached) when nothing could be imported, or ImportCancelled."""
+        result attached) when nothing could be imported, or ImportCancelled.
+
+        New assets are fingerprinted afterwards (state ``fingerprinting``); look-alike
+        assets are reported per item as ``candidate_asset_ids``."""
         ffprobe = _require_ffprobe(self.tools)
         try:
             entries = scan(params["paths"], recursive=bool(params.get("recursive", False)))
@@ -253,6 +274,7 @@ class Importer:
         staging = self.library.job_staging(job_id)
         self.library.clean_import_staging(job_id)  # leftovers of an interrupted attempt
         done = 0
+        new_assets: list[tuple[int, str]] = []
         if candidates:
             progress(0, candidates, f"0 of {candidates} files")
         conn = self.database.connect()
@@ -267,16 +289,23 @@ class Importer:
                     continue
                 if cancel.is_set():
                     raise ImportCancelled
+                report_for = self._byte_progress(progress, done, candidates)
                 try:
                     outcome, asset_id = self._import_one(
-                        conn, entry, batch, ffprobe, staging, cancel
+                        conn, entry, batch, ffprobe, staging, cancel, report_for
                     )
                 except _ItemError as exc:
                     batch.add(entry, "failed", error=exc.error)
                 else:
                     batch.add(entry, outcome, asset_id=asset_id)
+                    if outcome in ("imported", "relinked"):
+                        new_assets.append((len(batch.items) - 1, asset_id))
                 done += 1
                 progress(done, candidates, f"{done} of {candidates} files")
+            if new_assets:
+                if set_state is not None:
+                    set_state("fingerprinting")
+                self._fingerprint_new(conn, batch, new_assets, cancel, progress)
         finally:
             conn.close()
             self.library.clean_import_staging(job_id)
@@ -312,6 +341,75 @@ class Importer:
             )
         return result
 
+    @staticmethod
+    def _byte_progress(progress: Progress, done: int, total: int) -> ReportFor:
+        """For one file of ``size`` bytes: a callback posting throttled
+        'File N of M: P%' messages while it is hashed or copied."""
+
+        def report_for(size: int) -> Callable[[int], None]:
+            last = [time.monotonic()]
+
+            def on_bytes(read: int) -> None:
+                now = time.monotonic()
+                if size <= 0 or now - last[0] < BYTE_PROGRESS_INTERVAL_S:
+                    return
+                last[0] = now
+                progress(done, total, f"File {done + 1} of {total}: {min(99, read * 100 // size)}%")
+
+            return on_bytes
+
+        return report_for
+
+    def _fingerprint_new(
+        self,
+        conn: sqlite3.Connection,
+        batch: _Batch,
+        new_assets: list[tuple[int, str]],
+        cancel: threading.Event,
+        progress: Progress,
+    ) -> None:
+        """Fingerprint newly imported assets and attach their duplicate candidates.
+
+        Best effort: a decode failure or a missing FFmpeg never fails the import;
+        the ``fingerprint`` backfill job fills the gap later.
+        """
+        total = len(new_assets)
+        for k, (index, asset_id) in enumerate(new_assets, start=1):
+            progress(k - 1, total, f"Fingerprinting {k} of {total}")
+            try:
+                outcome = self.fingerprinter.fingerprint_asset(conn, asset_id, cancel=cancel)
+            except FingerprintCancelled as exc:
+                raise ImportCancelled from exc
+            except FingerprintFailure:
+                return  # FFmpeg unusable: skip the rest; backfill later
+            if outcome.candidates:
+                batch.items[index]["candidate_asset_ids"] = outcome.candidates[:20]
+        progress(total, total, f"Fingerprinted {total} of {total}")
+
+    def _without_copy(
+        self,
+        conn: sqlite3.Connection,
+        path: Path,
+        fast: str,
+        before: os.stat_result,
+        cancel: threading.Event,
+        on_bytes: Callable[[int], None],
+    ) -> Fingerprint | None:
+        """Managed mode: if the fast hash says these bytes may already be in the library,
+        confirm with the full SHA-256 in place and skip the copy. Returns None when a
+        copy is needed (no match, or the match is a lost managed copy to restore)."""
+        assets = AssetRepository(conn)
+        if not assets.ids_by_fast_hash(fast, before.st_size):
+            return None
+        fingerprint = hash_file(path, cancel=cancel, expected=before, on_bytes=on_bytes)
+        existing = assets.find_by_sha256(fingerprint.sha256)
+        if existing is None:
+            return None  # a fast-hash collision: different bytes
+        location = assets.location(existing.id)
+        if location.missing_at is not None and location.import_mode == "managed":
+            return None
+        return fingerprint
+
     def _import_one(
         self,
         conn: sqlite3.Connection,
@@ -320,6 +418,7 @@ class Importer:
         ffprobe: ToolInfo,
         staging: Path,
         cancel: threading.Event,
+        report_for: ReportFor,
     ) -> tuple[str, str]:
         path = entry.path
         try:
@@ -333,13 +432,25 @@ class Importer:
                     )
                 )
             probe = probe_file(path, ffprobe, timeout_s=self.probe_timeout_s, cancel=cancel)
+            try:
+                fast = fp_alg.fast_hash(path, before.st_size)
+            except OSError as exc:
+                raise FileStepError(
+                    "media.unreadable", f"The file cannot be read: {exc.strerror}.", retryable=True
+                ) from exc
+            report = report_for(before.st_size)
             staged: Staged | None = None
+            reused = None
             if batch.mode == "managed":
+                reused = self._without_copy(conn, path, fast, before, cancel, report)
+            if reused is not None:
+                fingerprint = reused
+            elif batch.mode == "managed":
                 self._check_free_space(before.st_size)
-                staged = stage_copy(path, staging, cancel=cancel, expected=before)
+                staged = stage_copy(path, staging, cancel=cancel, expected=before, on_bytes=report)
                 fingerprint = staged.fingerprint
             else:
-                fingerprint = hash_file(path, cancel=cancel, expected=before)
+                fingerprint = hash_file(path, cancel=cancel, expected=before, on_bytes=report)
         except ProbeCancelled as exc:
             raise ImportCancelled from exc
         except ProbeError as exc:
@@ -347,7 +458,7 @@ class Importer:
         except FileStepError as exc:
             raise _ItemError(_from_step(exc)) from exc
         try:
-            return self._commit(conn, entry, batch, probe, fingerprint, staged)
+            return self._commit(conn, entry, batch, probe, fingerprint, staged, fast)
         finally:
             if staged is not None:
                 staged.path.unlink(missing_ok=True)
@@ -386,6 +497,7 @@ class Importer:
         probe: Mapping[str, Any],
         fingerprint: Fingerprint,
         staged: Staged | None,
+        fast: str,
     ) -> tuple[str, str]:
         path = entry.path
         extension = path.suffix.lower()
@@ -405,9 +517,10 @@ class Importer:
                         # that the next import of the same bytes adopts.
                         managed_path = self._place(staged, extension) if staged else None
                         asset_id = new_id("ast")
-                        asset = self._asset(asset_id, path, batch, probe, fingerprint)
+                        asset = self._asset(asset_id, path, batch, probe, fingerprint, fast)
                         assets.add(asset, original_path=str(path), managed_path=managed_path)
                         outcome = "imported"
+                    self._record_fast(conn, asset_id, fast)
                     AssetImportRepository(conn).record(
                         asset_id=asset_id,
                         import_mode=batch.mode,
@@ -423,6 +536,25 @@ class Importer:
         raise _ItemError(  # pragma: no cover - needs two lost races in a row
             _error("import.conflict", "The asset changed concurrently; retry.", retryable=True)
         )
+
+    @staticmethod
+    def _record_fast(conn: sqlite3.Connection, asset_id: str, fast: str) -> None:
+        """Store the fast hash computed during import, unless a current one exists."""
+        prints = FingerprintRepository(conn)
+        if is_current(prints.for_asset(asset_id).get("fast"), "fast"):
+            return
+        algorithm, version = CURRENT["fast"]
+        prints.put(
+            StoredFingerprint(
+                asset_id=asset_id,
+                kind="fast",
+                algorithm=algorithm,
+                version=version,
+                data={"value": fast},
+                computed_at=utc_now(),
+            )
+        )
+        AssetRepository(conn).set_fast_hash(asset_id, fast)
 
     def _existing(
         self,
@@ -462,11 +594,13 @@ class Importer:
         batch: _Batch,
         probe: Mapping[str, Any],
         fingerprint: Fingerprint,
+        fast: str,
     ) -> MediaAsset:
         doc: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
             "id": asset_id,
             "sha256": fingerprint.sha256,
+            "fast_hash": fast,
             "original_name": path.name[:1024],
             "source_kind": batch.source_kind,
             "import_mode": batch.mode,
@@ -484,18 +618,34 @@ class Importer:
     # -- relink -----------------------------------------------------------------------
 
     def verify_identity(
-        self, sha256: str, size: int | None, path: Path, *, cancel: threading.Event
+        self,
+        sha256: str,
+        size: int | None,
+        path: Path,
+        *,
+        cancel: threading.Event,
+        fast: str | None = None,
     ) -> Fingerprint:
-        """Is ``path`` the asset's content? M05 compares size, then the full SHA-256.
-
-        M06 can screen with its fast partial hash here before the full read.
-        """
+        """Is ``path`` the asset's content? Size, then the fast hash (2 MiB read) when the
+        asset has a current one, then the full SHA-256, which alone decides a match."""
         before = snapshot(path)
         if size is not None and before.st_size != size:
             raise ImportFailure(
                 "relink.identity_mismatch",
                 "The selected file is not the original: its size differs.",
             )
+        if fast is not None:
+            try:
+                candidate_fast = fp_alg.fast_hash(path, before.st_size)
+            except OSError as exc:
+                raise ImportFailure(
+                    "media.unreadable", f"The file cannot be read: {exc.strerror}.", retryable=True
+                ) from exc
+            if candidate_fast != fast:
+                raise ImportFailure(
+                    "relink.identity_mismatch",
+                    "The selected file is not the original: its content differs.",
+                )
         fingerprint = hash_file(path, cancel=cancel, expected=before)
         if fingerprint.sha256 != sha256:
             raise ImportFailure(
@@ -524,11 +674,15 @@ class Importer:
                 )
             try:
                 precheck(path)
+                stored_fast = FingerprintRepository(conn).for_asset(asset_id).get("fast")
                 fingerprint = self.verify_identity(
                     asset.sha256,
                     location.size_bytes,
                     path,
                     cancel=cancel,
+                    fast=stored_fast.data["value"]
+                    if is_current(stored_fast, "fast") and stored_fast is not None
+                    else None,
                 )
             except ProbeError as exc:
                 raise ImportFailure(exc.code, exc.message, retryable=exc.retryable) from exc

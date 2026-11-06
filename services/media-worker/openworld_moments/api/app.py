@@ -34,9 +34,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from openworld_moments import __version__
+from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
-from openworld_moments.storage import AssetRepository, NotFoundError
+from openworld_moments.storage import (
+    AssetRepository,
+    DuplicateCandidateRepository,
+    NotFoundError,
+    transaction,
+)
 
 API_VERSION = 1
 _CORRELATION = re.compile(r"^cor_[0-9A-HJKMNP-TV-Z]{26}$")
@@ -172,6 +178,20 @@ class SubmitImport(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class SubmitBackfill(BaseModel):
+    """FingerprintRequest plus an optional idempotency key. Params are checked by the handler."""
+
+    model_config = ConfigDict(extra="forbid")
+    asset_ids: list[Any] | None = None
+    force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class ReviewDuplicate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    review_state: Literal["unreviewed", "duplicate", "distinct"]
+
+
 class SubmitRelink(BaseModel):
     model_config = ConfigDict(extra="forbid")
     path: str
@@ -301,6 +321,79 @@ def create_app(
         except NotFoundError as exc:
             raise EngineError("asset.not_found", f"asset {asset_id} not found", status=404) from exc
         return normalize(asset)
+
+    # -- fingerprints and duplicates (M06) ---------------------------------------------
+
+    def with_conn(fn: Callable[[Any], Any]) -> Any:
+        with contextlib.closing(engine.database.connect()) as conn:
+            return fn(conn)
+
+    @app.get("/v1/assets/{asset_id}/fingerprints")
+    async def get_fingerprints(asset_id: str) -> dict[str, Any]:
+        try:
+            doc: dict[str, Any] = await asyncio.to_thread(
+                with_conn, lambda conn: fingerprints_doc(conn, asset_id)
+            )
+        except NotFoundError as exc:
+            raise EngineError("asset.not_found", f"asset {asset_id} not found", status=404) from exc
+        return doc
+
+    @app.post("/v1/fingerprints/backfill", status_code=201)
+    async def backfill(
+        body: SubmitBackfill, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"force": body.force}
+        if body.asset_ids is not None:
+            params["asset_ids"] = body.asset_ids
+        return await submit_job("fingerprint", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/duplicates")
+    async def list_duplicates(
+        review_state: Literal["unreviewed", "duplicate", "distinct"] | None = None,
+        asset_id: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        rows = await asyncio.to_thread(
+            with_conn,
+            lambda conn: DuplicateCandidateRepository(conn).query(
+                review_state=review_state,
+                asset_id=asset_id,
+                limit=max(1, min(limit, 1000)),
+                offset=max(0, offset),
+            ),
+        )
+        return [candidate_doc(r) for r in rows]
+
+    @app.get("/v1/duplicates/{candidate_id}")
+    async def get_duplicate(candidate_id: int) -> dict[str, Any]:
+        try:
+            row = await asyncio.to_thread(
+                with_conn, lambda conn: DuplicateCandidateRepository(conn).get(candidate_id)
+            )
+        except NotFoundError as exc:
+            raise EngineError(
+                "duplicate.not_found", f"duplicate candidate {candidate_id} not found", status=404
+            ) from exc
+        return candidate_doc(row)
+
+    @app.patch("/v1/duplicates/{candidate_id}")
+    async def review_duplicate(candidate_id: int, body: ReviewDuplicate) -> dict[str, Any]:
+        """Record a person's decision. Never merges or deletes anything."""
+
+        def update(conn: Any) -> Any:
+            with transaction(conn):
+                return DuplicateCandidateRepository(conn).set_review_state(
+                    candidate_id, body.review_state
+                )
+
+        try:
+            row = await asyncio.to_thread(with_conn, update)
+        except NotFoundError as exc:
+            raise EngineError(
+                "duplicate.not_found", f"duplicate candidate {candidate_id} not found", status=404
+            ) from exc
+        return candidate_doc(row)
 
     @app.post("/v1/assets/{asset_id}/relink", status_code=201)
     async def relink(

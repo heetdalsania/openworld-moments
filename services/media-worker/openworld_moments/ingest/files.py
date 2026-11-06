@@ -14,6 +14,7 @@ import hashlib
 import os
 import tempfile
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import BinaryIO
@@ -102,8 +103,20 @@ def _write_error(exc: OSError) -> FileStepError:
     )
 
 
-def hash_file(path: Path, *, cancel: threading.Event, expected: os.stat_result) -> Fingerprint:
-    """SHA-256 of a source, read-only, verifying it did not change since ``expected``."""
+OnBytes = Callable[[int], None]
+
+
+def hash_file(
+    path: Path,
+    *,
+    cancel: threading.Event,
+    expected: os.stat_result,
+    on_bytes: OnBytes | None = None,
+) -> Fingerprint:
+    """SHA-256 of a source, read-only, verifying it did not change since ``expected``.
+
+    ``on_bytes(total_read)`` is called after every chunk, for progress on large files.
+    """
     digest = hashlib.sha256()
     read = 0
     try:
@@ -113,6 +126,8 @@ def hash_file(path: Path, *, cancel: threading.Event, expected: os.stat_result) 
                     raise ImportCancelled
                 digest.update(chunk)
                 read += len(chunk)
+                if on_bytes is not None:
+                    on_bytes(read)
     except OSError as exc:
         raise _read_error(exc) from exc
     _check_stable(path, expected, read)
@@ -125,7 +140,12 @@ def write_chunk(handle: BinaryIO, chunk: bytes) -> None:
 
 
 def stage_copy(
-    path: Path, staging: Path, *, cancel: threading.Event, expected: os.stat_result
+    path: Path,
+    staging: Path,
+    *,
+    cancel: threading.Event,
+    expected: os.stat_result,
+    on_bytes: OnBytes | None = None,
 ) -> Staged:
     """Copy a source into ``staging`` while hashing it, then flush it to disk.
 
@@ -162,6 +182,8 @@ def stage_copy(
                     except OSError as exc:
                         raise _write_error(exc) from exc
                     read += len(chunk)
+                    if on_bytes is not None:
+                        on_bytes(read)
             try:
                 out.flush()
                 os.fsync(out.fileno())

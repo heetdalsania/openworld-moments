@@ -1,0 +1,59 @@
+{
+  "description": "algorithm versions start at 1",
+  "expect": "schema",
+  "path": "frames.version",
+  "document": {
+    "schema_version": "1.4",
+    "asset_id": "ast_01JCBQ00000000000000000001",
+    "sha256": "3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
+    "fast_hash": {
+      "algorithm": "owm-fast",
+      "version": 1,
+      "value": "9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e9c1e",
+      "computed_at": "2026-11-20T10:21:00Z"
+    },
+    "frames": {
+      "algorithm": "dhash256",
+      "version": 0,
+      "sample_fps": 2,
+      "window_ms": 30000,
+      "head": [
+        {
+          "t_ms": 0,
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "flat": true
+        },
+        {
+          "t_ms": 500,
+          "hash": "8f3c61a0b2d4e9178f3c61a0b2d4e9178f3c61a0b2d4e9178f3c61a0b2d4e917"
+        },
+        {
+          "t_ms": 1000,
+          "hash": "8f3c61a0b2d4e9168f3c61a0b2d4e9168f3c61a0b2d4e9168f3c61a0b2d4e916"
+        }
+      ],
+      "tail": [
+        {
+          "t_ms": 29000,
+          "hash": "17e9d4b2a0613c8f17e9d4b2a0613c8f17e9d4b2a0613c8f17e9d4b2a0613c8f"
+        },
+        {
+          "t_ms": 29500,
+          "hash": "17e9d4b2a0613c8e17e9d4b2a0613c8e17e9d4b2a0613c8e17e9d4b2a0613c8e"
+        }
+      ],
+      "computed_at": "2026-11-20T10:21:00Z"
+    },
+    "audio": {
+      "algorithm": "energy-envelope",
+      "version": 1,
+      "rate_hz": 10,
+      "window_ms": 30000,
+      "head_start_ms": 0,
+      "head": [0, 12, 180, 175, 160],
+      "tail_start_ms": 29500,
+      "tail": [150, 149, 3],
+      "computed_at": "2026-11-20T10:21:00Z"
+    }
+  }
+}

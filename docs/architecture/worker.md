@@ -79,13 +79,18 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/assets/{id}` | `MediaAsset` |
 | POST | `/v1/assets/{id}/relink` | `{path}` → `Job` (kind `relink`) |
 | POST | `/v1/assets/check-sources` | → `Job` (kind `check_sources`) |
+| GET | `/v1/assets/{id}/fingerprints` | `AssetFingerprints`; see [fingerprints](./fingerprints.md) |
+| GET | `/v1/duplicates?review_state=&asset_id=` | `DuplicateCandidate[]` |
+| GET | `/v1/duplicates/{id}` | `DuplicateCandidate` |
+| PATCH | `/v1/duplicates/{id}` | `{review_state}` → `DuplicateCandidate` (never deletes) |
+| POST | `/v1/fingerprints/backfill` | `{asset_ids?, force?}` → `Job` (kind `fingerprint`) |
 | POST | `/v1/shutdown` | 202, then graceful stop |
 | WS | `/v1/jobs/events` | Stream of contract `JobEvent` JSON text frames |
 
 Errors always use contract `ErrorInfo` (`code`, `message`, `retryable`,
 `correlation_id`): `request.invalid` / `job.invalid_params` / `job.unknown_kind`
 / `job.invalid_idempotency_key` (422), `job.not_found` / `request.not_found` /
-`import.not_found` / `asset.not_found` (404), `job.not_cancellable` /
+`import.not_found` / `asset.not_found` / `duplicate.not_found` (404), `job.not_cancellable` /
 `job.not_retryable` / `job.max_attempts` / `job.idempotency_conflict` (409),
 `worker.stopping` (503).
 

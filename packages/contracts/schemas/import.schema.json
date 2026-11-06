@@ -123,6 +123,14 @@
         },
         "error": {
           "$ref": "error.schema.json"
+        },
+        "candidate_asset_ids": {
+          "description": "Other assets that look like the same content (perceptual duplicate candidates, 1.4). Reported for review only; nothing is merged.",
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "common.schema.json#/$defs/AssetId"
+          }
         }
       }
     },
