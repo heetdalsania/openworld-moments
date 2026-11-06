@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import sqlite3
 import threading
 from collections.abc import Callable, Mapping
@@ -50,6 +51,7 @@ ACTIVE = frozenset(
     }
 )
 SUBSCRIBER_QUEUE = 1000
+_IDEMPOTENCY_KEY = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def _not_before(*timestamps: str | None) -> str:
@@ -73,7 +75,10 @@ class Cancelled(Exception):
 
 
 class JobFailure(Exception):
-    """Raised by a handler to fail its job with a contract error."""
+    """Raised by a handler to fail its job with a contract error.
+
+    ``result`` is stored on the failed job too, e.g. an import's per-file report.
+    """
 
     def __init__(
         self,
@@ -83,6 +88,7 @@ class JobFailure(Exception):
         retryable: bool = False,
         details: Mapping[str, str | int | float | bool | None] | None = None,
         stderr_tail: str | None = None,
+        result: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
@@ -90,6 +96,7 @@ class JobFailure(Exception):
         self.retryable = retryable
         self.details = dict(details) if details else None
         self.stderr_tail = stderr_tail or None
+        self.result = dict(result) if result is not None else None
 
     def error(self) -> dict[str, Any]:
         """The contract ``ErrorInfo`` for this failure."""
@@ -257,8 +264,32 @@ class JobEngine:
         return self._repo.all(limit=limit)
 
     async def submit(
-        self, kind: str, params: Mapping[str, Any] | None, correlation_id: str | None
+        self,
+        kind: str,
+        params: Mapping[str, Any] | None,
+        correlation_id: str | None,
+        *,
+        idempotency_key: str | None = None,
     ) -> Job:
+        job, _ = await self.submit_once(
+            kind, params, correlation_id, idempotency_key=idempotency_key
+        )
+        return job
+
+    async def submit_once(
+        self,
+        kind: str,
+        params: Mapping[str, Any] | None,
+        correlation_id: str | None,
+        *,
+        idempotency_key: str | None = None,
+    ) -> tuple[Job, bool]:
+        """Submit a job; returns ``(job, created)``.
+
+        With an ``idempotency_key``, repeating the same request returns the job
+        created the first time (``created`` is False) instead of a new one; using
+        the key for a different request is refused.
+        """
         if self._stopping:
             raise EngineError("worker.stopping", "the worker is shutting down", status=503)
         handler = self.handlers.get(kind)
@@ -268,6 +299,21 @@ class JobEngine:
             clean = handler.validate(params or {})
         except (ValueError, TypeError) as exc:
             raise EngineError("job.invalid_params", str(exc), status=422) from exc
+        if idempotency_key is not None:
+            if not _IDEMPOTENCY_KEY.match(idempotency_key):
+                raise EngineError(
+                    "job.invalid_idempotency_key",
+                    "Idempotency keys are 1-128 letters, digits, '.', '_', ':' or '-'.",
+                    status=422,
+                )
+            existing = self._repo.find_by_idempotency_key(idempotency_key)
+            if existing is not None:
+                if existing.kind == kind and (existing.params or {}) == clean:
+                    return existing, False
+                raise EngineError(
+                    "job.idempotency_conflict",
+                    "This idempotency key was already used for a different request.",
+                )
         doc: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
             "id": new_id("job"),
@@ -279,9 +325,11 @@ class JobEngine:
         }
         if correlation_id:
             doc["correlation_id"] = correlation_id
+        if idempotency_key is not None:
+            doc["idempotency_key"] = idempotency_key
         job = self._save(doc, "state")
         self._queue.put_nowait(job.id)
-        return job
+        return job, True
 
     async def cancel(self, job_id: str) -> Job:
         job = self.get(job_id)
@@ -389,7 +437,7 @@ class JobEngine:
             pass
         except JobFailure as exc:
             if not running.shutdown:
-                self._finish(self._repo.get(job_id), "failed", error=exc.error())
+                self._finish(self._repo.get(job_id), "failed", error=exc.error(), result=exc.result)
             return
         except Exception:
             log.exception("job handler crashed", extra={"job_id": job_id, "kind": job.kind})

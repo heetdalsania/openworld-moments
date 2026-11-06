@@ -33,6 +33,7 @@ from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 
 from openworld_moments import __version__
 from openworld_moments.api.app import API_VERSION, ApiSettings, create_app
+from openworld_moments.ingest.library import LibraryPaths
 from openworld_moments.jobs.engine import JobEngine
 from openworld_moments.jobs.handlers import build_handlers
 from openworld_moments.logs import configure_logging
@@ -170,8 +171,10 @@ def main(argv: list[str] | None = None) -> int:
         on_shutdown_request=request_shutdown,
     )
     tools = MediaTools(ffprobe=args.ffprobe, ffmpeg=args.ffmpeg)
+    # No import runs yet, so every staging leftover is from a crash: remove it.
+    LibraryPaths.for_database(database.path).clean_import_staging()
     app = create_app(
-        JobEngine(database, build_handlers(tools)),
+        JobEngine(database, build_handlers(tools, database=database)),
         settings,
         on_ready=on_ready,
         capabilities=tools.capabilities,

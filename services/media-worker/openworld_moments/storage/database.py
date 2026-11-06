@@ -221,8 +221,14 @@ class Database:
         already finished.
         """
         with closing(self.connect()) as conn:
-            current = self.schema_version(conn)
-            self._verify_applied(conn, current)
+            # One read transaction, so the version and the ledger come from the same
+            # snapshot even while another process commits a migration in between.
+            conn.execute("BEGIN")
+            try:
+                current = self.schema_version(conn)
+                self._verify_applied(conn, current)
+            finally:
+                conn.execute("COMMIT")
             todo = [m for m in self.migrations if m.version > current]
             if not todo:
                 return MigrationReport(current, current, (), None)

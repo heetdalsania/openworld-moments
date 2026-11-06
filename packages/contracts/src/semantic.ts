@@ -4,6 +4,7 @@ import type {
   Event,
   Evidence,
   ExportManifest,
+  ImportResult,
   Job,
   JobEvent,
   Profile,
@@ -118,6 +119,43 @@ function* exportManifest(doc: ExportManifest): Generator<string> {
   }
 }
 
+const WITH_ASSET = new Set(["imported", "existing", "relinked"]);
+
+function* importResult(doc: ImportResult): Generator<string> {
+  const counts: Record<string, number> = {
+    imported: 0,
+    existing: 0,
+    relinked: 0,
+    skipped: 0,
+    failed: 0,
+  };
+  for (const [i, item] of doc.items.entries()) {
+    const outcome = item.outcome;
+    counts[outcome] = (counts[outcome] ?? 0) + 1;
+    if (WITH_ASSET.has(outcome)) {
+      if (item.asset_id === undefined) {
+        yield `items[${i}].asset_id: '${outcome}' items must name their asset`;
+      }
+      if (item.error !== undefined) {
+        yield `items[${i}].error: '${outcome}' items must not carry an error`;
+      }
+    } else {
+      if (item.error === undefined) yield `items[${i}].error: '${outcome}' items must explain why`;
+      if (item.asset_id !== undefined) {
+        yield `items[${i}].asset_id: '${outcome}' items must not name an asset`;
+      }
+    }
+  }
+  const totals = doc.totals;
+  if (totals.files !== doc.items.length) {
+    yield `totals.files: ${totals.files} does not match ${doc.items.length} items`;
+  }
+  for (const [outcome, count] of Object.entries(counts)) {
+    const total = totals[outcome as keyof typeof totals];
+    if (total !== count) yield `totals.${outcome}: ${total} does not match ${count} items`;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
   event,
@@ -127,6 +165,7 @@ const RULES: Record<string, (doc: any) => Iterable<string>> = {
   project,
   "render-preset": renderPreset,
   "export-manifest": exportManifest,
+  import: importResult,
 };
 
 /** Human-readable semantic problems. Assumes the document passed schema validation. */

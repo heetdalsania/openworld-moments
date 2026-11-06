@@ -5,16 +5,21 @@
   exercise progress, cancellation, failure, and crash recovery without media.
 * ``probe`` (M04): read-only FFprobe of one explicitly selected file; the
   normalized ``MediaProbe`` becomes the job's ``result``.
+* ``import``, ``relink``, ``check_sources`` (M05): the safe import pipeline
+  (``openworld_moments.ingest``). They need the library database.
 
-Product handlers (import, analyze, ...) arrive in later milestones.
+Later product handlers (analyze, proxy, ...) arrive in their milestones.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from openworld_moments.ingest.files import ImportCancelled
+from openworld_moments.ingest.importer import Importer, ImportFailure
 from openworld_moments.jobs.engine import Cancelled, JobContext, JobFailure, JobHandler
 from openworld_moments.media.probe import (
     DEFAULT_TIMEOUT_S,
@@ -24,9 +29,14 @@ from openworld_moments.media.probe import (
     probe_file,
 )
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.storage import Database
 
 MAX_STEPS = 10_000
 MAX_STEP_MS = 60_000
+MAX_IMPORT_PATHS = 100
+IMPORT_MODES = ("reference", "managed")
+SOURCE_KINDS = ("xbox", "playstation", "obs", "capture_card", "phone_upload", "other")
+_ASSET_ID = re.compile(r"^ast_[0-9A-HJKMNP-TV-Z]{26}$")
 
 
 def _int_param(
@@ -123,9 +133,112 @@ def probe_handler(tools: MediaTools, *, timeout_s: float = DEFAULT_TIMEOUT_S) ->
     )
 
 
+def _reject_unknown(params: Mapping[str, Any], allowed: set[str]) -> None:
+    unknown = set(params) - allowed
+    if unknown:
+        raise ValueError(f"unknown parameter(s): {', '.join(sorted(unknown))}")
+
+
+def validate_import(params: Mapping[str, Any]) -> dict[str, Any]:
+    """ImportRequest (contract import.schema.json#/$defs/ImportRequest), normalized."""
+    _reject_unknown(params, {"paths", "mode", "recursive", "source_kind"})
+    paths = params.get("paths")
+    if not isinstance(paths, list) or not 1 <= len(paths) <= MAX_IMPORT_PATHS:
+        raise ValueError(f"'paths' must be a list of 1 to {MAX_IMPORT_PATHS} absolute paths")
+    clean_paths = []
+    for i, value in enumerate(paths):
+        try:
+            clean_paths.append(check_path_param(value))
+        except ValueError as exc:
+            raise ValueError(str(exc).replace("'path'", f"'paths[{i}]'", 1)) from exc
+    mode = params.get("mode")
+    if mode not in IMPORT_MODES:
+        raise ValueError("'mode' must be 'reference' or 'managed'")
+    recursive = params.get("recursive", False)
+    if not isinstance(recursive, bool):
+        raise ValueError("'recursive' must be true or false")
+    source_kind = params.get("source_kind", "other")
+    if source_kind not in SOURCE_KINDS:
+        raise ValueError(f"'source_kind' must be one of {', '.join(SOURCE_KINDS)}")
+    return {
+        "paths": clean_paths,
+        "mode": mode,
+        "recursive": recursive,
+        "source_kind": source_kind,
+    }
+
+
+def validate_relink(params: Mapping[str, Any]) -> dict[str, Any]:
+    _reject_unknown(params, {"asset_id", "path"})
+    asset_id = params.get("asset_id")
+    if not isinstance(asset_id, str) or not _ASSET_ID.match(asset_id):
+        raise ValueError("'asset_id' must be an asset ID")
+    return {"asset_id": asset_id, "path": check_path_param(params.get("path"))}
+
+
+def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
+    _reject_unknown(params, set())
+    return {}
+
+
+def _job_failure(exc: ImportFailure) -> JobFailure:
+    return JobFailure(
+        exc.code,
+        exc.message,
+        retryable=exc.retryable,
+        details=exc.details,
+        stderr_tail=exc.stderr_tail,
+        result=exc.result,
+    )
+
+
+def import_handlers(importer: Importer) -> dict[str, JobHandler]:
+    """``import``, ``relink``, and ``check_sources``. All are idempotent (identical bytes
+    resolve to one asset; relink and the check only converge state), so a worker crash
+    requeues them."""
+
+    def run_import(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return importer.run_import(
+                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except ImportCancelled as exc:
+            raise Cancelled from exc
+        except ImportFailure as exc:
+            raise _job_failure(exc) from exc
+
+    def run_relink(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return importer.relink(ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event)
+        except ImportCancelled as exc:
+            raise Cancelled from exc
+        except ImportFailure as exc:
+            raise _job_failure(exc) from exc
+
+    def run_check(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return importer.check_sources(cancel=ctx.cancel_event, progress=ctx.progress)
+        except ImportCancelled as exc:
+            raise Cancelled from exc
+
+    handlers = [
+        JobHandler("import", run_import, validate_import, "probing", True, 3),
+        JobHandler("relink", run_relink, validate_relink, "fingerprinting", True, 3),
+        JobHandler("check_sources", run_check, validate_check_sources, "analyzing", True, 3),
+    ]
+    return {h.kind: h for h in handlers}
+
+
 def build_handlers(
-    tools: MediaTools, *, probe_timeout_s: float = DEFAULT_TIMEOUT_S
+    tools: MediaTools,
+    *,
+    probe_timeout_s: float = DEFAULT_TIMEOUT_S,
+    database: Database | None = None,
 ) -> dict[str, JobHandler]:
-    """Every handler the worker serves."""
+    """Every handler the worker serves. Import handlers need the library ``database``."""
     probe = probe_handler(tools, timeout_s=probe_timeout_s)
-    return {**BUILTIN_HANDLERS, probe.kind: probe}
+    handlers = {**BUILTIN_HANDLERS, probe.kind: probe}
+    if database is not None:
+        importer = Importer(database, tools, probe_timeout_s=probe_timeout_s)
+        handlers.update(import_handlers(importer))
+    return handlers

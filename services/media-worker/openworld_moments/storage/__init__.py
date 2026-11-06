@@ -15,6 +15,9 @@ from openworld_moments.storage.database import (
     utc_now,
 )
 from openworld_moments.storage.repositories import (
+    AssetImport,
+    AssetImportRepository,
+    AssetLocation,
     AssetRepository,
     ConflictError,
     EventRepository,
@@ -30,6 +33,9 @@ from openworld_moments.storage.repositories import (
 )
 
 __all__ = [
+    "AssetImport",
+    "AssetImportRepository",
+    "AssetLocation",
     "AssetRepository",
     "ConflictError",
     "Database",

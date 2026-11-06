@@ -69,17 +69,25 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/health` | `{status, api_version, schema_version, worker_version, pid}` |
 | GET | `/v1/capabilities?refresh=bool` | Media tool report, same as `doctor --json` (see [media](./media.md)) |
 | GET | `/v1/jobs?limit=N` | Newest jobs (contract `Job[]`) |
-| POST | `/v1/jobs` | `{kind, params}` → 201 `Job` (state `queued`) |
+| POST | `/v1/jobs` | `{kind, params, idempotency_key?}` → 201 `Job` (state `queued`), or 200 with the earlier job for the same key |
 | GET | `/v1/jobs/{id}` | `Job` |
 | POST | `/v1/jobs/{id}/cancel` | `Job` (see cancellation) |
 | POST | `/v1/jobs/{id}/retry` | `Job` back in `queued` |
+| POST | `/v1/imports` | Import request → `Job` (kind `import`); see [import](./import.md) |
+| GET | `/v1/imports/{id}` | Import `Job` with its `ImportResult` |
+| GET | `/v1/assets?missing=bool` | `MediaAsset[]` |
+| GET | `/v1/assets/{id}` | `MediaAsset` |
+| POST | `/v1/assets/{id}/relink` | `{path}` → `Job` (kind `relink`) |
+| POST | `/v1/assets/check-sources` | → `Job` (kind `check_sources`) |
 | POST | `/v1/shutdown` | 202, then graceful stop |
 | WS | `/v1/jobs/events` | Stream of contract `JobEvent` JSON text frames |
 
 Errors always use contract `ErrorInfo` (`code`, `message`, `retryable`,
 `correlation_id`): `request.invalid` / `job.invalid_params` / `job.unknown_kind`
-(422), `job.not_found` / `request.not_found` (404), `job.not_cancellable` /
-`job.not_retryable` / `job.max_attempts` (409), `worker.stopping` (503).
+/ `job.invalid_idempotency_key` (422), `job.not_found` / `request.not_found` /
+`import.not_found` / `asset.not_found` (404), `job.not_cancellable` /
+`job.not_retryable` / `job.max_attempts` / `job.idempotency_conflict` (409),
+`worker.stopping` (503).
 
 ### Event stream
 
@@ -126,7 +134,8 @@ content, and must not touch the database connection the engine owns.
 
 Return normally → `ready`, with the returned JSON object (if any) stored as
 `result`. `JobFailure` → `failed` with that error, including optional scalar
-`details` and a redacted `stderr_tail` (capped at 8 KB). Any other
+`details` and a redacted `stderr_tail` (capped at 8 KB); a `JobFailure(result=...)`
+also stores that result (an import's per-file report). Any other
 exception → `failed` with `job.handler_crashed` (not retryable); details go to
 the redacted log only.
 

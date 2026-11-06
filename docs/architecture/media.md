@@ -18,7 +18,7 @@ Code: `services/media-worker/openworld_moments/media/`:
 | Minimum | **FFmpeg 6.0**: `libavformat` ≥ 60 and `libavcodec` ≥ 60 |
 | Needed for probing | `ffprobe` |
 | Needed for fixtures (tests) and later milestones | `ffmpeg` with `libx264`; `libx265` optional (HEVC fixture) |
-| Tested | Ubuntu 24.04 package (6.1), Chocolatey on Windows (current release), Homebrew on macOS (9.0) |
+| Tested | Ubuntu package on the `ubuntu-latest` runner (8.0 at the time of writing), Chocolatey on Windows (current release), Homebrew on macOS (9.0) |
 
 Library majors are checked instead of the release string because Git and
 distro builds report versions such as `N-118000-g1a2b3c` or `6.1.1-3ubuntu5`.
@@ -98,7 +98,7 @@ Submit `POST /v1/jobs` with `{"kind": "probe", "params": {"path": "<absolute pat
 | `duration_ms` | `format.duration`, else video stream duration | Exact decimal → integer ms. Missing or ≤ 0 → `media.invalid_duration` |
 | `size_bytes` | file size | |
 | `bit_rate` | `format.bit_rate` | When reported |
-| `creation_time` | `creation_time` tag (format, then video stream) | Converted to UTC with ms precision. Zero epochs (1904/1970) and junk are dropped. Only an input to capture-time estimation (M05) |
+| `creation_time` | `creation_time` tag (format, then video stream) | Converted to UTC with ms precision. Zero epochs (1904/1970) and junk are dropped. Imports use it as a preliminary capture time (confidence 0.6, see [import](./import.md#provenance)); session grouping (M11) refines it |
 | `video` | First video stream that is not cover art | None → `media.no_video_stream` |
 | `video.frame_rate` | `r_frame_rate` / `avg_frame_rate` | **Exact rational**, reduced (`30000/1001` stays `30000/1001`). The base rate for constant-frame-rate media, the average for VFR |
 | `video.average_frame_rate` | `avg_frame_rate` | Exact rational |

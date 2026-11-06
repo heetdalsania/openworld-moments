@@ -37,10 +37,11 @@ Rules:
 
 | Repository | Table(s) | Types |
 |---|---|---|
-| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json` |
+| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
+| `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |
 | `EventRepository` | `events` | contract `Event` |
-| `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002, `result` since 0003) |
+| `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002, `result` since 0003, `idempotency_key` since 0004 with `find_by_idempotency_key`) |
 | `StoryRepository` | `stories` | `Story`, whose `timeline` is a contract `Project` with the same ID |
 | `SettingsRepository` | `settings` | JSON values |
 
@@ -74,9 +75,10 @@ their repositories arrive with the milestones that use them (M07, M18, M24, M26)
   load each fixture at its version and upgrade it to head.
 - A database newer than the app is refused with "update the app".
 - Several processes may open the same library at once (for example the CLI
-  during app start): each migration re-checks the version under the write
-  lock and skips work another process finished, and the switch to WAL retries
-  while locked.
+  during app start): the version and the ledger are read in one read
+  transaction (one consistent snapshot), each migration re-checks the version
+  under the write lock and skips work another process finished, and the switch
+  to WAL retries while locked.
 
 ### Backups and recovery
 

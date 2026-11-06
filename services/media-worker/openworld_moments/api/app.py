@@ -14,6 +14,7 @@ Responses carry ``X-Correlation-Id``; errors use the contract ``ErrorInfo`` shap
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hmac
 import json
 import logging
@@ -22,9 +23,9 @@ import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from openworld_moments_contracts import normalize
@@ -35,6 +36,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from openworld_moments import __version__
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
+from openworld_moments.storage import AssetRepository, NotFoundError
 
 API_VERSION = 1
 _CORRELATION = re.compile(r"^cor_[0-9A-HJKMNP-TV-Z]{26}$")
@@ -149,10 +151,31 @@ class Guard:
         )
 
 
+IDEMPOTENCY_KEY = r"^[A-Za-z0-9._:-]{1,128}$"
+
+
 class SubmitJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: str = Field(min_length=1, max_length=64)
     params: dict[str, Any] = Field(default_factory=dict)
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitImport(BaseModel):
+    """ImportRequest plus an optional idempotency key. Params are checked by the handler."""
+
+    model_config = ConfigDict(extra="forbid")
+    paths: list[Any]
+    mode: Literal["reference", "managed"]
+    recursive: bool = False
+    source_kind: str = "other"
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitRelink(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: str
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
 def create_app(
@@ -221,9 +244,70 @@ def create_app(
     async def list_jobs(limit: int = 200) -> list[dict[str, Any]]:
         return [normalize(j) for j in engine.list(limit=max(1, min(limit, 1000)))]
 
+    async def submit_job(
+        kind: str,
+        params: dict[str, Any],
+        key: str | None,
+        request: Request,
+        response: Response,
+    ) -> dict[str, Any]:
+        job, created = await engine.submit_once(kind, params, cid(request), idempotency_key=key)
+        response.status_code = 201 if created else 200  # 200: the earlier job for this key
+        return normalize(job)
+
     @app.post("/v1/jobs", status_code=201)
-    async def submit(body: SubmitJob, request: Request) -> dict[str, Any]:
-        return normalize(await engine.submit(body.kind, body.params, cid(request)))
+    async def submit(body: SubmitJob, request: Request, response: Response) -> dict[str, Any]:
+        return await submit_job(body.kind, body.params, body.idempotency_key, request, response)
+
+    # -- imports and assets (M05) ------------------------------------------------------
+
+    def read_assets(fn: Callable[[AssetRepository], Any]) -> Any:
+        with contextlib.closing(engine.database.connect()) as conn:
+            return fn(AssetRepository(conn))
+
+    @app.post("/v1/imports", status_code=201)
+    async def submit_import(
+        body: SubmitImport, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = body.model_dump(exclude={"idempotency_key"})
+        return await submit_job("import", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/imports/{job_id}")
+    async def get_import(job_id: str) -> dict[str, Any]:
+        job = engine.get(job_id)
+        if job.kind != "import":
+            raise EngineError("import.not_found", f"import {job_id} not found", status=404)
+        return normalize(job)
+
+    @app.get("/v1/assets")
+    async def list_assets(
+        missing: bool | None = None, limit: int = 200, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        bounded = max(1, min(limit, 1000))
+        assets = await asyncio.to_thread(
+            read_assets,
+            lambda repo: repo.query(missing=missing, limit=bounded, offset=max(0, offset)),
+        )
+        return [normalize(a) for a in assets]
+
+    @app.post("/v1/assets/check-sources", status_code=201)
+    async def check_sources(request: Request, response: Response) -> dict[str, Any]:
+        return await submit_job("check_sources", {}, None, request, response)
+
+    @app.get("/v1/assets/{asset_id}")
+    async def get_asset(asset_id: str) -> dict[str, Any]:
+        try:
+            asset = await asyncio.to_thread(read_assets, lambda repo: repo.get(asset_id))
+        except NotFoundError as exc:
+            raise EngineError("asset.not_found", f"asset {asset_id} not found", status=404) from exc
+        return normalize(asset)
+
+    @app.post("/v1/assets/{asset_id}/relink", status_code=201)
+    async def relink(
+        asset_id: str, body: SubmitRelink, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = {"asset_id": asset_id, "path": body.path}
+        return await submit_job("relink", params, body.idempotency_key, request, response)
 
     @app.get("/v1/jobs/{job_id}")
     async def get_job(job_id: str) -> dict[str, Any]:

@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.3",
+  "id": "job_01JCBQ00000000000000000021",
+  "kind": "import",
+  "state": "ready",
+  "params": {
+    "paths": ["/captures", "/downloads/clip.mp4"],
+    "mode": "managed",
+    "recursive": true,
+    "source_kind": "xbox"
+  },
+  "idempotency_key": "desktop:import:01JCBQ00000000000000000099",
+  "result": {
+    "schema_version": "1.3",
+    "mode": "managed",
+    "totals": {
+      "files": 6,
+      "imported": 1,
+      "existing": 1,
+      "relinked": 1,
+      "skipped": 1,
+      "failed": 2
+    },
+    "items": [
+      {
+        "source": 0,
+        "relative_path": "Captures/Capture 2026-11-20 03-14-22.mp4",
+        "outcome": "imported",
+        "asset_id": "ast_01JCBQ00000000000000000001"
+      },
+      {
+        "source": 0,
+        "relative_path": "Captures/Capture 2026-11-20 03-20-01.mp4",
+        "outcome": "existing",
+        "asset_id": "ast_01JCBQ00000000000000000002"
+      },
+      {
+        "source": 0,
+        "relative_path": "Captures/moved.mp4",
+        "outcome": "relinked",
+        "asset_id": "ast_01JCBQ00000000000000000003"
+      },
+      {
+        "source": 0,
+        "relative_path": "Captures/notes.txt",
+        "outcome": "skipped",
+        "error": {
+          "code": "import.not_media_extension",
+          "message": "Not a supported video file type.",
+          "retryable": false
+        }
+      },
+      {
+        "source": 0,
+        "relative_path": "Captures/broken.mp4",
+        "outcome": "failed",
+        "error": {
+          "code": "media.damaged",
+          "message": "The file is damaged or incomplete.",
+          "retryable": false,
+          "stderr_tail": "moov atom not found"
+        }
+      },
+      {
+        "source": 1,
+        "outcome": "failed",
+        "error": {
+          "code": "import.disk_full",
+          "message": "Not enough free space in the library.",
+          "retryable": true
+        }
+      }
+    ]
+  },
+  "attempt": 1,
+  "progress": {
+    "done": 6,
+    "total": 6
+  },
+  "message": "1 imported, 1 already in the library, 1 relinked, 1 skipped, 2 failed",
+  "correlation_id": "cor_01JCBQ00000000000000000008",
+  "created_at": "2026-11-20T05:40:10Z",
+  "started_at": "2026-11-20T05:40:10.100Z",
+  "finished_at": "2026-11-20T05:41:02Z"
+}
