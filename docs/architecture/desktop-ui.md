@@ -61,6 +61,7 @@ Routes are hash-based, so reloading the window returns to the same screen.
 | `#/library` (default) | `LibraryView` | Newest clips first, 60 per page. Thumbnail, name, duration, size, and badges (Original missing, HDR, No audio, Copied to library). Loading, error with retry, and empty states (with Import and a pointer to watched folders) |
 | `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
 | `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
+| `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |
 
 Global, in `App.tsx`:
 
