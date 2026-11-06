@@ -37,10 +37,10 @@ Rules:
 
 | Repository | Table(s) | Types |
 |---|---|---|
-| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy) |
+| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json` |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |
 | `EventRepository` | `events` | contract `Event` |
-| `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002) |
+| `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002, `result` since 0003) |
 | `StoryRepository` | `stories` | `Story`, whose `timeline` is a contract `Project` with the same ID |
 | `SettingsRepository` | `settings` | JSON values |
 

@@ -33,6 +33,8 @@
     "build": "pnpm --filter @openworld-moments/desktop run tauri build --no-bundle",
     "build:bundle": "pnpm --filter @openworld-moments/desktop run tauri build",
     "dev": "pnpm --filter @openworld-moments/desktop run tauri dev",
+    "media:doctor": "uv run --locked --directory services/media-worker python -m openworld_moments.doctor",
+    "media:fixtures": "uv run --locked --directory services/media-worker python -m openworld_moments.media.fixtures",
     "contracts:generate": "uv run --locked --directory packages/contracts/python python scripts/generate.py && pnpm --filter @openworld-moments/contracts run generate",
     "contracts:check": "pnpm run contracts:generate && node packages/contracts/scripts/check-drift.mjs",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run contracts:check"

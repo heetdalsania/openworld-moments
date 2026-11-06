@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from openworld_moments_contracts import load
+from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 from starlette.testclient import WebSocketDenialResponse
 
 from tests.worker.conftest import wait_for
@@ -63,7 +64,9 @@ def test_health_and_correlation_ids(client: TestClient) -> None:
     response = client.get("/v1/health", headers={"X-Correlation-Id": COR})
     assert response.status_code == 200
     assert response.headers["x-correlation-id"] == COR
-    assert response.json()["status"] == "ok" and response.json()["schema_version"] == "1.1"
+    assert response.json()["status"] == "ok" and response.json()["schema_version"] == str(
+        SUPPORTED_VERSION
+    )
     generated = client.get("/v1/health", headers={"X-Correlation-Id": "not-valid"}).headers[
         "x-correlation-id"
     ]

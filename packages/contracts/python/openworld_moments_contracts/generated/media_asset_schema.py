@@ -36,9 +36,45 @@ class CaptureTimeEstimate(BaseModel):
     ]
 
 
+class MasteringDisplay(BaseModel):
+    """
+    SMPTE ST 2086 mastering display luminance, in nits (cd/m²).
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    min_luminance_nits: Annotated[float | None, Field(ge=0.0)] = None
+    max_luminance_nits: Annotated[float | None, Field(ge=0.0)] = None
+
+
+class ContentLightLevel(BaseModel):
+    """
+    CTA-861.3 content light level, in nits.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    max_cll: Annotated[int, Field(ge=0)]
+    max_fall: Annotated[int, Field(ge=0)]
+
+
+class DolbyVision(BaseModel):
+    """
+    Dolby Vision configuration record.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    profile: Annotated[int, Field(ge=0, le=31)]
+    level: Annotated[int | None, Field(ge=0, le=63)] = None
+
+
 class ColorInfo(BaseModel):
     """
-    FFprobe color metadata. 'hdr' is derived from the transfer characteristic (e.g. smpte2084, arib-std-b67).
+    FFprobe color metadata. 'hdr' is true for PQ (smpte2084) or HLG (arib-std-b67) transfer, or Dolby Vision. Unknown or unspecified values are omitted.
     """
 
     model_config = ConfigDict(
@@ -47,7 +83,25 @@ class ColorInfo(BaseModel):
     primaries: Annotated[str | None, Field(max_length=64)] = None
     transfer: Annotated[str | None, Field(max_length=64)] = None
     matrix: Annotated[str | None, Field(max_length=64)] = None
+    range: Annotated[
+        str | None, Field(description="'tv' (limited) or 'pc' (full).", max_length=16)
+    ] = None
     hdr: bool
+    mastering_display: Annotated[
+        MasteringDisplay | None,
+        Field(
+            description="SMPTE ST 2086 mastering display luminance, in nits (cd/m²).",
+            title="MasteringDisplay",
+        ),
+    ] = None
+    content_light_level: Annotated[
+        ContentLightLevel | None,
+        Field(description="CTA-861.3 content light level, in nits.", title="ContentLightLevel"),
+    ] = None
+    dolby_vision: Annotated[
+        DolbyVision | None,
+        Field(description="Dolby Vision configuration record.", title="DolbyVision"),
+    ] = None
 
 
 class AudioStream(BaseModel):
@@ -57,6 +111,19 @@ class AudioStream(BaseModel):
     codec: Annotated[str, Field(max_length=64, min_length=1)]
     channels: Annotated[int, Field(ge=1, le=64)]
     sample_rate_hz: Annotated[int, Field(ge=1000, le=768000)]
+    channel_layout: Annotated[
+        str | None,
+        Field(
+            description="FFmpeg channel layout name, e.g. 'stereo' or '5.1(side)'.", max_length=64
+        ),
+    ] = None
+
+
+class ProbeTool(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    ffprobe_version: Annotated[str, Field(max_length=200, min_length=1)]
 
 
 class VideoStream(BaseModel):
@@ -66,9 +133,78 @@ class VideoStream(BaseModel):
     codec: Annotated[str, Field(max_length=64, min_length=1)]
     width: Annotated[int, Field(ge=1, le=16384)]
     height: Annotated[int, Field(ge=1, le=16384)]
-    frame_rate: common_schema.Rational
+    frame_rate: Annotated[
+        common_schema.Rational,
+        Field(
+            description="Nominal frame rate, exact. For constant-frame-rate media this is the stream's base rate; for variable-frame-rate media it is the average rate (see 'variable_frame_rate')."
+        ),
+    ]
     pixel_format: Annotated[str | None, Field(max_length=64)] = None
     color: ColorInfo
+    average_frame_rate: Annotated[
+        common_schema.Rational | None,
+        Field(
+            description="Average frame rate reported by the container (frames / duration), exact."
+        ),
+    ] = None
+    variable_frame_rate: Annotated[
+        bool | None,
+        Field(
+            description="True when the container's base and average frame rates disagree by more than 0.1%. A header-level heuristic; frame timing is not decoded."
+        ),
+    ] = None
+    rotation: Annotated[
+        Literal[0, 90, 180, 270] | None,
+        Field(
+            description="Clockwise rotation in degrees to apply to the coded frame for upright display. 'width' and 'height' are coded (pre-rotation) dimensions."
+        ),
+    ] = None
+
+
+class MediaProbe(BaseModel):
+    """
+    Normalized FFprobe result for one source file (M04), before import assigns identity. Stored as the 'result' of a 'probe' job. Never contains the file path or free-form container tags.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    container: Annotated[
+        str,
+        Field(
+            description="FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.",
+            max_length=200,
+            min_length=1,
+        ),
+    ]
+    duration_ms: Annotated[
+        int,
+        Field(
+            description="Non-negative duration in integer milliseconds.", ge=0, title="DurationMs"
+        ),
+    ]
+    size_bytes: Annotated[int, Field(ge=1)]
+    bit_rate: Annotated[
+        int | None, Field(description="Overall bit rate in bits per second, when known.", ge=1)
+    ] = None
+    creation_time: Annotated[
+        str | None,
+        Field(
+            description="Container 'creation_time' tag converted to UTC, when present and valid. Input to capture-time estimation; not trusted on its own.",
+            pattern="^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]{1,3})?Z$",
+            title="UtcTimestamp",
+        ),
+    ] = None
+    video: VideoStream | None = None
+    audio: list[AudioStream]
+    other_streams: Annotated[
+        int | None,
+        Field(
+            description="Count of subtitle, data, attachment, and cover-art streams that were not normalized.",
+            ge=0,
+        ),
+    ] = None
+    probed_with: Annotated[ProbeTool, Field(title="ProbeTool")]
 
 
 class MediaAsset(BaseModel):

@@ -41,6 +41,7 @@ managed-media/
 derived/
 exports/
 models/
+media-fixtures/
 logs/
 *.sqlite
 *.sqlite3
@@ -49,6 +50,8 @@ logs/
 *.mov
 *.mkv
 *.webm
+*.m4a
+*.m2ts
 *.wav
 *.flac
 *.onnx

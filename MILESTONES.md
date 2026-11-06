@@ -233,8 +233,8 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M01 | Complete | [#5](https://github.com/heetdalsania/openworld-moments/pull/5) | — | Arun Velkumar | JSON Schema 2020-12 contracts at schema_version 1.0; TS + Pydantic generated; CI drift check |
 | M02 | Complete | [#6](https://github.com/heetdalsania/openworld-moments/pull/6) | — | Arun Velkumar | SQLite (WAL) schema v1 for all §9.7 tables; in-house migration runner with backups; typed repositories |
 | M03 | Complete | [#7](https://github.com/heetdalsania/openworld-moments/pull/7) | — | Arun Velkumar | Rust supervisor + loopback token-auth FastAPI worker; durable jobs with WebSocket progress; contracts 1.1, migration 0002 |
-| M04 | Ready | — | — | — | — |
-| M05 | Blocked by M04 | — | — | — | — |
+| M04 | Complete | [#8](https://github.com/heetdalsania/openworld-moments/pull/8) | — | Arun Velkumar | FFprobe probe job (exact rationals, clockwise rotation, HDR side data, stable error codes), `doctor` + `/v1/capabilities`, synthetic fixtures; FFmpeg ≥ 6.0; contracts 1.2, migration 0003 |
+| M05 | Ready | — | — | — | — |
 | M06–M32 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure

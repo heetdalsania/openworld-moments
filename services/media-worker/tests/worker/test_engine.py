@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from openworld_moments_contracts import load
 
-from openworld_moments.jobs.engine import JobEngine, JobHandler
+from openworld_moments.jobs.engine import JobEngine, JobFailure, JobHandler
 from openworld_moments.jobs.handlers import BUILTIN_HANDLERS, DIAGNOSTIC
 from openworld_moments.storage import Database, JobRepository, transaction
 
@@ -137,3 +137,39 @@ def test_clock_moving_backwards_does_not_strand_jobs(database: Database) -> None
     job = _get(database, job_id)
     assert job.state == "ready"
     assert job.started_at == job.finished_at == "2099-01-01T00:00:00Z"
+
+
+async def _run_to_end(database: Database, handler: JobHandler) -> str:
+    engine = JobEngine(database, {handler.kind: handler})
+    await engine.start()
+    job = await engine.submit(handler.kind, {}, None)
+    for _ in range(200):
+        await asyncio.sleep(0.01)
+        if engine.get(job.id).state in {"ready", "failed", "cancelled"}:
+            break
+    await engine.stop()
+    return job.id
+
+
+def test_handler_result_is_stored_on_ready(database: Database) -> None:
+    handler = JobHandler(kind="analyze", run=lambda ctx: {"answer": 42, "nested": {"ok": True}})
+    job = _get(database, asyncio.run(_run_to_end(database, handler)))
+    assert job.state == "ready"
+    assert job.result == {"answer": 42, "nested": {"ok": True}}
+
+
+def test_job_failure_carries_details_and_stderr_tail(database: Database) -> None:
+    def fail(ctx: Any) -> None:
+        raise JobFailure(
+            "media.damaged",
+            "Broken file.",
+            details={"reason": "moov", "ffprobe_error": -1},
+            stderr_tail="x" * 9000 + "moov atom not found",
+        )
+
+    job = _get(database, asyncio.run(_run_to_end(database, JobHandler(kind="analyze", run=fail))))
+    assert job.state == "failed" and job.result is None
+    assert job.error.code == "media.damaged"
+    assert job.error.details == {"reason": "moov", "ffprobe_error": -1}
+    assert job.error.stderr_tail.endswith("moov atom not found")
+    assert len(job.error.stderr_tail) <= 8192

@@ -78,6 +78,10 @@ export type JobId = string;
  */
 export type DurationMs = number;
 /**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp1 = string;
+/**
  * Opaque timeline segment ID: 'seg_' + ULID.
  */
 export type SegmentId = string;
@@ -321,7 +325,7 @@ export interface JobEvent {
 export interface Job {
   schema_version: string;
   id: JobId;
-  kind: "import" | "analyze" | "proxy" | "transcribe" | "index" | "render" | "diagnostic";
+  kind: "import" | "analyze" | "proxy" | "transcribe" | "index" | "render" | "diagnostic" | "probe";
   state:
     | "queued"
     | "probing"
@@ -339,6 +343,10 @@ export interface Job {
    * Handler input (JSON object). Must not contain secrets; paths are allowed but never logged.
    */
   params?: {};
+  /**
+   * Handler output (JSON object), set when the job reaches 'ready'. For 'probe' jobs: a MediaProbe (media-asset.schema.json#/$defs/MediaProbe). Must not contain secrets.
+   */
+  result?: {};
   /**
    * 1 for the first run, incremented on each retry or requeue.
    */
@@ -407,12 +415,28 @@ export interface VideoStream {
   codec: string;
   width: number;
   height: number;
-  frame_rate: Rational;
+  frame_rate: Rational1;
   pixel_format?: string;
   color: ColorInfo;
+  average_frame_rate?: Rational2;
+  /**
+   * True when the container's base and average frame rates disagree by more than 0.1%. A header-level heuristic; frame timing is not decoded.
+   */
+  variable_frame_rate?: boolean;
+  /**
+   * Clockwise rotation in degrees to apply to the coded frame for upright display. 'width' and 'height' are coded (pre-rotation) dimensions.
+   */
+  rotation?: 0 | 90 | 180 | 270;
 }
 /**
- * FFprobe color metadata. 'hdr' is derived from the transfer characteristic (e.g. smpte2084, arib-std-b67).
+ * Exact rational number, used for frame rates (e.g. 30000/1001).
+ */
+export interface Rational1 {
+  num: number;
+  den: number;
+}
+/**
+ * FFprobe color metadata. 'hdr' is true for PQ (smpte2084) or HLG (arib-std-b67) transfer, or Dolby Vision. Unknown or unspecified values are omitted.
  *
  * This interface was referenced by `MediaAsset`'s JSON-Schema
  * via the `definition` "ColorInfo".
@@ -421,7 +445,42 @@ export interface ColorInfo {
   primaries?: string;
   transfer?: string;
   matrix?: string;
+  /**
+   * 'tv' (limited) or 'pc' (full).
+   */
+  range?: string;
   hdr: boolean;
+  mastering_display?: MasteringDisplay;
+  content_light_level?: ContentLightLevel;
+  dolby_vision?: DolbyVision;
+}
+/**
+ * SMPTE ST 2086 mastering display luminance, in nits (cd/m²).
+ */
+export interface MasteringDisplay {
+  min_luminance_nits?: number;
+  max_luminance_nits?: number;
+}
+/**
+ * CTA-861.3 content light level, in nits.
+ */
+export interface ContentLightLevel {
+  max_cll: number;
+  max_fall: number;
+}
+/**
+ * Dolby Vision configuration record.
+ */
+export interface DolbyVision {
+  profile: number;
+  level?: number;
+}
+/**
+ * Exact rational number, used for frame rates (e.g. 30000/1001).
+ */
+export interface Rational2 {
+  num: number;
+  den: number;
 }
 /**
  * This interface was referenced by `MediaAsset`'s JSON-Schema
@@ -431,6 +490,39 @@ export interface AudioStream {
   codec: string;
   channels: number;
   sample_rate_hz: number;
+  /**
+   * FFmpeg channel layout name, e.g. 'stereo' or '5.1(side)'.
+   */
+  channel_layout?: string;
+}
+/**
+ * Normalized FFprobe result for one source file (M04), before import assigns identity. Stored as the 'result' of a 'probe' job. Never contains the file path or free-form container tags.
+ *
+ * This interface was referenced by `MediaAsset`'s JSON-Schema
+ * via the `definition` "MediaProbe".
+ */
+export interface MediaProbe {
+  /**
+   * FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.
+   */
+  container: string;
+  duration_ms: DurationMs;
+  size_bytes: number;
+  /**
+   * Overall bit rate in bits per second, when known.
+   */
+  bit_rate?: number;
+  creation_time?: UtcTimestamp1;
+  video?: VideoStream;
+  audio: AudioStream[];
+  /**
+   * Count of subtitle, data, attachment, and cover-art streams that were not normalized.
+   */
+  other_streams?: number;
+  probed_with: ProbeTool;
+}
+export interface ProbeTool {
+  ffprobe_version: string;
 }
 /**
  * Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.

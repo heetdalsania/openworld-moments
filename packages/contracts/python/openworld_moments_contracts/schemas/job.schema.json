@@ -16,7 +16,7 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic"]
+      "enum": ["import", "analyze", "proxy", "transcribe", "index", "render", "diagnostic", "probe"]
     },
     "state": {
       "type": "string",
@@ -37,6 +37,10 @@
     },
     "params": {
       "description": "Handler input (JSON object). Must not contain secrets; paths are allowed but never logged.",
+      "type": "object"
+    },
+    "result": {
+      "description": "Handler output (JSON object), set when the job reaches 'ready'. For 'probe' jobs: a MediaProbe (media-asset.schema.json#/$defs/MediaProbe). Must not contain secrets.",
       "type": "object"
     },
     "attempt": {

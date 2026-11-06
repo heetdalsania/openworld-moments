@@ -156,7 +156,11 @@ class SubmitJob(BaseModel):
 
 
 def create_app(
-    engine: JobEngine, settings: ApiSettings, *, on_ready: Callable[[], None] | None = None
+    engine: JobEngine,
+    settings: ApiSettings,
+    *,
+    on_ready: Callable[[], None] | None = None,
+    capabilities: Callable[..., dict[str, Any]] | None = None,
 ) -> ASGIApp:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -205,6 +209,13 @@ def create_app(
             "worker_version": __version__,
             "pid": os.getpid(),
         }
+
+    @app.get("/v1/capabilities")
+    async def get_capabilities(refresh: bool = False) -> dict[str, Any]:
+        """Media tool report (same as ``doctor --json``). Runs the tools, so it is threaded."""
+        if capabilities is None:
+            raise EngineError("request.not_found", "No capability report.", status=404)
+        return await asyncio.to_thread(capabilities, refresh=refresh)
 
     @app.get("/v1/jobs")
     async def list_jobs(limit: int = 200) -> list[dict[str, Any]]:

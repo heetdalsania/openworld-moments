@@ -103,7 +103,7 @@ describe("checkVersion", () => {
     [{}, "missing"],
     [{ schema_version: 1 }, "malformed schema_version 1;"],
     [{ schema_version: "0.9" }, "older than the supported 1.x"],
-    [{ schema_version: "1.2" }, "reads up to 1.1"],
+    [{ schema_version: "1.3" }, "reads up to 1.2"],
     [{ schema_version: "2.0" }, "newer OpenWorld Moments"],
   ])("rejects %j with a useful message", (doc, fragment) => {
     expect(() => checkVersion("event", doc)).toThrow(fragment);
@@ -112,6 +112,7 @@ describe("checkVersion", () => {
   it.each([
     ["1.0", 0],
     ["1.1", 1],
+    ["1.2", 2],
   ])("accepts supported version %s", (version, minor) => {
     expect(checkVersion("event", { schema_version: version })).toEqual({ major: 1, minor });
   });

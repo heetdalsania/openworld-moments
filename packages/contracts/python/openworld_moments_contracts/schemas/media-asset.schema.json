@@ -17,32 +17,61 @@
     "created_at"
   ],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
-    "id": { "$ref": "common.schema.json#/$defs/AssetId" },
-    "sha256": { "$ref": "common.schema.json#/$defs/Sha256" },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/AssetId"
+    },
+    "sha256": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
     "fast_hash": {
       "description": "Partial-content hash for early duplicate screening (lowercase hex).",
       "type": "string",
       "pattern": "^[0-9a-f]{16,64}$"
     },
-    "original_name": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "original_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
     "source_kind": {
       "type": "string",
       "enum": ["xbox", "playstation", "obs", "capture_card", "phone_upload", "other"]
     },
-    "import_mode": { "type": "string", "enum": ["reference", "managed"] },
-    "capture_time": { "$ref": "#/$defs/CaptureTimeEstimate" },
-    "duration_ms": { "$ref": "common.schema.json#/$defs/DurationMs" },
+    "import_mode": {
+      "type": "string",
+      "enum": ["reference", "managed"]
+    },
+    "capture_time": {
+      "$ref": "#/$defs/CaptureTimeEstimate"
+    },
+    "duration_ms": {
+      "$ref": "common.schema.json#/$defs/DurationMs"
+    },
     "container": {
       "description": "FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.",
       "type": "string",
       "minLength": 1,
       "maxLength": 200
     },
-    "video": { "$ref": "#/$defs/VideoStream" },
-    "audio": { "type": "array", "items": { "$ref": "#/$defs/AudioStream" } },
-    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "missing_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+    "video": {
+      "$ref": "#/$defs/VideoStream"
+    },
+    "audio": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AudioStream"
+      }
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "missing_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    }
   },
   "$defs": {
     "CaptureTimeEstimate": {
@@ -52,8 +81,12 @@
       "additionalProperties": false,
       "required": ["captured_at", "confidence", "basis"],
       "properties": {
-        "captured_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-        "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "captured_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
         "basis": {
           "type": "array",
           "minItems": 1,
@@ -71,25 +104,126 @@
       "additionalProperties": false,
       "required": ["codec", "width", "height", "frame_rate", "color"],
       "properties": {
-        "codec": { "type": "string", "minLength": 1, "maxLength": 64 },
-        "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
-        "height": { "type": "integer", "minimum": 1, "maximum": 16384 },
-        "frame_rate": { "$ref": "common.schema.json#/$defs/Rational" },
-        "pixel_format": { "type": "string", "maxLength": 64 },
-        "color": { "$ref": "#/$defs/ColorInfo" }
+        "codec": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "frame_rate": {
+          "description": "Nominal frame rate, exact. For constant-frame-rate media this is the stream's base rate; for variable-frame-rate media it is the average rate (see 'variable_frame_rate').",
+          "$ref": "common.schema.json#/$defs/Rational"
+        },
+        "pixel_format": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "color": {
+          "$ref": "#/$defs/ColorInfo"
+        },
+        "average_frame_rate": {
+          "description": "Average frame rate reported by the container (frames / duration), exact.",
+          "$ref": "common.schema.json#/$defs/Rational"
+        },
+        "variable_frame_rate": {
+          "description": "True when the container's base and average frame rates disagree by more than 0.1%. A header-level heuristic; frame timing is not decoded.",
+          "type": "boolean"
+        },
+        "rotation": {
+          "description": "Clockwise rotation in degrees to apply to the coded frame for upright display. 'width' and 'height' are coded (pre-rotation) dimensions.",
+          "type": "integer",
+          "enum": [0, 90, 180, 270]
+        }
       }
     },
     "ColorInfo": {
       "title": "ColorInfo",
-      "description": "FFprobe color metadata. 'hdr' is derived from the transfer characteristic (e.g. smpte2084, arib-std-b67).",
+      "description": "FFprobe color metadata. 'hdr' is true for PQ (smpte2084) or HLG (arib-std-b67) transfer, or Dolby Vision. Unknown or unspecified values are omitted.",
       "type": "object",
       "additionalProperties": false,
       "required": ["hdr"],
       "properties": {
-        "primaries": { "type": "string", "maxLength": 64 },
-        "transfer": { "type": "string", "maxLength": 64 },
-        "matrix": { "type": "string", "maxLength": 64 },
-        "hdr": { "type": "boolean" }
+        "primaries": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "transfer": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "matrix": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "range": {
+          "description": "'tv' (limited) or 'pc' (full).",
+          "type": "string",
+          "maxLength": 16
+        },
+        "hdr": {
+          "type": "boolean"
+        },
+        "mastering_display": {
+          "title": "MasteringDisplay",
+          "description": "SMPTE ST 2086 mastering display luminance, in nits (cd/m²).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_luminance_nits": {
+              "type": "number",
+              "minimum": 0
+            },
+            "max_luminance_nits": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "content_light_level": {
+          "title": "ContentLightLevel",
+          "description": "CTA-861.3 content light level, in nits.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_cll", "max_fall"],
+          "properties": {
+            "max_cll": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_fall": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "dolby_vision": {
+          "title": "DolbyVision",
+          "description": "Dolby Vision configuration record.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["profile"],
+          "properties": {
+            "profile": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 31
+            },
+            "level": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 63
+            }
+          }
+        }
       }
     },
     "AudioStream": {
@@ -98,9 +232,84 @@
       "additionalProperties": false,
       "required": ["codec", "channels", "sample_rate_hz"],
       "properties": {
-        "codec": { "type": "string", "minLength": 1, "maxLength": 64 },
-        "channels": { "type": "integer", "minimum": 1, "maximum": 64 },
-        "sample_rate_hz": { "type": "integer", "minimum": 1000, "maximum": 768000 }
+        "codec": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "sample_rate_hz": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 768000
+        },
+        "channel_layout": {
+          "description": "FFmpeg channel layout name, e.g. 'stereo' or '5.1(side)'.",
+          "type": "string",
+          "maxLength": 64
+        }
+      }
+    },
+    "MediaProbe": {
+      "title": "MediaProbe",
+      "description": "Normalized FFprobe result for one source file (M04), before import assigns identity. Stored as the 'result' of a 'probe' job. Never contains the file path or free-form container tags.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["container", "duration_ms", "size_bytes", "audio", "probed_with"],
+      "properties": {
+        "container": {
+          "description": "FFprobe format name, e.g. 'mov,mp4,m4a,3gp,3g2,mj2'.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "duration_ms": {
+          "$ref": "common.schema.json#/$defs/DurationMs"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bit_rate": {
+          "description": "Overall bit rate in bits per second, when known.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "creation_time": {
+          "description": "Container 'creation_time' tag converted to UTC, when present and valid. Input to capture-time estimation; not trusted on its own.",
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "video": {
+          "$ref": "#/$defs/VideoStream"
+        },
+        "audio": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AudioStream"
+          }
+        },
+        "other_streams": {
+          "description": "Count of subtitle, data, attachment, and cover-art streams that were not normalized.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "probed_with": {
+          "title": "ProbeTool",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ffprobe_version"],
+          "properties": {
+            "ffprobe_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          }
+        }
       }
     }
   }

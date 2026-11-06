@@ -67,6 +67,7 @@ that created them, and every event and log line for that job carries it.
 | Method | Path | Result |
 |---|---|---|
 | GET | `/v1/health` | `{status, api_version, schema_version, worker_version, pid}` |
+| GET | `/v1/capabilities?refresh=bool` | Media tool report, same as `doctor --json` (see [media](./media.md)) |
 | GET | `/v1/jobs?limit=N` | Newest jobs (contract `Job[]`) |
 | POST | `/v1/jobs` | `{kind, params}` → 201 `Job` (state `queued`) |
 | GET | `/v1/jobs/{id}` | `Job` |
@@ -98,14 +99,16 @@ Errors always use contract `ErrorInfo` (`code`, `message`, `retryable`,
 ```python
 from openworld_moments.jobs.engine import JobContext, JobFailure, JobHandler
 
-def run(ctx: JobContext) -> None:
+def run(ctx: JobContext) -> dict | None:
     ctx.set_state("probing")           # optional: move between active stages
     for i, item in enumerate(items):
         ctx.check_cancelled()          # or ctx.sleep(seconds), which wakes on cancel
         ...
         ctx.progress(i + 1, len(items), "Probing files")
     if problem:
-        raise JobFailure("media.probe_failed", "Explain it plainly.", retryable=True)
+        raise JobFailure("media.probe_failed", "Explain it plainly.", retryable=True,
+                         details={"reason": "..."}, stderr_tail=redacted_tail)
+    return {"summary": ...}            # optional: stored as the job's `result`
 
 HANDLER = JobHandler(
     kind="import",                     # must be a contract Job kind
@@ -118,10 +121,12 @@ HANDLER = JobHandler(
 ```
 
 Register handlers in `openworld_moments/jobs/handlers.py`
-(`BUILTIN_HANDLERS`). Handlers must not log secrets, full paths, or media
+(`build_handlers`). Handlers must not log secrets, full paths, or media
 content, and must not touch the database connection the engine owns.
 
-Return normally → `ready`. `JobFailure` → `failed` with that error. Any other
+Return normally → `ready`, with the returned JSON object (if any) stored as
+`result`. `JobFailure` → `failed` with that error, including optional scalar
+`details` and a redacted `stderr_tail` (capped at 8 KB). Any other
 exception → `failed` with `job.handler_crashed` (not retryable); details go to
 the redacted log only.
 
@@ -134,8 +139,9 @@ the redacted log only.
 - Already `cancelled`: returns the job (idempotent). `ready` or `failed`: 409
   `job.not_cancellable`.
 - Handlers should check at least every few hundred milliseconds of work.
-  Subprocesses started by handlers (FFmpeg, M04+) must be terminated when
-  cancellation is observed.
+  Subprocesses started by handlers must be terminated when cancellation is
+  observed: pass `ctx.cancel_event` to `openworld_moments.media.process.run_tool`,
+  which kills and reaps the tool within one poll interval (50 ms).
 
 ## Retry and crash-recovery rules
 

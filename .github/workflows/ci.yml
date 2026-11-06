@@ -51,8 +51,20 @@ jobs:
           enable-cache: true
           cache-dependency-glob: uv.lock
       - run: uv sync --locked --all-packages
+      # Media tests generate synthetic clips with FFmpeg (M04); none are committed.
+      - name: Install FFmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
+      - name: Media tool report (doctor)
+        working-directory: services/media-worker
+        run: uv run --locked python -m openworld_moments.doctor
       - name: Media worker
         working-directory: services/media-worker
+        env:
+          OWM_REQUIRE_FFMPEG: "1" # media tests fail instead of skipping without FFmpeg
         run: |
           uv run --locked ruff format --check .
           uv run --locked ruff check .
