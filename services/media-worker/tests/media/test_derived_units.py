@@ -15,7 +15,7 @@ import pytest
 from openworld_moments_contracts.generated.media_asset_schema import MediaAsset
 
 from openworld_moments.derived import recipes, tonemap, waveform
-from openworld_moments.derived.layout import CleanupReport, DerivedPaths, remove_entry
+from openworld_moments.derived.layout import CleanupReport, DerivedPaths, fsync_file, remove_entry
 from openworld_moments.derived.policy import decide, fit, proxy_geometry, thumbnail_size
 from openworld_moments.derived.service import _ProgressParser
 from openworld_moments.jobs.handlers import validate_derived
@@ -300,6 +300,14 @@ def test_cleanup_ignores_a_linked_derived_root(tmp_path: Path) -> None:
     report = DerivedPaths(library).cleanup([], [])
     assert report.removed_files == 0
     assert (elsewhere / ASSET / "proxy-0000000000000000.mp4").exists()
+
+
+def test_fsync_file_flushes_without_changing_the_file(tmp_path: Path) -> None:
+    # On Windows a flush needs a writable handle; the content must not change.
+    target = tmp_path / "proxy.mp4"
+    target.write_bytes(b"finished artifact")
+    fsync_file(target)
+    assert target.read_bytes() == b"finished artifact"
 
 
 def test_remove_entry_refuses_paths_outside_its_root(tmp_path: Path) -> None:

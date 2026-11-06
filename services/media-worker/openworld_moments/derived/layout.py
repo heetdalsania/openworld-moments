@@ -23,6 +23,7 @@ import contextlib
 import os
 import re
 import stat
+import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -198,7 +199,13 @@ def remove_tree(path: Path, report: CleanupReport, *, inside: Path) -> None:
 
 
 def fsync_file(path: Path) -> None:
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+    """Flush one of the worker's own staging files to disk. Never used on sources.
+
+    Windows can only flush a handle opened for writing (FlushFileBuffers), so the
+    file is opened read-write there; nothing is written.
+    """
+    flags = os.O_RDWR if sys.platform == "win32" else os.O_RDONLY
+    fd = os.open(path, flags | getattr(os, "O_BINARY", 0))
     try:
         os.fsync(fd)
     finally:
