@@ -17,6 +17,7 @@ Decision record: [ADR-0003](./adr/0003-sqlite-migrations.md).
 Rules:
 
 - Binary data never goes into SQLite. Rows reference files by path or hash.
+  Fingerprints are small JSON metadata (a few KB per asset), not media.
 - Anything under `derived/` may be deleted at any time; the database must not
   depend on it existing.
 - Settings hold small JSON values only, never secrets or footage.
@@ -37,7 +38,9 @@ Rules:
 
 | Repository | Table(s) | Types |
 |---|---|---|
-| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
+| `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, since 0005 `set_fast_hash`, `ids_by_fast_hash`, `ids_with_duration`, plus `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
+| `FingerprintRepository` | `asset_fingerprints` (0005) | One versioned fingerprint per (asset, kind): `fast`, `frames`, `audio`; small canonical JSON, never media. Cascades with its asset ([fingerprints](./fingerprints.md)) |
+| `DuplicateCandidateRepository` | `duplicate_candidates` (0005) | Perceptual look-alike pairs (`asset_a < asset_b`). Re-recording refreshes score and evidence but never `review_state`. Cascades with either asset; never deletes media |
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets` | `Session`, `SessionAsset` |
 | `EventRepository` | `events` | contract `Event` |

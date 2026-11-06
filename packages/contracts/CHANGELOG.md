@@ -2,6 +2,18 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.4 — 2026-11-06 (M06)
+
+Additive; every 1.3 document is valid 1.4.
+
+- `fingerprint` (new): `AssetFingerprints` (exact SHA-256, `owm-fast` fast
+  hash, `dhash256` frame hashes over head/tail windows, `energy-envelope`
+  audio), each with algorithm and version, plus `$defs` `DuplicateCandidate`,
+  `DuplicateEvidence`, `FingerprintRequest`, and `FingerprintResult`.
+- `job`: new kind `fingerprint` (backfill).
+- `import`: `ImportItem.candidate_asset_ids` (perceptual look-alikes, review
+  only). Semantic rule: only items with an asset may carry it.
+
 ## 1.3 — 2026-11-05 (M05)
 
 Additive; every 1.2 document is valid 1.3.

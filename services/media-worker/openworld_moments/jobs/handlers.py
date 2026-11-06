@@ -18,6 +18,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from openworld_moments.fingerprints.service import (
+    FingerprintCancelled,
+    Fingerprinter,
+    FingerprintFailure,
+)
 from openworld_moments.ingest.files import ImportCancelled
 from openworld_moments.ingest.importer import Importer, ImportFailure
 from openworld_moments.jobs.engine import Cancelled, JobContext, JobFailure, JobHandler
@@ -176,6 +181,46 @@ def validate_relink(params: Mapping[str, Any]) -> dict[str, Any]:
     return {"asset_id": asset_id, "path": check_path_param(params.get("path"))}
 
 
+MAX_FINGERPRINT_ASSETS = 10_000
+
+
+def validate_fingerprint(params: Mapping[str, Any]) -> dict[str, Any]:
+    """FingerprintRequest (contract fingerprint.schema.json#/$defs/FingerprintRequest)."""
+    _reject_unknown(params, {"asset_ids", "force"})
+    clean: dict[str, Any] = {}
+    force = params.get("force", False)
+    if not isinstance(force, bool):
+        raise ValueError("'force' must be true or false")
+    clean["force"] = force
+    if "asset_ids" in params:
+        ids = params["asset_ids"]
+        if not isinstance(ids, list) or not 1 <= len(ids) <= MAX_FINGERPRINT_ASSETS:
+            raise ValueError(f"'asset_ids' must list 1 to {MAX_FINGERPRINT_ASSETS} asset IDs")
+        if any(not isinstance(i, str) or not _ASSET_ID.match(i) for i in ids):
+            raise ValueError("'asset_ids' must contain asset IDs only")
+        if len(set(ids)) != len(ids):
+            raise ValueError("'asset_ids' must not repeat an asset")
+        clean["asset_ids"] = list(ids)
+    return clean
+
+
+def fingerprint_handler(fingerprinter: Fingerprinter) -> JobHandler:
+    """The ``fingerprint`` backfill. Each asset commits on its own and only missing or
+    stale fingerprints are computed, so a requeued job continues where it stopped."""
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return fingerprinter.backfill(
+                ctx.params, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except FingerprintCancelled as exc:
+            raise Cancelled from exc
+        except FingerprintFailure as exc:
+            raise JobFailure(exc.code, exc.message, retryable=exc.retryable) from exc
+
+    return JobHandler("fingerprint", run, validate_fingerprint, "fingerprinting", True, 3)
+
+
 def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
     _reject_unknown(params, set())
     return {}
@@ -200,7 +245,11 @@ def import_handlers(importer: Importer) -> dict[str, JobHandler]:
     def run_import(ctx: JobContext) -> dict[str, Any]:
         try:
             return importer.run_import(
-                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+                ctx.params,
+                job_id=ctx.job_id,
+                cancel=ctx.cancel_event,
+                progress=ctx.progress,
+                set_state=ctx.set_state,
             )
         except ImportCancelled as exc:
             raise Cancelled from exc
@@ -241,4 +290,6 @@ def build_handlers(
     if database is not None:
         importer = Importer(database, tools, probe_timeout_s=probe_timeout_s)
         handlers.update(import_handlers(importer))
+        fingerprint = fingerprint_handler(importer.fingerprinter)
+        handlers[fingerprint.kind] = fingerprint
     return handlers

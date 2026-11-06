@@ -35,7 +35,7 @@ class FixedTools(MediaTools):
         self._fixed = ffprobe
 
     def tool(self, name: str) -> ToolInfo:
-        return self._fixed
+        return self._fixed if name == "ffprobe" else super().tool(name)  # type: ignore[arg-type]
 
 
 def _fingerprint(path: Path) -> tuple[str, int, int]:

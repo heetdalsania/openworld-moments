@@ -50,6 +50,7 @@ class Job(BaseModel):
         "probe",
         "relink",
         "check_sources",
+        "fingerprint",
     ]
     state: Literal[
         "queued",
@@ -74,7 +75,7 @@ class Job(BaseModel):
     result: Annotated[
         dict[str, Any] | None,
         Field(
-            description="Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs). Must not contain secrets."
+            description="Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs). Must not contain secrets."
         ),
     ] = None
     idempotency_key: Annotated[

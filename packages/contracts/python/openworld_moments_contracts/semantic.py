@@ -127,6 +127,8 @@ def _import(doc: Document) -> Iterable[str]:
                 yield f"items[{i}].error: '{outcome}' items must explain why"
             if "asset_id" in item:
                 yield f"items[{i}].asset_id: '{outcome}' items must not name an asset"
+            if "candidate_asset_ids" in item:
+                yield f"items[{i}].candidate_asset_ids: '{outcome}' items have no candidates"
     totals = doc["totals"]
     if totals["files"] != len(doc["items"]):
         yield f"totals.files: {totals['files']} does not match {len(doc['items'])} items"

@@ -100,7 +100,7 @@ that file's error, and the batch continues.
 
 | `outcome` | Meaning |
 |---|---|
-| `imported` | New asset |
+| `imported` | New asset; `candidate_asset_ids` lists look-alike assets, if any (M06) |
 | `existing` | The same bytes are already in the library (any path, either mode). No new row |
 | `relinked` | The same bytes match an asset marked missing, and this import restored it. A reference import re-points a reference asset; a managed import re-copies a lost managed file |
 | `skipped` | Not attempted: not a media file, or a link that leaves the selected folder |
@@ -193,20 +193,24 @@ Session grouping (M11) refines it.
 - **Managed assets** are not relinked (`relink.not_referenced`). Importing the
   same file again in managed mode restores a lost library copy.
 
-### Identity limitation (until M06)
+### Identity (M06)
 
-Identity is the full SHA-256. That is exact, but it means:
+Identity is the full SHA-256. M06 added three things on top of it (see
+[fingerprints](./fingerprints.md)):
 
-- Every import reads every byte, and a managed import of something already in
-  the library still copies it to staging before the duplicate is noticed.
-- Relink always reads the whole candidate file.
-- The missing-source check only compares sizes. A same-size in-place edit is
-  not detected until the file is hashed again.
+- **Every import computes the fast hash first.** In managed mode, a file
+  already in the library is confirmed in place and never copied into staging
+  again.
+- **Relink checks the fast hash before reading the whole file.** A file that
+  differs within its first or last MiB is rejected after reading 2 MiB.
+- **New assets are fingerprinted at the end of the import** (state
+  `fingerprinting`). Look-alike assets are reported per item as
+  `candidate_asset_ids`. Fingerprinting is best effort: a decode failure or a
+  missing FFmpeg never fails the import, and the `fingerprint` backfill fills
+  the gap.
 
-M06 adds the fast partial hash (early duplicate screening before copying, and
-a cheap relink pre-check in `verify_identity`), perceptual fingerprints,
-fingerprint versioning, and a backfill job. The SHA-256 computed here is the
-exact identity M06 builds on.
+**Remaining limitation:** the missing-source check compares sizes only, so a
+same-size in-place edit is not detected until the file is hashed again.
 
 ## Error codes
 

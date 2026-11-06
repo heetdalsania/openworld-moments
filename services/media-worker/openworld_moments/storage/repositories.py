@@ -286,6 +286,35 @@ class AssetRepository:
         if cur.rowcount == 0:
             raise NotFoundError(f"asset {asset_id} not found")
 
+    def set_fast_hash(self, asset_id: str, value: str) -> None:
+        cur = self.conn.execute(
+            "UPDATE media_assets SET fast_hash = ? WHERE id = ?", (value, asset_id)
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"asset {asset_id} not found")
+
+    def ids_by_fast_hash(self, value: str, size_bytes: int) -> list[str]:
+        """Assets that may hold exactly these bytes: same fast hash and size (or unknown size)."""
+        rows = self.conn.execute(
+            "SELECT id FROM media_assets WHERE fast_hash = ? "
+            "AND (size_bytes IS NULL OR size_bytes = ?) ORDER BY created_at, id",
+            (value, size_bytes),
+        ).fetchall()
+        return [str(r["id"]) for r in rows]
+
+    def ids_with_duration(self, low_ms: int, high_ms: int, *, exclude: str) -> list[str]:
+        """Video assets whose duration lies in [low_ms, high_ms], except ``exclude``."""
+        rows = self.conn.execute(
+            "SELECT id FROM media_assets WHERE duration_ms BETWEEN ? AND ? AND id <> ? "
+            "AND video_codec IS NOT NULL ORDER BY created_at, id",
+            (low_ms, high_ms, exclude),
+        ).fetchall()
+        return [str(r["id"]) for r in rows]
+
+    def ids(self) -> list[str]:
+        rows = self.conn.execute("SELECT id FROM media_assets ORDER BY created_at, id").fetchall()
+        return [str(r["id"]) for r in rows]
+
     def clear_missing(self, asset_id: str) -> None:
         cur = self.conn.execute(
             "UPDATE media_assets SET missing_at = NULL WHERE id = ?", (asset_id,)
@@ -414,6 +443,180 @@ class AssetImportRepository:
 
     def count(self) -> int:
         return int(self.conn.execute("SELECT count(*) FROM asset_imports").fetchone()[0])
+
+
+FingerprintKind = Literal["fast", "frames", "audio"]
+
+
+class StoredFingerprint(_Model):
+    asset_id: str
+    kind: FingerprintKind
+    algorithm: str
+    version: int = Field(ge=1)
+    data: dict[str, JsonValue]
+    computed_at: str
+
+
+class FingerprintRepository:
+    """asset_fingerprints: one versioned fingerprint per (asset, kind); cascades with the asset."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def put(self, fp: StoredFingerprint) -> None:
+        try:
+            self.conn.execute(
+                "INSERT INTO asset_fingerprints (asset_id, kind, algorithm, version, data_json, "
+                "computed_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (asset_id, kind) DO UPDATE SET "
+                "algorithm = excluded.algorithm, version = excluded.version, "
+                "data_json = excluded.data_json, computed_at = excluded.computed_at",
+                (fp.asset_id, fp.kind, fp.algorithm, fp.version, _dumps(fp.data), fp.computed_at),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def for_asset(self, asset_id: str) -> dict[str, StoredFingerprint]:
+        rows = self.conn.execute(
+            "SELECT * FROM asset_fingerprints WHERE asset_id = ?", (asset_id,)
+        ).fetchall()
+        return {r["kind"]: self._from_row(r) for r in rows}
+
+    def delete(self, asset_id: str, kind: FingerprintKind) -> None:
+        self.conn.execute(
+            "DELETE FROM asset_fingerprints WHERE asset_id = ? AND kind = ?", (asset_id, kind)
+        )
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> StoredFingerprint:
+        return StoredFingerprint(
+            asset_id=row["asset_id"],
+            kind=row["kind"],
+            algorithm=row["algorithm"],
+            version=row["version"],
+            data=_loads(row["data_json"]),
+            computed_at=row["computed_at"],
+        )
+
+
+ReviewState = Literal["unreviewed", "duplicate", "distinct"]
+
+
+class DuplicateCandidateRow(_Model):
+    id: int
+    asset_a: str
+    asset_b: str
+    kind: Literal["perceptual"]
+    score: float = Field(ge=0, le=1)
+    evidence: dict[str, JsonValue]
+    algorithm: str
+    version: int
+    review_state: ReviewState
+    created_at: str
+    updated_at: str
+
+
+class DuplicateCandidateRepository:
+    """duplicate_candidates. Recording a pair again refreshes its score and evidence but
+    never changes a person's ``review_state``. Nothing here deletes media."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def record(
+        self,
+        asset_x: str,
+        asset_y: str,
+        *,
+        score: float,
+        evidence: dict[str, JsonValue],
+        algorithm: str,
+        version: int,
+        when: str | None = None,
+    ) -> tuple[int, bool]:
+        """Insert or refresh a pair; returns ``(id, created)``."""
+        if asset_x == asset_y:
+            raise ConflictError("an asset cannot be a duplicate candidate of itself")
+        a, b = sorted((asset_x, asset_y))
+        now = when or utc_now()
+        existing = self.conn.execute(
+            "SELECT id FROM duplicate_candidates WHERE asset_a = ? AND asset_b = ? "
+            "AND kind = 'perceptual'",
+            (a, b),
+        ).fetchone()
+        try:
+            if existing is not None:
+                self.conn.execute(
+                    "UPDATE duplicate_candidates SET score = ?, evidence_json = ?, algorithm = ?, "
+                    "version = ?, updated_at = ? WHERE id = ?",
+                    (score, _dumps(evidence), algorithm, version, now, existing["id"]),
+                )
+                return int(existing["id"]), False
+            cur = self.conn.execute(
+                "INSERT INTO duplicate_candidates (asset_a, asset_b, kind, score, evidence_json, "
+                "algorithm, version, created_at, updated_at) "
+                "VALUES (?, ?, 'perceptual', ?, ?, ?, ?, ?, ?)",
+                (a, b, score, _dumps(evidence), algorithm, version, now, now),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+        return int(cur.lastrowid or 0), True
+
+    def get(self, candidate_id: int) -> DuplicateCandidateRow:
+        row = self.conn.execute(
+            "SELECT * FROM duplicate_candidates WHERE id = ?", (candidate_id,)
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(f"duplicate candidate {candidate_id} not found")
+        return self._from_row(row)
+
+    def query(
+        self,
+        *,
+        review_state: ReviewState | None = None,
+        asset_id: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[DuplicateCandidateRow]:
+        clauses: list[str] = []
+        args: list[JsonValue] = []
+        if review_state is not None:
+            clauses.append("review_state = ?")
+            args.append(review_state)
+        if asset_id is not None:
+            clauses.append("(asset_a = ? OR asset_b = ?)")
+            args += [asset_id, asset_id]
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = self.conn.execute(
+            f"SELECT * FROM duplicate_candidates {where} "  # noqa: S608 - fixed fragments
+            "ORDER BY created_at, id LIMIT ? OFFSET ?",
+            (*args, limit, offset),
+        ).fetchall()
+        return [self._from_row(r) for r in rows]
+
+    def set_review_state(self, candidate_id: int, state: ReviewState) -> DuplicateCandidateRow:
+        cur = self.conn.execute(
+            "UPDATE duplicate_candidates SET review_state = ?, updated_at = ? WHERE id = ?",
+            (state, utc_now(), candidate_id),
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"duplicate candidate {candidate_id} not found")
+        return self.get(candidate_id)
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> DuplicateCandidateRow:
+        return DuplicateCandidateRow(
+            id=row["id"],
+            asset_a=row["asset_a"],
+            asset_b=row["asset_b"],
+            kind=row["kind"],
+            score=row["score"],
+            evidence=_loads(row["evidence_json"]),
+            algorithm=row["algorithm"],
+            version=row["version"],
+            review_state=row["review_state"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
 
 
 # -- sessions -------------------------------------------------------------------------

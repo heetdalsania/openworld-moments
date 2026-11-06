@@ -144,6 +144,9 @@ function* importResult(doc: ImportResult): Generator<string> {
       if (item.asset_id !== undefined) {
         yield `items[${i}].asset_id: '${outcome}' items must not name an asset`;
       }
+      if (item.candidate_asset_ids !== undefined) {
+        yield `items[${i}].candidate_asset_ids: '${outcome}' items have no candidates`;
+      }
     }
   }
   const totals = doc.totals;

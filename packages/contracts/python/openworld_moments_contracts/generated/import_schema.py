@@ -78,6 +78,13 @@ class ImportItem(BaseModel):
         ),
     ] = None
     error: error_schema.ErrorInfo | None = None
+    candidate_asset_ids: Annotated[
+        list[common_schema.AssetId] | None,
+        Field(
+            description="Other assets that look like the same content (perceptual duplicate candidates, 1.4). Reported for review only; nothing is merged.",
+            max_length=20,
+        ),
+    ] = None
 
 
 class RelinkRequest(BaseModel):
