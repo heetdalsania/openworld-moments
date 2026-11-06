@@ -92,7 +92,7 @@ informs review but does not decide.
 | Case | Result |
 |---|---|
 | Byte-identical, renamed, or moved copy | One asset (`existing`) |
-| Remux (same streams, other container) | Candidate, score 1.0 |
+| Remux (same streams, other container) | Candidate; every frame matches. Score 1.0 when both files sample the same frames, about 0.83 when an FFmpeg version samples the remux one frame-time apart (seen with FFmpeg 8) |
 | Recompressed (other resolution or bitrate) | Candidate (about 0.88 for a half-bitrate re-encode at double resolution) |
 | Similar but different content (same texture, other seed; the same static pattern 10 s later; another test pattern) | Separate, no candidate |
 | Replay overlap (A's end repeated at the start of B) | Not a candidate: head is compared with head and tail with tail. Overlap alignment is M12 |

@@ -53,7 +53,8 @@ def clips(tmp_path_factory: pytest.TempPathFactory, ffmpeg: ToolInfo) -> Path:
     """8-second synthetic clips: an original, its remux and re-encode, and look-alikes."""
     out = tmp_path_factory.mktemp("fingerprint-clips")
     src = f"testsrc2=size=320x180:rate=30:duration={CLIP_S}"
-    tone = f"sine=frequency=440:duration={CLIP_S}"
+    # Beeps, not a steady tone: a constant loudness has no defined correlation.
+    tone = f"sine=frequency=440:beep_factor=4:duration={CLIP_S}"
     x264 = ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
     _ffmpeg_run(
         ffmpeg,
@@ -299,7 +300,12 @@ def test_same_content_becomes_a_candidate_not_a_duplicate(
     assert candidate.evidence["matching_frames"] >= alg.MATCH_MIN_FRAMES
     assert "audio_correlation" in candidate.evidence  # both have the same tone
     if variant == "remux.mkv":
-        assert candidate.score == 1.0
+        # Every sampled frame matches. The score is 1.0 when both files sample the same
+        # frames; some FFmpeg versions pick frames one frame-time apart in the remux
+        # (about 0.83 seen with FFmpeg 8): still near-identical, still a candidate.
+        evidence = candidate.evidence
+        assert evidence["matching_frames"] == evidence["compared_frames"]
+        assert candidate.score >= 0.75
 
 
 @pytest.mark.parametrize(
