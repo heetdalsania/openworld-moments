@@ -292,7 +292,8 @@ async fn early_exit_reports_stderr_without_the_token() {
 /// file is not valid media, so its import job fails, but exactly one is started.
 #[tokio::test(flavor = "multi_thread")]
 async fn worker_sink_round_trip() {
-    use openworld_moments_desktop_lib::watch::{Meta, Sink, WorkerSink};
+    use openworld_moments_desktop_lib::watch::fsprobe::{self, FileState};
+    use openworld_moments_desktop_lib::watch::{Sink, WorkerSink};
 
     let dir = tempfile::tempdir().unwrap();
     let watched = dir.path().join("Xbox Game DVR");
@@ -317,16 +318,22 @@ async fn worker_sink_round_trip() {
     assert_eq!(folders[0].id, id);
     assert!(folders[0].recursive && folders[0].enabled);
 
-    let meta = Meta {
-        size: 18,
-        mtime_ns: 1_700_000_000_000_000_000,
+    // Report the file's real metadata, as the watcher would.
+    let FileState::Local(meta) = fsprobe::file_state(&watched.join("clip.mp4")) else {
+        panic!("the test file is a local file");
     };
     assert_eq!(
         sink.report_file(id, "clip.mp4", meta).await.unwrap(),
         "queued"
     );
+    // The same version again never starts a second job. Depending on timing the
+    // first import is still running, has failed for good (not a video), or has
+    // failed retryably and waits in backoff.
     let again = sink.report_file(id, "clip.mp4", meta).await.unwrap();
-    assert!(again == "in_progress" || again == "known", "{again}");
+    assert!(
+        matches!(again.as_str(), "in_progress" | "known" | "backoff"),
+        "{again}"
+    );
     assert_eq!(
         sink.report_file(id, "notes.txt", meta).await.unwrap(),
         "ignored"
