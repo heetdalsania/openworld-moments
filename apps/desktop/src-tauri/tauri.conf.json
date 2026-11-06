@@ -14,14 +14,14 @@
       {
         "label": "main",
         "title": "OpenWorld Moments",
-        "width": 960,
-        "height": 640,
+        "width": 1200,
+        "height": 780,
         "minWidth": 640,
         "minHeight": 480
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: owm-media: http://owm-media.localhost; media-src owm-media: http://owm-media.localhost; connect-src ipc: http://ipc.localhost owm-media: http://owm-media.localhost"
     }
   },
   "bundle": {

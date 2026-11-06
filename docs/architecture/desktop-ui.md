@@ -1,0 +1,174 @@
+# Desktop library and jobs UI
+
+M09 turns the desktop window into the first usable workflow:
+
+- import media,
+- watch background work,
+- browse the library,
+- play clips,
+- understand failures.
+
+Everything runs locally. The UI talks only to the Rust host, which talks to the
+worker.
+
+## How the UI reaches the worker
+
+```text
+React UI ──invoke("worker_api", {method, path, body})──▶ Rust host ──token──▶ worker /v1/...
+React UI ──<video src="owm-media://localhost/asset/<id>/proxy">──▶ Rust host ──▶ file (Range)
+Rust host ──worker://job-event, worker://resync, worker://status──▶ React UI
+```
+
+- **`worker_api`** (`src-tauri/src/media.rs`, `api_route_allowed`) forwards only
+  these routes. Everything else is refused with `request.not_allowed`, including
+  shutdown, cleanup, watched-folder reports from the host, and the media lookup.
+  The worker token never reaches the web view.
+
+  | Method | Route |
+  |---|---|
+  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities` |
+  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry` |
+
+  IDs must be well-formed and query strings contain only `[A-Za-z0-9_=&-]`.
+  Watched folders keep their own M07 commands.
+- **`owm-media://`** is a custom protocol served by the host. URLs name an asset
+  and a variant only:
+  - `/asset/<id>/original`
+  - `/asset/<id>/proxy`
+  - `/asset/<id>/waveform`
+  - `/asset/<id>/thumbnail/<n>`
+
+  On Windows (WebView2) the same URLs are `http://owm-media.localhost/...`.
+
+  The host asks the worker for the file (`GET /v1/assets/{id}/media/{variant}`,
+  host-only). The worker returns a path it has checked:
+  - an original only through its import record, with the size still matching;
+  - a derived file only when its row is ready and the path is a derived artifact.
+
+  The host then reads the requested byte range. It supports HTTP Range requests
+  (one range, up to 4 MiB per response; files up to 16 MiB are sent whole when no
+  range is asked) and never writes. The CSP allows this scheme only for
+  `img-src`, `media-src`, and `connect-src`.
+- **Events:** the host relays job events and asks the UI to resynchronize after
+  a reconnect or a sequence gap.
+
+## Routes and components
+
+Routes are hash-based, so reloading the window returns to the same screen.
+
+| Route | Component | Shows |
+|---|---|---|
+| `#/library` (default) | `LibraryView` | Newest clips first, 60 per page. Thumbnail, name, duration, size, and badges (Original missing, HDR, No audio, Copied to library). Loading, error with retry, and empty states (with Import and a pointer to watched folders) |
+| `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
+| `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
+
+Global, in `App.tsx`:
+
+- **Navigation:** Library and Settings. Other spec 10.1 sections arrive with
+  their milestones.
+- **Import:** opens `ImportPanel`. Choose files or folders, or drop them onto the
+  window, then choose reference (the default, remembered) or managed.
+- **Background jobs:** toggles `JobCenter`, with a running count.
+- **Worker banner:** starting, restarting (jobs are kept), or failed.
+- **Skip to content** link.
+
+Supporting modules:
+
+| Module | Role |
+|---|---|
+| `api.ts` | Typed client (contract types) and plain-language error text (`describeError`) |
+| `query.ts` | Small shared query cache (`useQuery`, `invalidate`, `useAction`) |
+| `jobs.ts` | Durable job store. Loaded from `GET /v1/jobs` at start, after a worker (re)start, and on resync; live events update it. Finished imports refresh the library, finished `proxy` jobs refresh that asset |
+| `media.ts` | `owm-media` URLs, waveform parsing (`owm-waveform` v1), durations |
+| `route.ts` | Hash router |
+
+## Behavior worth knowing
+
+- **Playback preparation is automatic.** Opening a clip whose playback copy,
+  thumbnails, or waveform are not prepared (or are missing or stale) starts one
+  `proxy` job (M08), at most once per visit. **Rebuild playback media** forces
+  regeneration; **Try again** retries a failure.
+- **Playback choice:**
+  - the playback copy plays when it is ready (or stale but playable);
+  - otherwise the original plays, with a note when the policy says it may not
+    play smoothly;
+  - a missing original disables the Original choice, while a playback copy keeps
+    playing.
+- **Missing original vs. failed copy:**
+  - a missing original shows a notice ("missing or offline… Nothing was deleted");
+  - a failed copy shows its error ("The playback copy could not be made: …") and
+    a Try again button.
+- **Jobs stay visible.** The job center is outside the routed view, and its
+  state comes from the worker. After navigation, a UI reload, or a worker
+  restart, running and finished jobs are still listed.
+  - **Cancel and Retry** show the state the worker returns.
+  - **Retry** appears only for retryable failures.
+  - **Errors** show plain text first. The code and the tool's (path-redacted)
+    stderr tail are folded under "Technical details". There are no stack traces.
+- **Import results:** an import job lists its counts (imported, already in the
+  library, found again, skipped, failed) and the files that were not imported,
+  with reasons.
+- **Originals:**
+  - The UI has no action that deletes, moves, renames, or edits a source.
+  - Copy in the import dialog and asset view says so.
+  - Tests check that no button suggests it.
+
+## Keyboard and accessibility
+
+- **Keyboard:** every primary control is a native link, button, or form field.
+  Tab order:
+  1. Skip to content;
+  2. Library and Settings;
+  3. Import and Background jobs;
+  4. view controls;
+  5. clip cards.
+
+  Focus rings are always visible (`:focus-visible`).
+- **Dialogs:** the import dialog is labelled (`role="dialog"`, `aria-modal`),
+  moves focus to its first button, and closes with Escape.
+- **Labels:** progress bars carry labels and value text. Status changes use
+  `role="status"`, errors `role="alert"`. Thumbnails in the filmstrip are buttons
+  named "Jump to m:ss", and the waveform has an image label.
+
+## Tests
+
+- **UI** (`apps/desktop/src/*.test.tsx`, Vitest + Testing Library + user-event),
+  with a fake host (`src/testing/fakeHost.ts`):
+  - **every state** of the library, asset view, job center, and import dialog;
+  - **a keyboard-only walkthrough:** tab order, Import opened with Enter, files
+    chosen and the import started without a mouse, Escape closing the dialog;
+  - **worker restart:** while the UI is open;
+  - **reload recovery:** the hash route restores the asset screen;
+  - **drag and drop;**
+  - **live job events and resync.**
+- **End-to-end:** the real worker and FFmpeg, through the host's code. Run:
+
+  ```bash
+  cargo test -p openworld-moments-desktop --test library_e2e
+  ```
+
+  It covers:
+  - **import:** a synthetic MKV through `/v1/imports`;
+  - **playback media:** a `proxy` job, as the asset view starts it;
+  - **playback:** proxy byte ranges through `owm-media`, the way a `<video>`
+    element asks for them, plus the original, a thumbnail, and the waveform;
+  - **errors:** they carry no paths;
+  - **a moved original:** reported as missing while the proxy still plays;
+  - **a worker crash and restart:** jobs and media survive.
+
+  CI installs FFmpeg for this test (`OWM_REQUIRE_FFMPEG=1`).
+
+## Known player limitations
+
+- **Formats:** the original plays only in formats the system web view decodes.
+  That's H.264/AAC MP4 everywhere. HEVC, MKV, and VP9 depend on the platform,
+  which is why the proxy policy (M08) exists.
+- **Seeking:** in an original depends on its keyframe spacing. Proxies have one
+  keyframe per second.
+- **Waveform:** shown for orientation; it is not linked to the playhead yet.
+- **Thumbnails** seek the player but do not scrub.
+- **No frame-accurate stepping, playback speed, or A/V offset controls.** The
+  editor milestones (M21, M22) own those.
+- **Bounded responses:** large files are served in 4 MiB ranges. Players that
+  request without a Range header get the first 4 MiB of a file larger than
+  16 MiB with status 206. Every supported web view sends ranges.

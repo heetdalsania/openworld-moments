@@ -182,6 +182,64 @@ pub async fn worker_cancel_job(
         .map_err(to_ui_error)
 }
 
+/// The UI's general route to the worker (M09). Only routes in
+/// [`crate::media::api_route_allowed`] pass; the token stays in the host.
+#[tauri::command]
+pub async fn worker_api(
+    state: State<'_, Option<Supervisor>>,
+    method: String,
+    path: String,
+    body: Option<Value>,
+) -> Result<Value, Value> {
+    if !crate::media::api_route_allowed(&method, &path) {
+        return Err(crate::media::route_refused());
+    }
+    let method = match method.as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        _ => return Err(crate::media::route_refused()),
+    };
+    supervisor(&state)?
+        .request(method, &path, body.as_ref(), None)
+        .await
+        .map_err(to_ui_error)
+}
+
+/// Answer one `owm-media://` request (see [`crate::media`]).
+pub fn media_protocol<R: Runtime>(
+    app: &AppHandle<R>,
+    request: tauri::http::Request<Vec<u8>>,
+    responder: tauri::UriSchemeResponder,
+) {
+    let supervisor = app
+        .try_state::<Option<Supervisor>>()
+        .and_then(|s| s.inner().clone());
+    let path = request.uri().path().to_string();
+    let range = request
+        .headers()
+        .get("range")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+    tauri::async_runtime::spawn(async move {
+        let response = match supervisor {
+            Some(supervisor) => crate::media::serve(&supervisor, &path, range.as_deref()).await,
+            None => crate::media::MediaResponse {
+                status: 503,
+                headers: vec![("Content-Type", "application/json".into())],
+                body: unavailable().to_string().into_bytes(),
+            },
+        };
+        let mut builder = tauri::http::Response::builder().status(response.status);
+        for (name, value) in response.headers {
+            builder = builder.header(name, value);
+        }
+        let reply = builder
+            .body(response.body)
+            .unwrap_or_else(|_| tauri::http::Response::new(Vec::new()));
+        responder.respond(reply);
+    });
+}
+
 #[tauri::command]
 pub async fn worker_list_jobs(state: State<'_, Option<Supervisor>>) -> Result<Value, Value> {
     supervisor(&state)?.list_jobs().await.map_err(to_ui_error)

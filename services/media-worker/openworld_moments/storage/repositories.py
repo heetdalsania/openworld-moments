@@ -248,14 +248,36 @@ class AssetRepository:
         return [self._from_row(r) for r in rows]
 
     def query(
-        self, *, missing: bool | None = None, limit: int = 200, offset: int = 0
+        self,
+        *,
+        missing: bool | None = None,
+        limit: int = 200,
+        offset: int = 0,
+        newest: bool = False,
+        after: str | None = None,
     ) -> list[MediaAsset]:
-        """Assets oldest first. ``missing`` filters on whether ``missing_at`` is set."""
-        where = {None: "", True: "WHERE missing_at IS NOT NULL", False: "WHERE missing_at IS NULL"}
+        """Assets oldest first (``newest``: newest first). ``missing`` filters on whether
+        ``missing_at`` is set. ``after`` is an asset ID: only assets after it in this order
+        are returned (keyset pagination, stable while new assets arrive). Raises
+        NotFoundError for an unknown ``after``."""
+        clauses = {None: [], True: ["missing_at IS NOT NULL"], False: ["missing_at IS NULL"]}[
+            missing
+        ]
+        params: list[Any] = []
+        if after is not None:
+            anchor = self.conn.execute(
+                "SELECT created_at, id FROM media_assets WHERE id = ?", (after,)
+            ).fetchone()
+            if anchor is None:
+                raise NotFoundError(f"asset {after} not found")
+            clauses.append("(created_at, id) < (?, ?)" if newest else "(created_at, id) > (?, ?)")
+            params += [anchor["created_at"], anchor["id"]]
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        order = "created_at DESC, id DESC" if newest else "created_at, id"
         rows = self.conn.execute(
-            f"SELECT * FROM media_assets {where[missing]} "  # noqa: S608 - fixed fragments
-            "ORDER BY created_at, id LIMIT ? OFFSET ?",
-            (limit, offset),
+            f"SELECT * FROM media_assets {where} "  # noqa: S608 - fixed fragments
+            f"ORDER BY {order} LIMIT ? OFFSET ?",
+            (*params, limit, offset),
         ).fetchall()
         return [self._from_row(r) for r in rows]
 

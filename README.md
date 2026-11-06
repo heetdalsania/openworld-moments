@@ -25,8 +25,9 @@ Completed milestones:
 | M06 — Fingerprints and duplicate detection | Fast partial hashes that skip re-copying known files, versioned perceptual frame and audio fingerprints, review-only duplicate candidates, and a restartable backfill job ([fingerprints guide](./docs/architecture/fingerprints.md)) |
 | M07 — Watched folders and Xbox onboarding | Native folder watching with stabilization, startup and periodic reconciliation, offline backoff, and cloud-placeholder handling; watched-folder settings and an Xbox/OneDrive onboarding card in the app ([watched folders](./docs/architecture/watched-folders.md), [Xbox guide](./docs/guides/xbox-onedrive.md)) |
 | M08 — Proxies, thumbnails, and waveforms | Explainable proxy decisions; deterministic H.264 SDR proxies with LUT-based HDR tone mapping; filmstrip thumbnails and compact waveforms; cache keys with invalidation, atomic promotion, validated outputs, cancellation, and safe cleanup ([derived media](./docs/architecture/derived-media.md)) |
+| M09 — Desktop library and jobs UI | The first usable app: import by button or drag and drop, a paged library with thumbnails, clip pages that play a proxy or the original over a range-capable media protocol, automatic playback preparation, and a background-job center with progress, cancel, retry, and readable errors ([desktop UI](./docs/architecture/desktop-ui.md)) |
 
-The app can watch folders and import new captures automatically, and the worker can prepare playback proxies, thumbnails, and waveforms; there is no library view, analysis, or editing yet. Those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+You can import clips (by button, drag and drop, or a watched folder), browse them in the library, and play them, with playback copies prepared automatically; there are no sessions, analysis, or editing yet. Those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -338,8 +339,8 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M09, M11, and M14 are ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
+M10, M11, and M14 are ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
 
-- [M09 — Desktop library and jobs UI](./docs/milestones/M09-library-and-jobs-ui.md): the first usable import and library experience, playing M08 proxies and showing thumbnails and waveforms.
+- [M10 — Phone QR upload](./docs/milestones/M10-phone-qr-upload.md): temporary, isolated LAN transfer from a phone into the library.
 - [M11 — Session grouping](./docs/milestones/M11-session-grouping.md): explainable metadata-based grouping of assets into sessions.
 - [M14 — Detector SDK and profile schema](./docs/milestones/M14-detector-sdk-and-profiles.md): the extensible detector and profile runtime.
