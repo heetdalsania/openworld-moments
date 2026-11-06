@@ -498,6 +498,139 @@ class FingerprintRepository:
         )
 
 
+DerivedKind = Literal["proxy", "filmstrip", "waveform"]
+
+
+class DerivedArtifactRow(_Model):
+    """One derived artifact (M08). ``relpath`` is relative to the library folder."""
+
+    asset_id: str
+    kind: DerivedKind
+    status: Literal["ready", "failed"]
+    cache_key: str = Field(min_length=64, max_length=64)
+    recipe: dict[str, JsonValue]
+    info: dict[str, JsonValue] | None = None
+    relpath: str | None = None
+    size_bytes: int | None = Field(default=None, ge=0)
+    sha256: str | None = None
+    created_at: str | None = None
+    last_error: dict[str, JsonValue] | None = None
+    updated_at: str
+
+
+class DerivedArtifactRepository:
+    """derived_artifacts: which derived file is current per (asset, kind); cascades with
+    the asset. Rows never delete files; the derived-media service does."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def get(self, asset_id: str, kind: DerivedKind) -> DerivedArtifactRow | None:
+        row = self.conn.execute(
+            "SELECT * FROM derived_artifacts WHERE asset_id = ? AND kind = ?", (asset_id, kind)
+        ).fetchone()
+        return self._from_row(row) if row else None
+
+    def for_asset(self, asset_id: str) -> dict[str, DerivedArtifactRow]:
+        rows = self.conn.execute(
+            "SELECT * FROM derived_artifacts WHERE asset_id = ?", (asset_id,)
+        ).fetchall()
+        return {r["kind"]: self._from_row(r) for r in rows}
+
+    def put(self, row: DerivedArtifactRow) -> None:
+        """Insert or replace the row for (asset, kind)."""
+        try:
+            self.conn.execute(
+                "INSERT INTO derived_artifacts (asset_id, kind, status, cache_key, recipe_json, "
+                "info_json, relpath, size_bytes, sha256, created_at, last_error_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT (asset_id, kind) DO UPDATE SET status = excluded.status, "
+                "cache_key = excluded.cache_key, "
+                "recipe_json = excluded.recipe_json, info_json = excluded.info_json, "
+                "relpath = excluded.relpath, size_bytes = excluded.size_bytes, "
+                "sha256 = excluded.sha256, created_at = excluded.created_at, "
+                "last_error_json = excluded.last_error_json, updated_at = excluded.updated_at",
+                (
+                    row.asset_id,
+                    row.kind,
+                    row.status,
+                    row.cache_key,
+                    _dumps(row.recipe),
+                    _dumps(row.info) if row.info is not None else None,
+                    row.relpath,
+                    row.size_bytes,
+                    row.sha256,
+                    row.created_at,
+                    _dumps(row.last_error) if row.last_error is not None else None,
+                    row.updated_at,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def record_failure(
+        self,
+        asset_id: str,
+        kind: DerivedKind,
+        *,
+        cache_key: str,
+        recipe: dict[str, JsonValue],
+        error: dict[str, JsonValue],
+    ) -> None:
+        """Remember a failed attempt. A previous ready artifact stays current."""
+        now = utc_now()
+        existing = self.get(asset_id, kind)
+        if existing is not None and existing.status == "ready":
+            self.conn.execute(
+                "UPDATE derived_artifacts SET last_error_json = ?, updated_at = ? "
+                "WHERE asset_id = ? AND kind = ?",
+                (_dumps(error), now, asset_id, kind),
+            )
+            return
+        self.put(
+            DerivedArtifactRow(
+                asset_id=asset_id,
+                kind=kind,
+                status="failed",
+                cache_key=cache_key,
+                recipe=recipe,
+                last_error=error,
+                updated_at=now,
+            )
+        )
+
+    def relpaths(self) -> list[str]:
+        """Stored paths of every artifact (current ones, kept by cleanup)."""
+        rows = self.conn.execute(
+            "SELECT relpath FROM derived_artifacts WHERE relpath IS NOT NULL"
+        ).fetchall()
+        return [r["relpath"] for r in rows]
+
+    def delete(self, asset_id: str, kind: DerivedKind) -> None:
+        self.conn.execute(
+            "DELETE FROM derived_artifacts WHERE asset_id = ? AND kind = ?", (asset_id, kind)
+        )
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> DerivedArtifactRow:
+        return DerivedArtifactRow(
+            asset_id=row["asset_id"],
+            kind=row["kind"],
+            status=row["status"],
+            cache_key=row["cache_key"],
+            recipe=_loads(row["recipe_json"]),
+            info=_loads(row["info_json"]) if row["info_json"] is not None else None,
+            relpath=row["relpath"],
+            size_bytes=row["size_bytes"],
+            sha256=row["sha256"],
+            created_at=row["created_at"],
+            last_error=_loads(row["last_error_json"])
+            if row["last_error_json"] is not None
+            else None,
+            updated_at=row["updated_at"],
+        )
+
+
 ReviewState = Literal["unreviewed", "duplicate", "distinct"]
 
 

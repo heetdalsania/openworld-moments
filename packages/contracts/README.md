@@ -30,6 +30,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 | Job event | `job-event.schema.json` | `JobEvent` | `generated.job_event_schema.JobEvent` | M03 |
 | Media asset | `media-asset.schema.json` | `MediaAsset` | `generated.media_asset_schema.MediaAsset` | M04, M05 |
 | Fingerprints | `fingerprint.schema.json` | `AssetFingerprints` (+ `DuplicateCandidate`, `FingerprintRequest`, `FingerprintResult`) | `generated.fingerprint_schema.AssetFingerprints` | M06, M12 |
+| Derived media | `derived-media.schema.json` | `AssetDerivedMedia` (+ `DerivedArtifact`, `ProxyDecision`, `ToneMap`, `Recipe`, `DerivedMediaRequest`, `DerivedMediaResult`, `DerivedCleanupResult`) | `generated.derived_media_schema.AssetDerivedMedia` | M08 |
 | Watched folder | `watched-folder.schema.json` | `WatchedFolder` (+ `WatchedFolderRequest`, `WatchedFileReport`, `WatchedFileDecision`, `WatchedFile`, `ScanReport`) | `generated.watched_folder_schema.WatchedFolder` | M07 |
 | Import | `import.schema.json` | `ImportResult` (+ `ImportRequest`, `RelinkRequest`, `RelinkResult`, `SourceCheckResult`) | `generated.import_schema.ImportResult` | M05 |
 | Event and evidence | `event.schema.json`, `evidence.schema.json` | `Event`, `Evidence` | `generated.event_schema.Event` | M14, M16–M19 |

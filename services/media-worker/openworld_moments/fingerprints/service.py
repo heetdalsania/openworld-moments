@@ -24,7 +24,7 @@ from openworld_moments_contracts.generated.fingerprint_schema import (
 )
 
 from openworld_moments.fingerprints import algorithms as alg
-from openworld_moments.ingest.library import LibraryPaths
+from openworld_moments.ingest.library import LibraryPaths, readable_source
 from openworld_moments.media.tools import MediaTools, ToolInfo
 from openworld_moments.storage import (
     AssetLocation,
@@ -139,21 +139,7 @@ class Fingerprinter:
 
     def source_path(self, location: AssetLocation) -> Path | None:
         """Where the asset's bytes can be read now, or None."""
-        if location.import_mode == "managed" and location.managed_path:
-            path = self.library.resolve_managed(location.managed_path)
-        elif location.original_path:
-            path = Path(location.original_path)
-        else:
-            path = None
-        if path is None:
-            return None
-        try:
-            info = path.stat()
-        except OSError:
-            return None
-        if location.size_bytes is not None and info.st_size != location.size_bytes:
-            return None  # replaced: not this asset's bytes any more
-        return path
+        return readable_source(self.library, location)
 
     def ffmpeg(self) -> ToolInfo:
         tool = self.tools.tool("ffmpeg")

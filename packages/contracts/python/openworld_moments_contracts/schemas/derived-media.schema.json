@@ -1,0 +1,491 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/derived-media.schema.json",
+  "title": "AssetDerivedMedia",
+  "description": "Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under library/derived/<asset-id>/; 'path' is relative to the library folder. Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "asset_id", "proxy_decision", "artifacts"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "asset_id": {
+      "$ref": "common.schema.json#/$defs/AssetId"
+    },
+    "proxy_decision": {
+      "$ref": "#/$defs/ProxyDecision"
+    },
+    "artifacts": {
+      "description": "Exactly one entry per kind, in the order proxy, filmstrip, waveform (checked semantically).",
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/DerivedArtifact"
+      }
+    }
+  },
+  "$defs": {
+    "DerivedKind": {
+      "title": "DerivedKind",
+      "type": "string",
+      "enum": ["proxy", "filmstrip", "waveform"]
+    },
+    "ProxyPolicy": {
+      "title": "ProxyPolicy",
+      "description": "'auto': a proxy only when the policy finds a reason. 'always': a proxy for every asset.",
+      "type": "string",
+      "enum": ["auto", "always"]
+    },
+    "ProxyReason": {
+      "title": "ProxyReason",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "detail"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "container",
+            "codec",
+            "pixel_format",
+            "hdr",
+            "resolution",
+            "frame_rate",
+            "audio_codec",
+            "no_video"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    },
+    "ProxyDecision": {
+      "title": "ProxyDecision",
+      "description": "Whether the embedded player needs a proxy, with every reason. 'needed' is true exactly when 'reasons' is non-empty and does not only contain 'no_video' (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["needed", "policy", "policy_version", "reasons"],
+      "properties": {
+        "needed": {
+          "type": "boolean"
+        },
+        "policy": {
+          "$ref": "#/$defs/ProxyPolicy"
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reasons": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/ProxyReason"
+          }
+        }
+      }
+    },
+    "ToneMap": {
+      "title": "ToneMap",
+      "description": "The deterministic HDR-to-SDR mapping used for a proxy: a 3D LUT computed by the worker and applied with FFmpeg's lut3d filter. Same settings give a byte-identical LUT ('lut_sha256').",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transfer",
+        "method",
+        "curve",
+        "source_peak_nits",
+        "reference_white_nits",
+        "output_primaries",
+        "output_transfer",
+        "lut_size",
+        "interpolation",
+        "version",
+        "lut_sha256"
+      ],
+      "properties": {
+        "transfer": {
+          "description": "Source transfer: PQ (HDR10) or HLG.",
+          "type": "string",
+          "enum": ["smpte2084", "arib-std-b67"]
+        },
+        "method": {
+          "type": "string",
+          "enum": ["lut3d"]
+        },
+        "curve": {
+          "type": "string",
+          "enum": ["hable"]
+        },
+        "source_peak_nits": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "reference_white_nits": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "output_primaries": {
+          "type": "string",
+          "enum": ["bt709"]
+        },
+        "output_transfer": {
+          "type": "string",
+          "enum": ["bt709"]
+        },
+        "lut_size": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 65
+        },
+        "interpolation": {
+          "type": "string",
+          "enum": ["tetrahedral", "trilinear", "nearest"]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lut_sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        }
+      }
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "How an artifact was made: the versioned preset, the FFmpeg build, and the parameters chosen for this asset. Part of the cache key.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset", "tool"],
+      "properties": {
+        "preset": {
+          "description": "The preset as used, with all of its parameters (open: each preset id defines its own fields; 'version' changes whenever they do).",
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["id", "version"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+            },
+            "version": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "policy_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tool": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ffmpeg", "libraries"],
+          "properties": {
+            "ffmpeg": {
+              "type": ["string", "null"],
+              "maxLength": 200
+            },
+            "libraries": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "maxLength": 32
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/ScalarValue"
+          }
+        },
+        "tone_map": {
+          "oneOf": [{ "$ref": "#/$defs/ToneMap" }, { "type": "null" }]
+        },
+        "source": {
+          "description": "Filmstrip input: the proxy (by cache key) or the original file.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["proxy", "original"]
+            },
+            "cache_key": {
+              "$ref": "common.schema.json#/$defs/Sha256"
+            }
+          }
+        }
+      }
+    },
+    "ProxyInfo": {
+      "title": "ProxyInfo",
+      "description": "The proxy (preset proxy-h264-sdr): H.264 8-bit yuv420p, longer edge at most 1280 px, upright (rotation applied), source timing unless faster than 60 fps, AAC stereo, fast-start MP4.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "video_codec",
+        "pixel_format",
+        "audio",
+        "duration_ms",
+        "frame_rate",
+        "tone_mapped"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1280
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 1280
+        },
+        "video_codec": {
+          "type": "string",
+          "enum": ["h264"]
+        },
+        "pixel_format": {
+          "type": "string",
+          "enum": ["yuv420p"]
+        },
+        "audio": {
+          "type": "boolean"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "frame_rate": {
+          "description": "'source': same timing as the source (VFR stays VFR); otherwise a constant rate cap.",
+          "type": "string",
+          "pattern": "^(source|[1-9][0-9]{0,2})$"
+        },
+        "tone_mapped": {
+          "type": "boolean"
+        },
+        "tone_map": {
+          "$ref": "#/$defs/ToneMap"
+        }
+      }
+    },
+    "FilmstripInfo": {
+      "title": "FilmstripInfo",
+      "description": "Thumbnails 0001.jpg ... in the artifact folder; thumbnail i (1-based) shows the asset at times_ms[i-1], the middle of its slice. 'count' equals the length of times_ms, which ascend (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "width", "height", "format", "times_ms", "source"],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 160
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 160
+        },
+        "format": {
+          "type": "string",
+          "enum": ["jpeg"]
+        },
+        "times_ms": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 120,
+          "items": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          }
+        },
+        "source": {
+          "type": "string",
+          "enum": ["proxy", "original"]
+        }
+      }
+    },
+    "WaveformInfo": {
+      "title": "WaveformInfo",
+      "description": "Binary 'owm-waveform' v1: a 16-byte header (magic OWMW, version, buckets per second, sample rate, bucket count) and one (peak, rms) byte pair per bucket of the first audio stream mixed to mono.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "format_version",
+        "buckets_per_second",
+        "sample_rate_hz",
+        "bucket_count"
+      ],
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["owm-waveform"]
+        },
+        "format_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "buckets_per_second": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "sample_rate_hz": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "bucket_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "DerivedArtifact": {
+      "title": "DerivedArtifact",
+      "description": "One artifact's state. 'ready': complete and current. 'stale': complete but made with an older preset, policy, or FFmpeg build (still playable; regenerate to update). 'missing': recorded but the file is gone (rebuildable). 'failed': never produced; see last_error. 'not_generated': not made yet. 'not_needed': no proxy is needed. 'not_applicable': no waveform for an asset without audio. Complete states (ready, stale, missing) carry path, size, digest, recipe, and the kind's info object (checked semantically).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "status"],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/DerivedKind"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "stale",
+            "missing",
+            "failed",
+            "not_generated",
+            "not_needed",
+            "not_applicable"
+          ]
+        },
+        "cache_key": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "path": {
+          "description": "Relative to the library folder: derived/<asset-id>/<kind>-<key16>[.mp4|.bin]. A filmstrip path is a folder.",
+          "type": "string",
+          "pattern": "^derived/ast_[0-9A-HJKMNP-TV-Z]{26}/(proxy-[0-9a-f]{16}\\.mp4|filmstrip-[0-9a-f]{16}|waveform-[0-9a-f]{16}\\.bin)$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "description": "Digest of the file; for a filmstrip, of its sorted file names and file digests.",
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "created_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "recipe": {
+          "$ref": "#/$defs/Recipe"
+        },
+        "last_error": {
+          "description": "The latest failed attempt. A failed regeneration keeps the previous artifact.",
+          "$ref": "error.schema.json"
+        },
+        "proxy": {
+          "$ref": "#/$defs/ProxyInfo"
+        },
+        "filmstrip": {
+          "$ref": "#/$defs/FilmstripInfo"
+        },
+        "waveform": {
+          "$ref": "#/$defs/WaveformInfo"
+        }
+      }
+    },
+    "DerivedMediaRequest": {
+      "title": "DerivedMediaRequest",
+      "description": "Params of a 'proxy' job: prepare one asset's derived media. 'artifacts' defaults to all three; a filmstrip of an asset that needs a proxy also creates the proxy. 'force' regenerates even current artifacts.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/DerivedKind"
+          }
+        },
+        "proxy_policy": {
+          "$ref": "#/$defs/ProxyPolicy"
+        },
+        "force": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DerivedOutcome": {
+      "title": "DerivedOutcome",
+      "type": "string",
+      "enum": ["generated", "cached", "not_needed", "not_applicable"]
+    },
+    "DerivedMediaResult": {
+      "title": "DerivedMediaResult",
+      "description": "Result of a 'proxy' job: what happened to each artifact it handled.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "proxy_decision", "outcomes"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "proxy_decision": {
+          "$ref": "#/$defs/ProxyDecision"
+        },
+        "outcomes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "proxy": { "$ref": "#/$defs/DerivedOutcome" },
+            "filmstrip": { "$ref": "#/$defs/DerivedOutcome" },
+            "waveform": { "$ref": "#/$defs/DerivedOutcome" }
+          }
+        }
+      }
+    },
+    "DerivedCleanupResult": {
+      "title": "DerivedCleanupResult",
+      "description": "What the derived-media cleanup removed. It only ever removes entries inside library/derived/ that no artifact row points at, and never follows links (a link is removed as a link and counted in skipped_links).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["removed_files", "removed_dirs", "freed_bytes", "skipped_links"],
+      "properties": {
+        "removed_files": { "type": "integer", "minimum": 0 },
+        "removed_dirs": { "type": "integer", "minimum": 0 },
+        "freed_bytes": { "type": "integer", "minimum": 0 },
+        "skipped_links": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

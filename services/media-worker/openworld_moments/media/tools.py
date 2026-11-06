@@ -36,6 +36,9 @@ LIST_TIMEOUT_S = 15.0
 #: Decoders and encoders reported by ``doctor``; none is required to probe.
 DECODERS = ("h264", "hevc", "av1", "vp9", "aac", "opus")
 ENCODERS = ("libx264", "libx265", "aac")
+#: What derived media (M08: proxies, thumbnails, waveforms) needs from FFmpeg.
+DERIVED_ENCODERS = ("libx264", "aac", "mjpeg", "pcm_s16le")
+DERIVED_FILTERS = ("scale", "format", "setparams", "lut3d", "fps")
 
 ToolName = Literal["ffprobe", "ffmpeg"]
 Status = Literal["ok", "missing", "too_old", "unusable"]
@@ -43,6 +46,8 @@ Status = Literal["ok", "missing", "too_old", "unusable"]
 _VERSION_LINE = re.compile(r"^(?:ffprobe|ffmpeg) version (\S+)", re.MULTILINE)
 _LIBRARY_LINE = re.compile(r"^\s*(lib[a-z]+)\s+(\d+)\.\s*(\d+)\.\s*(\d+)", re.MULTILINE)
 _CODEC_LINE = re.compile(r"^\s[A-Z.]{6}\s+(\S+)", re.MULTILINE)
+# " TS colorspace        V->V       Convert ..." (2 or 3 flag columns by version).
+_FILTER_LINE = re.compile(r"^\s*[TSC.]{2,3}\s+(\S+)\s+\S*->\S*", re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -153,6 +158,19 @@ def list_codecs(tool: ToolInfo, kind: Literal["decoders", "encoders"]) -> set[st
     return set(_CODEC_LINE.findall(result.stdout.decode("utf-8", errors="replace")))
 
 
+def list_filters(tool: ToolInfo) -> set[str]:
+    """Filter names from ``-filters``; empty when the tool is unusable."""
+    if not tool.ok:
+        return set()
+    try:
+        result = run_tool([*tool.command, "-hide_banner", "-filters"], timeout_s=LIST_TIMEOUT_S)
+    except ToolError:
+        return set()
+    if result.returncode != 0:
+        return set()
+    return set(_FILTER_LINE.findall(result.stdout.decode("utf-8", errors="replace")))
+
+
 class MediaTools:
     """Thread-safe cache of the located tools and their capability report."""
 
@@ -188,6 +206,9 @@ class MediaTools:
         ffmpeg = self.tool("ffmpeg")
         decoders = list_codecs(ffprobe, "decoders")
         encoders = list_codecs(ffmpeg, "encoders")
+        filters = list_filters(ffmpeg)
+        derived_missing = [f"encoder:{e}" for e in DERIVED_ENCODERS if e not in encoders]
+        derived_missing += [f"filter:{f}" for f in DERIVED_FILTERS if f not in filters]
         report: dict[str, Any] = {
             "probe_ready": ffprobe.ok,
             "minimum": {"ffmpeg_release": MIN_FFMPEG_RELEASE, **MIN_LIBRARIES},
@@ -195,6 +216,10 @@ class MediaTools:
             "ffmpeg": ffmpeg.report(),
             "decoders": {name: name in decoders for name in DECODERS},
             "encoders": {name: name in encoders for name in ENCODERS},
+            "derived": {
+                "ready": ffprobe.ok and ffmpeg.ok and not derived_missing,
+                "missing": derived_missing if ffmpeg.ok else ["ffmpeg"],
+            },
         }
         with self._lock:
             if ffprobe.ok and ffmpeg.ok:

@@ -2,6 +2,22 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.6 — 2026-11-06 (M08)
+
+Additive; every 1.5 document is valid 1.6.
+
+- `derived-media` (new): `AssetDerivedMedia`, an asset's proxy decision (with
+  reasons and policy version) and one `DerivedArtifact` per kind (proxy,
+  filmstrip, waveform) with status, cache key, library-relative path, digest,
+  recipe, last error, and kind-specific info (`ProxyInfo` with an optional
+  `ToneMap`, `FilmstripInfo`, `WaveformInfo`). `$defs` also cover
+  `DerivedMediaRequest` (params of the `proxy` job), `DerivedMediaResult`, and
+  `DerivedCleanupResult`. Semantic rules: kinds in order; complete states carry
+  path, digest, recipe, and info, and other states carry none; a failed
+  artifact carries `last_error`; filmstrip counts match ascending times; a
+  proxy has `tone_map` exactly when tone-mapped; `needed` matches the reasons.
+- `job`: the existing `proxy` kind is now used (result: `DerivedMediaResult`).
+
 ## 1.5 — 2026-11-06 (M07)
 
 Additive; every 1.4 document is valid 1.5.

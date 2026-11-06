@@ -269,10 +269,13 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M05 | Complete | [#9](https://github.com/heetdalsania/openworld-moments/pull/9) | — | Arun Velkumar | Reference + managed imports (staging, atomic content-addressed promotion), idempotency keys, provenance, missing-source check, SHA-256-verified relink; contracts 1.3, migration 0004 |
 | M06 | Complete | [#10](https://github.com/heetdalsania/openworld-moments/pull/10) | — | Arun Velkumar | Fast partial hash (no re-copy of known files, relink pre-check), versioned dhash256 head/tail frame and energy-envelope audio fingerprints, review-only duplicate candidates, restartable backfill; contracts 1.4, migration 0005 |
 | M07 | Complete | [#12](https://github.com/heetdalsania/openworld-moments/pull/12) | — | Arun Velkumar | Rust watcher (notify + 15-min reconciliation, 10 s stabilization, offline backoff, cloud placeholders), worker-side folder settings and per-version file records with deduplicated imports, settings UI and Xbox/OneDrive onboarding; contracts 1.5, migration 0006 |
-| M08 | Ready | — | — | — | — |
-| M09–M10 | See dependency graph | — | — | — | — |
+| M08 | Complete | [#13](https://github.com/heetdalsania/openworld-moments/pull/13) | — | Arun Velkumar | Explainable proxy policy; deterministic H.264 SDR proxies with LUT-based (lut3d, no zimg) HDR tone mapping; filmstrip JPEGs and owm-waveform peaks; versioned recipes and cache keys, atomic key-named promotion, FFprobe and sampled-decode validation, cancellable FFmpeg with progress, link-safe cleanup; contracts 1.6, migration 0007 |
+| M09 | Ready | — | — | — | — |
+| M10 | See dependency graph | — | — | — | — |
 | M11 | Ready | — | — | — | — |
-| M12–M39 | See dependency graph | — | — | — | — |
+| M12–M13 | See dependency graph | — | — | — | — |
+| M14 | Ready | — | — | — | — |
+| M15–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 

@@ -144,7 +144,49 @@ def _watched_folder(doc: Document) -> Iterable[str]:
         yield f"stats.tracked: {stats['tracked']} is less than the {counted} files counted by state"
 
 
+_KINDS = ("proxy", "filmstrip", "waveform")
+_COMPLETE = ("ready", "stale", "missing")
+_COMPLETE_FIELDS = ("cache_key", "path", "size_bytes", "sha256", "created_at", "recipe")
+
+
+def _derived_media(doc: Document) -> Iterable[str]:
+    decision = doc["proxy_decision"]
+    real = [r for r in decision["reasons"] if r["code"] != "no_video"]
+    if decision["needed"] != bool(real):
+        yield "proxy_decision.needed: must be true exactly when there is a reason"
+    kinds = [a["kind"] for a in doc["artifacts"]]
+    if kinds != list(_KINDS):
+        yield f"artifacts: kinds must be {', '.join(_KINDS)} in that order, got {', '.join(kinds)}"
+    for i, art in enumerate(doc["artifacts"]):
+        kind, status = art["kind"], art["status"]
+        others = [k for k in _KINDS if k != kind and k in art]
+        if others:
+            yield f"artifacts[{i}]: a {kind} artifact cannot carry {', '.join(others)} info"
+        if status in _COMPLETE:
+            for field in (*_COMPLETE_FIELDS, kind):
+                if field not in art:
+                    yield f"artifacts[{i}].{field}: required when status is '{status}'"
+            if "path" in art and not art["path"].split("/")[-1].startswith(f"{kind}-"):
+                yield f"artifacts[{i}].path: does not name a {kind} artifact"
+        else:
+            for field in ("path", "size_bytes", "sha256", "created_at", kind):
+                if field in art:
+                    yield f"artifacts[{i}].{field}: not allowed when status is '{status}'"
+        if status == "failed" and "last_error" not in art:
+            yield f"artifacts[{i}].last_error: required when status is 'failed'"
+        info = art.get(kind)
+        if kind == "filmstrip" and info is not None:
+            times = info["times_ms"]
+            if info["count"] != len(times):
+                yield f"artifacts[{i}].filmstrip.count: {info['count']} != {len(times)} times"
+            if any(b <= a for a, b in pairwise(times)):
+                yield f"artifacts[{i}].filmstrip.times_ms: must strictly ascend"
+        if kind == "proxy" and info is not None and info["tone_mapped"] != ("tone_map" in info):
+            yield f"artifacts[{i}].proxy.tone_map: present exactly when tone_mapped is true"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "derived-media": _derived_media,
     "event": _event,
     "job": _job,
     "job-event": _job_event,
