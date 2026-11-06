@@ -76,6 +76,17 @@ Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm te
 
 Commits must be signed off (`git commit -s`) under the [Developer Certificate of Origin](https://developercertificate.org/).
 
+## Target desktop platforms
+
+The release roadmap now covers both Windows and macOS:
+
+- Windows 11 x64 is qualified first in M32.
+- macOS 14+ on Apple Silicon is supported through a native `arm64` DMG.
+- macOS 14+ on supported Intel Macs is supported through a native `x86_64` DMG.
+- M39 is the final dual-platform qualification gate.
+
+The two Mac packages are separate so neither architecture requires Rosetta and every bundled worker/media dependency remains native. Linux remains a later target. See the [macOS delivery plan](./docs/platforms/macos-delivery-plan.md) for packaging, permissions, testing, signing, and notarization details.
+
 ## Why this exists
 
 Console capture systems are useful but leave creators with a weak workflow:
@@ -202,7 +213,7 @@ Architecture decisions may change through reviewed ADRs, but milestone acceptanc
 
 ## Milestone-driven development
 
-Implementation is divided into milestones sized for one focused contributor or agent session. Each milestone has:
+Implementation is divided into 40 milestones sized for one focused contributor or agent session. Each milestone has:
 
 - Explicit prerequisites.
 - A narrow objective.
@@ -257,7 +268,7 @@ Timeline editing, captions, rendering, HUD-aware vertical layouts, search, safet
 
 ### Release lane
 
-Packaging, security hardening, accessibility review, documentation, and public-alpha qualification.
+Windows packaging and alpha qualification, macOS native packaging, security hardening, signing/notarization, accessibility review, documentation, and final dual-platform qualification.
 
 ## Contributing
 

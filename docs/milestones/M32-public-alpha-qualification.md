@@ -1,8 +1,8 @@
-# M32 — Public alpha qualification
+# M32 — Windows public alpha qualification
 
 ## Objective
 
-Qualify and publish the first honest, reproducible public alpha after all required workflows pass on clean systems.
+Qualify and publish the first honest, reproducible Windows public alpha after all required workflows pass on clean Windows systems. This remains a valid early release gate; M39 later qualifies the combined Windows and macOS release.
 
 ## Dependencies
 
@@ -23,7 +23,7 @@ Read the complete specification, MILESTONES.md, SECURITY.md, CONTRIBUTING.md, an
 
 ## Out of scope
 
-- Declaring v1.0, promising complete GTA VI compatibility, app-store distribution, and direct social publishing.
+- macOS qualification, declaring v1.0, promising complete GTA VI compatibility, app-store distribution, and direct social publishing.
 
 ## Implementation steps
 
@@ -52,4 +52,4 @@ Read the complete specification, MILESTONES.md, SECURITY.md, CONTRIBUTING.md, an
 
 ## Handoff
 
-Publish the qualification report, compatibility matrix, metrics, known limitations, release notes, artifact hashes, SBOM, signed/tagged commit details, and follow-up issue list. Mark M32 complete only after the published artifact passes the smoke test.
+Publish the Windows qualification report, compatibility matrix, metrics, known limitations, release notes, artifact hashes, SBOM, signed/tagged commit details, and follow-up issue list. Mark M32 complete only after the published Windows artifact passes the smoke test.
