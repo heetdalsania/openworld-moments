@@ -235,7 +235,7 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M03 | Complete | [#7](https://github.com/heetdalsania/openworld-moments/pull/7) | — | Arun Velkumar | Rust supervisor + loopback token-auth FastAPI worker; durable jobs with WebSocket progress; contracts 1.1, migration 0002 |
 | M04 | Complete | [#8](https://github.com/heetdalsania/openworld-moments/pull/8) | — | Arun Velkumar | FFprobe probe job (exact rationals, clockwise rotation, HDR side data, stable error codes), `doctor` + `/v1/capabilities`, synthetic fixtures; FFmpeg ≥ 6.0; contracts 1.2, migration 0003 |
 | M05 | Complete | [#9](https://github.com/heetdalsania/openworld-moments/pull/9) | — | Arun Velkumar | Reference + managed imports (staging, atomic content-addressed promotion), idempotency keys, provenance, missing-source check, SHA-256-verified relink; contracts 1.3, migration 0004 |
-| M06 | Complete | — | — | Arun Velkumar | Fast partial hash (no re-copy of known files, relink pre-check), versioned dhash256 head/tail frame and energy-envelope audio fingerprints, review-only duplicate candidates, restartable backfill; contracts 1.4, migration 0005 |
+| M06 | Complete | [#10](https://github.com/heetdalsania/openworld-moments/pull/10) | — | Arun Velkumar | Fast partial hash (no re-copy of known files, relink pre-check), versioned dhash256 head/tail frame and energy-envelope audio fingerprints, review-only duplicate candidates, restartable backfill; contracts 1.4, migration 0005 |
 | M07 | Ready | — | — | — | — |
 | M08 | Ready | — | — | — | — |
 | M09–M10 | See dependency graph | — | — | — | — |
