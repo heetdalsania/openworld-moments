@@ -11,6 +11,7 @@ import type {
   Project,
   Region,
   RenderPreset,
+  WatchedFolder,
 } from "./generated/types.ts";
 
 const EPSILON = 1e-9;
@@ -159,6 +160,14 @@ function* importResult(doc: ImportResult): Generator<string> {
   }
 }
 
+function* watchedFolder(doc: WatchedFolder): Generator<string> {
+  const s = doc.stats;
+  const counted = s.imported + s.in_progress + s.failed;
+  if (counted > s.tracked) {
+    yield `stats.tracked: ${s.tracked} is less than the ${counted} files counted by state`;
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
   event,
@@ -169,6 +178,7 @@ const RULES: Record<string, (doc: any) => Iterable<string>> = {
   "render-preset": renderPreset,
   "export-manifest": exportManifest,
   import: importResult,
+  "watched-folder": watchedFolder,
 };
 
 /** Human-readable semantic problems. Assumes the document passed schema validation. */

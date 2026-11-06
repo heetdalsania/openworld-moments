@@ -287,3 +287,71 @@ async fn early_exit_reports_stderr_without_the_token() {
         "{stderr_tail}"
     );
 }
+
+/// The real worker sink: folder config round trip and file decisions (M07). The
+/// file is not valid media, so its import job fails, but exactly one is started.
+#[tokio::test(flavor = "multi_thread")]
+async fn worker_sink_round_trip() {
+    use openworld_moments_desktop_lib::watch::fsprobe::{self, FileState};
+    use openworld_moments_desktop_lib::watch::{Sink, WorkerSink};
+
+    let dir = tempfile::tempdir().unwrap();
+    let watched = dir.path().join("Xbox Game DVR");
+    std::fs::create_dir(&watched).unwrap();
+    std::fs::write(watched.join("clip.mp4"), b"not really a video").unwrap();
+    let supervisor = Supervisor::new(config(&dir));
+    supervisor.start().await.expect("worker starts");
+    let created = supervisor
+        .request(
+            reqwest::Method::POST,
+            "/v1/watched-folders",
+            Some(&json!({ "path": watched, "source_kind": "xbox" })),
+            None,
+        )
+        .await
+        .expect("folder is created");
+    let id = created["id"].as_i64().unwrap();
+
+    let sink = WorkerSink(supervisor.clone());
+    let folders = sink.folders().await.expect("folders load");
+    assert_eq!(folders.len(), 1);
+    assert_eq!(folders[0].id, id);
+    assert!(folders[0].recursive && folders[0].enabled);
+
+    // Report the file's real metadata, as the watcher would.
+    let FileState::Local(meta) = fsprobe::file_state(&watched.join("clip.mp4")) else {
+        panic!("the test file is a local file");
+    };
+    assert_eq!(
+        sink.report_file(id, "clip.mp4", meta).await.unwrap(),
+        "queued"
+    );
+    // The same version again never starts a second job. Depending on timing the
+    // first import is still running, has failed for good (not a video), or has
+    // failed retryably and waits in backoff.
+    let again = sink.report_file(id, "clip.mp4", meta).await.unwrap();
+    assert!(
+        matches!(again.as_str(), "in_progress" | "known" | "backoff"),
+        "{again}"
+    );
+    assert_eq!(
+        sink.report_file(id, "notes.txt", meta).await.unwrap(),
+        "ignored"
+    );
+    assert!(sink.report_file(id, "../escape.mp4", meta).await.is_err());
+    sink.report_scan(id, true, true, None).await.unwrap();
+
+    let jobs = supervisor.list_jobs().await.unwrap();
+    let imports = jobs
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|j| j["kind"] == "import")
+        .count();
+    assert_eq!(imports, 1);
+    supervisor.stop().await;
+    assert!(
+        watched.join("clip.mp4").exists(),
+        "the watched file is never touched"
+    );
+}

@@ -17,4 +17,5 @@ Other architecture notes:
 - [Worker lifecycle and jobs](./worker.md): process lifecycle, API, job handlers, cancellation, retry rules.
 - [Media probing](./media.md): FFmpeg discovery and minimum version, `doctor`, the probe job, normalized metadata, error codes, fixtures.
 - [Fingerprints and duplicates](./fingerprints.md): exact, fast, perceptual, and audio fingerprints, versioning, duplicate candidates, backfill.
+- [Watched folders](./watched-folders.md): host watcher and stabilization, worker decisions, reconciliation, offline backoff, cloud placeholders, Xbox onboarding.
 - [Safe import pipeline](./import.md): reference and managed imports, staging and atomic promotion, idempotency, provenance, missing sources and relink, error codes.

@@ -84,13 +84,18 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/duplicates/{id}` | `DuplicateCandidate` |
 | PATCH | `/v1/duplicates/{id}` | `{review_state}` → `DuplicateCandidate` (never deletes) |
 | POST | `/v1/fingerprints/backfill` | `{asset_ids?, force?}` → `Job` (kind `fingerprint`) |
+| GET / POST | `/v1/watched-folders` | `WatchedFolder[]` / create; see [watched folders](./watched-folders.md) |
+| GET / PATCH / DELETE | `/v1/watched-folders/{id}` | Read, change, stop watching (files untouched) |
+| GET / POST | `/v1/watched-folders/{id}/files` | `WatchedFile[]` / host report of a stable file → `WatchedFileDecision` |
+| POST | `/v1/watched-folders/{id}/scans` | Host availability and scan report → `WatchedFolder` |
 | POST | `/v1/shutdown` | 202, then graceful stop |
 | WS | `/v1/jobs/events` | Stream of contract `JobEvent` JSON text frames |
 
 Errors always use contract `ErrorInfo` (`code`, `message`, `retryable`,
 `correlation_id`): `request.invalid` / `job.invalid_params` / `job.unknown_kind`
 / `job.invalid_idempotency_key` (422), `job.not_found` / `request.not_found` /
-`import.not_found` / `asset.not_found` / `duplicate.not_found` (404), `job.not_cancellable` /
+`import.not_found` / `asset.not_found` / `duplicate.not_found` /
+`watch.folder_not_found` (404), `watch.*` (see [watched folders](./watched-folders.md#error-codes)), `job.not_cancellable` /
 `job.not_retryable` / `job.max_attempts` / `job.idempotency_conflict` (409),
 `worker.stopping` (503).
 

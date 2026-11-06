@@ -97,6 +97,24 @@ export type UtcTimestamp1 = string;
  * Opaque timeline segment ID: 'seg_' + ULID.
  */
 export type SegmentId = string;
+/**
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "SourceKind".
+ */
+export type SourceKind = "xbox" | "playstation" | "obs" | "capture_card" | "phone_upload" | "other";
+/**
+ * Glob patterns over '/'-separated paths relative to the folder, matched case-insensitively. A pattern without '/' matches the file name; one with '/' matches the whole relative path. '*' and '?' stay within one path segment; '**' spans segments. Only supported video files are ever candidates, whatever 'include' says.
+ *
+ * @maxItems 32
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "Patterns".
+ */
+export type Patterns = string[];
+/**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp2 = string;
 
 export interface ContractsBundle {
   error?: ErrorInfo;
@@ -111,6 +129,7 @@ export interface ContractsBundle {
   profile?: Profile;
   project?: Project;
   "render-preset"?: RenderPreset;
+  "watched-folder"?: WatchedFolder;
 }
 /**
  * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
@@ -1184,4 +1203,142 @@ export interface AudioEncoding {
   codec: "aac";
   bitrate_kbps: number;
   sample_rate_hz: 44100 | 48000;
+}
+/**
+ * A user-approved folder whose completed video files are imported automatically (spec 6.1, 8.1.2, M07). The desktop host watches it and reports stable files; the worker decides whether to import. Nothing in a watched folder is ever moved, renamed, or deleted.
+ */
+export interface WatchedFolder {
+  schema_version: string;
+  id: number;
+  /**
+   * Absolute path of the folder. Local data: never logged.
+   */
+  path: string;
+  source_kind: SourceKind;
+  /**
+   * Import mode for files found here.
+   */
+  mode: "reference" | "managed";
+  recursive: boolean;
+  include: Patterns;
+  exclude: Patterns;
+  /**
+   * Disabled folders are not watched, scanned, or imported from.
+   */
+  enabled: boolean;
+  created_at: UtcTimestamp;
+  updated_at: UtcTimestamp;
+  last_scan_at?: UtcTimestamp2;
+  /**
+   * Reported by the host: whether the folder could be read at the last check.
+   */
+  availability?: "unknown" | "available" | "unavailable";
+  last_error?: ErrorInfo1;
+  stats: WatchedFolderStats;
+}
+/**
+ * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
+ */
+export interface ErrorInfo1 {
+  /**
+   * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
+   */
+  code: string;
+  /**
+   * Human-readable explanation. Must not contain media contents or transcripts.
+   */
+  message: string;
+  retryable: boolean;
+  /**
+   * Extra machine-readable context. Values are scalars only.
+   */
+  details?: {
+    [k: string]: ScalarValue | undefined;
+  };
+  /**
+   * Last lines of a tool's stderr (e.g. FFmpeg), already redacted of user paths.
+   */
+  stderr_tail?: string;
+  correlation_id?: CorrelationId;
+}
+/**
+ * Files the worker has seen in this folder, by the state of their latest import.
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "WatchedFolderStats".
+ */
+export interface WatchedFolderStats {
+  tracked: number;
+  imported: number;
+  in_progress: number;
+  failed: number;
+}
+/**
+ * Create (POST, 'path' required) or change (PATCH, 'path' not allowed) a watched folder. Omitted fields keep their current value or default: source_kind 'other', mode 'reference', recursive true, the default include/exclude patterns, enabled true.
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "WatchedFolderRequest".
+ */
+export interface WatchedFolderRequest {
+  path?: string;
+  source_kind?: SourceKind;
+  mode?: "reference" | "managed";
+  recursive?: boolean;
+  include?: Patterns;
+  exclude?: Patterns;
+  enabled?: boolean;
+}
+/**
+ * Sent by the host for a file whose size and modification time stayed unchanged for the stabilization period and that could be opened for reading.
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "WatchedFileReport".
+ */
+export interface WatchedFileReport {
+  relative_path: string;
+  size_bytes: number;
+  mtime_ns: number;
+}
+/**
+ * The worker's answer to a report. 'queued': an import job was submitted. 'known': this exact version (path, size, mtime) was already imported or found unimportable. 'in_progress': its import is still running. 'backoff': its last import failed with a retryable error and 'retry_at' has not passed. 'ignored': the file does not match the folder's patterns.
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "WatchedFileDecision".
+ */
+export interface WatchedFileDecision {
+  action: "queued" | "known" | "in_progress" | "backoff" | "ignored";
+  job_id?: JobId;
+  retry_at?: UtcTimestamp;
+}
+/**
+ * The worker's record of one file in a watched folder (its latest version).
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "WatchedFile".
+ */
+export interface WatchedFile {
+  relative_path: string;
+  size_bytes: number;
+  mtime_ns: number;
+  state: "queued" | "in_progress" | "imported" | "failed";
+  attempts: number;
+  job_id?: JobId;
+  asset_id?: AssetId;
+  error?: ErrorInfo;
+  retry_at?: UtcTimestamp;
+  updated_at: UtcTimestamp;
+}
+/**
+ * Sent by the host after each availability check or reconciliation scan.
+ *
+ * This interface was referenced by `WatchedFolder`'s JSON-Schema
+ * via the `definition` "ScanReport".
+ */
+export interface ScanReport {
+  available: boolean;
+  /**
+   * True when a full reconciliation scan finished (sets last_scan_at).
+   */
+  scanned?: boolean;
+  error?: ErrorInfo;
 }

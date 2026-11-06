@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/watched-folder.schema.json",
+  "title": "WatchedFolder",
+  "description": "A user-approved folder whose completed video files are imported automatically (spec 6.1, 8.1.2, M07). The desktop host watches it and reports stable files; the worker decides whether to import. Nothing in a watched folder is ever moved, renamed, or deleted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "path",
+    "source_kind",
+    "mode",
+    "recursive",
+    "include",
+    "exclude",
+    "enabled",
+    "created_at",
+    "updated_at",
+    "stats"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "path": {
+      "description": "Absolute path of the folder. Local data: never logged.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "source_kind": {
+      "$ref": "#/$defs/SourceKind"
+    },
+    "mode": {
+      "description": "Import mode for files found here.",
+      "type": "string",
+      "enum": ["reference", "managed"]
+    },
+    "recursive": {
+      "type": "boolean"
+    },
+    "include": {
+      "$ref": "#/$defs/Patterns"
+    },
+    "exclude": {
+      "$ref": "#/$defs/Patterns"
+    },
+    "enabled": {
+      "description": "Disabled folders are not watched, scanned, or imported from.",
+      "type": "boolean"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "last_scan_at": {
+      "description": "When the host last finished a reconciliation scan.",
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "availability": {
+      "description": "Reported by the host: whether the folder could be read at the last check.",
+      "type": "string",
+      "enum": ["unknown", "available", "unavailable"]
+    },
+    "last_error": {
+      "description": "Why the folder was unavailable at the last check.",
+      "$ref": "error.schema.json"
+    },
+    "stats": {
+      "$ref": "#/$defs/WatchedFolderStats"
+    }
+  },
+  "$defs": {
+    "SourceKind": {
+      "title": "SourceKind",
+      "type": "string",
+      "enum": ["xbox", "playstation", "obs", "capture_card", "phone_upload", "other"]
+    },
+    "Patterns": {
+      "title": "Patterns",
+      "description": "Glob patterns over '/'-separated paths relative to the folder, matched case-insensitively. A pattern without '/' matches the file name; one with '/' matches the whole relative path. '*' and '?' stay within one path segment; '**' spans segments. Only supported video files are ever candidates, whatever 'include' says.",
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "WatchedFolderStats": {
+      "title": "WatchedFolderStats",
+      "description": "Files the worker has seen in this folder, by the state of their latest import.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tracked", "imported", "in_progress", "failed"],
+      "properties": {
+        "tracked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "imported": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "in_progress": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "WatchedFolderRequest": {
+      "title": "WatchedFolderRequest",
+      "description": "Create (POST, 'path' required) or change (PATCH, 'path' not allowed) a watched folder. Omitted fields keep their current value or default: source_kind 'other', mode 'reference', recursive true, the default include/exclude patterns, enabled true.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "source_kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["reference", "managed"]
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "include": {
+          "$ref": "#/$defs/Patterns"
+        },
+        "exclude": {
+          "$ref": "#/$defs/Patterns"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "WatchedFileReport": {
+      "title": "WatchedFileReport",
+      "description": "Sent by the host for a file whose size and modification time stayed unchanged for the stabilization period and that could be opened for reading.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "size_bytes", "mtime_ns"],
+      "properties": {
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mtime_ns": {
+          "type": "integer"
+        }
+      }
+    },
+    "WatchedFileDecision": {
+      "title": "WatchedFileDecision",
+      "description": "The worker's answer to a report. 'queued': an import job was submitted. 'known': this exact version (path, size, mtime) was already imported or found unimportable. 'in_progress': its import is still running. 'backoff': its last import failed with a retryable error and 'retry_at' has not passed. 'ignored': the file does not match the folder's patterns.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["queued", "known", "in_progress", "backoff", "ignored"]
+        },
+        "job_id": {
+          "$ref": "common.schema.json#/$defs/JobId"
+        },
+        "retry_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
+      }
+    },
+    "WatchedFile": {
+      "title": "WatchedFile",
+      "description": "The worker's record of one file in a watched folder (its latest version).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "size_bytes", "mtime_ns", "state", "attempts", "updated_at"],
+      "properties": {
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mtime_ns": {
+          "type": "integer"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["queued", "in_progress", "imported", "failed"]
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "job_id": {
+          "$ref": "common.schema.json#/$defs/JobId"
+        },
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "error": {
+          "$ref": "error.schema.json"
+        },
+        "retry_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "updated_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
+      }
+    },
+    "ScanReport": {
+      "title": "ScanReport",
+      "description": "Sent by the host after each availability check or reconciliation scan.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available"],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "scanned": {
+          "description": "True when a full reconciliation scan finished (sets last_scan_at).",
+          "type": "boolean"
+        },
+        "error": {
+          "$ref": "error.schema.json"
+        }
+      }
+    }
+  }
+}

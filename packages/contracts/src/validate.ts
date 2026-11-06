@@ -15,6 +15,7 @@ import mediaAsset from "../schemas/media-asset.schema.json" with { type: "json" 
 import profile from "../schemas/profile.schema.json" with { type: "json" };
 import project from "../schemas/project.schema.json" with { type: "json" };
 import renderPreset from "../schemas/render-preset.schema.json" with { type: "json" };
+import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
   AssetFingerprints,
@@ -28,6 +29,7 @@ import type {
   Profile,
   Project,
   RenderPreset,
+  WatchedFolder,
 } from "./generated/types.ts";
 import { semanticIssues } from "./semantic.ts";
 import { checkVersion } from "./versioning.ts";
@@ -45,6 +47,7 @@ export interface ContractTypes {
   profile: Profile;
   project: Project;
   "render-preset": RenderPreset;
+  "watched-folder": WatchedFolder;
 }
 export type ContractName = keyof ContractTypes;
 
@@ -61,6 +64,7 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   profile: [profile, true],
   project: [project, true],
   "render-preset": [renderPreset, true],
+  "watched-folder": [watchedFolder, true],
 };
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });

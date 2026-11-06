@@ -7,7 +7,11 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, State};
 
+use crate::watch::{WatchConfig, WatchService, WorkerSink};
 use crate::worker::{SeqCheck, Supervisor, SupervisorConfig, WorkerCommand, WorkerStatus};
+
+/// The watched-folder loop, present when a worker is configured.
+pub type Watcher = Option<WatchService<WorkerSink>>;
 
 /// UI event names.
 pub const STATUS_EVENT: &str = "worker://status";
@@ -41,17 +45,25 @@ fn worker_command() -> Option<WorkerCommand> {
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
     let Some(command) = worker_command() else {
         app.manage(None::<Supervisor>);
+        app.manage(None::<WatchService<WorkerSink>> as Watcher);
         return Ok(());
     };
     let library = app.path().app_data_dir()?.join("library");
     let supervisor = Supervisor::new(SupervisorConfig::new(command, library));
     app.manage(Some(supervisor.clone()));
 
+    let watcher = WatchService::new(WorkerSink(supervisor.clone()), WatchConfig::default());
+    app.manage(Some(watcher.clone()) as Watcher);
+    tauri::async_runtime::spawn(watcher.clone().run());
+
     let handle = app.clone();
     let mut status = supervisor.subscribe_status();
     tauri::async_runtime::spawn(async move {
         loop {
             let current = status.borrow_and_update().clone();
+            if matches!(current, WorkerStatus::Ready { .. }) {
+                watcher.refresh(); // (re)load watched folders once the worker answers
+            }
             let _ = handle.emit(STATUS_EVENT, &current);
             if status.changed().await.is_err() {
                 break;
@@ -98,6 +110,11 @@ async fn relay_events<R: Runtime>(app: AppHandle<R>, supervisor: Supervisor) {
 }
 
 pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+    if let RunEvent::Exit = event
+        && let Some(watcher) = app.try_state::<Watcher>().and_then(|w| w.inner().clone())
+    {
+        watcher.stop();
+    }
     if let RunEvent::Exit = event
         && let Some(supervisor) = app
             .try_state::<Option<Supervisor>>()
@@ -168,4 +185,107 @@ pub async fn worker_cancel_job(
 #[tauri::command]
 pub async fn worker_list_jobs(state: State<'_, Option<Supervisor>>) -> Result<Value, Value> {
     supervisor(&state)?.list_jobs().await.map_err(to_ui_error)
+}
+
+// -- watched folders (M07) -----------------------------------------------------------
+
+fn refresh_watcher(watcher: &State<'_, Watcher>) {
+    if let Some(w) = watcher.inner() {
+        w.refresh();
+    }
+}
+
+/// Folders from the worker plus the host's live status for each.
+#[tauri::command]
+pub async fn watched_folders_list(
+    state: State<'_, Option<Supervisor>>,
+    watcher: State<'_, Watcher>,
+) -> Result<Value, Value> {
+    let folders = supervisor(&state)?
+        .request(reqwest::Method::GET, "/v1/watched-folders", None, None)
+        .await
+        .map_err(to_ui_error)?;
+    let status = watcher
+        .inner()
+        .as_ref()
+        .map(|w| w.status())
+        .unwrap_or_default();
+    Ok(json!({ "folders": folders, "status": status }))
+}
+
+#[tauri::command]
+pub async fn watched_folder_add(
+    state: State<'_, Option<Supervisor>>,
+    watcher: State<'_, Watcher>,
+    path: String,
+    source_kind: String,
+) -> Result<Value, Value> {
+    let body = json!({ "path": path, "source_kind": source_kind });
+    let created = supervisor(&state)?
+        .request(
+            reqwest::Method::POST,
+            "/v1/watched-folders",
+            Some(&body),
+            None,
+        )
+        .await
+        .map_err(to_ui_error)?;
+    refresh_watcher(&watcher);
+    Ok(created)
+}
+
+#[tauri::command]
+pub async fn watched_folder_update(
+    state: State<'_, Option<Supervisor>>,
+    watcher: State<'_, Watcher>,
+    id: i64,
+    changes: Value,
+) -> Result<Value, Value> {
+    let updated = supervisor(&state)?
+        .request(
+            reqwest::Method::PATCH,
+            &format!("/v1/watched-folders/{id}"),
+            Some(&changes),
+            None,
+        )
+        .await
+        .map_err(to_ui_error)?;
+    refresh_watcher(&watcher);
+    Ok(updated)
+}
+
+/// Stops watching. Never deletes or moves anything in the folder.
+#[tauri::command]
+pub async fn watched_folder_remove(
+    state: State<'_, Option<Supervisor>>,
+    watcher: State<'_, Watcher>,
+    id: i64,
+) -> Result<(), Value> {
+    supervisor(&state)?
+        .request(
+            reqwest::Method::DELETE,
+            &format!("/v1/watched-folders/{id}"),
+            None,
+            None,
+        )
+        .await
+        .map_err(to_ui_error)?;
+    refresh_watcher(&watcher);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn watched_folder_files(
+    state: State<'_, Option<Supervisor>>,
+    id: i64,
+) -> Result<Value, Value> {
+    supervisor(&state)?
+        .request(
+            reqwest::Method::GET,
+            &format!("/v1/watched-folders/{id}/files"),
+            None,
+            None,
+        )
+        .await
+        .map_err(to_ui_error)
 }

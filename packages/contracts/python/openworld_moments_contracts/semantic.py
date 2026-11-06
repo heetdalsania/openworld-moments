@@ -137,6 +137,13 @@ def _import(doc: Document) -> Iterable[str]:
             yield f"totals.{outcome}: {totals[outcome]} does not match {count} items"
 
 
+def _watched_folder(doc: Document) -> Iterable[str]:
+    stats = doc["stats"]
+    counted = stats["imported"] + stats["in_progress"] + stats["failed"]
+    if counted > stats["tracked"]:
+        yield f"stats.tracked: {stats['tracked']} is less than the {counted} files counted by state"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "event": _event,
     "job": _job,
@@ -146,6 +153,7 @@ RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "render-preset": _render_preset,
     "export-manifest": _export_manifest,
     "import": _import,
+    "watched-folder": _watched_folder,
 }
 
 

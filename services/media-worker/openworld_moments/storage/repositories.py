@@ -90,7 +90,7 @@ def _insert(
         raise _translate(exc) from exc
 
 
-def _delete(conn: sqlite3.Connection, table: str, row_id: str, what: str) -> None:
+def _delete(conn: sqlite3.Connection, table: str, row_id: str | int, what: str) -> None:
     try:
         cur = conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))  # noqa: S608
     except sqlite3.IntegrityError as exc:
@@ -616,6 +616,219 @@ class DuplicateCandidateRepository:
             review_state=row["review_state"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
+        )
+
+
+DEFAULT_EXCLUDE: tuple[str, ...] = (".*", "**/.*/**")
+
+
+class WatchedFolderRow(_Model):
+    id: int
+    path: str
+    source_kind: str
+    mode: Literal["reference", "managed"]
+    recursive: bool
+    include: list[str]
+    exclude: list[str]
+    enabled: bool
+    created_at: str
+    updated_at: str
+    last_scan_at: str | None
+    availability: Literal["unknown", "available", "unavailable"]
+    last_error: dict[str, JsonValue] | None
+
+
+class WatchedFileRow(_Model):
+    folder_id: int
+    relative_path: str
+    size_bytes: int
+    mtime_ns: int
+    attempts: int
+    job_id: str | None
+    updated_at: str
+
+
+class WatchedFolderRepository:
+    """watched_folders and watched_files. Removing a folder deletes only these records;
+    files on disk are never touched."""
+
+    _FIELDS = ("source_kind", "mode", "recursive", "include", "exclude", "enabled")
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def create(
+        self,
+        *,
+        path: str,
+        source_kind: str = "other",
+        mode: str = "reference",
+        recursive: bool = True,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
+        enabled: bool = True,
+        when: str | None = None,
+    ) -> WatchedFolderRow:
+        now = when or utc_now()
+        try:
+            cur = self.conn.execute(
+                "INSERT INTO watched_folders (path, source_kind, enabled, created_at, mode, "
+                "recursive, include_json, exclude_json, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    path,
+                    source_kind,
+                    int(enabled),
+                    now,
+                    mode,
+                    int(recursive),
+                    _dumps(include or []),
+                    _dumps(list(DEFAULT_EXCLUDE) if exclude is None else exclude),
+                    now,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            if "UNIQUE" in str(exc):
+                raise ConflictError("this folder is already watched") from exc
+            raise _translate(exc) from exc
+        return self.get(int(cur.lastrowid or 0))
+
+    def get(self, folder_id: int) -> WatchedFolderRow:
+        row = self.conn.execute(
+            "SELECT * FROM watched_folders WHERE id = ?", (folder_id,)
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(f"watched folder {folder_id} not found")
+        return self._from_row(row)
+
+    def all(self) -> list[WatchedFolderRow]:
+        rows = self.conn.execute("SELECT * FROM watched_folders ORDER BY id").fetchall()
+        return [self._from_row(r) for r in rows]
+
+    def update(self, folder_id: int, changes: dict[str, JsonValue]) -> WatchedFolderRow:
+        unknown = set(changes) - set(self._FIELDS)
+        if unknown:
+            raise ValueError(f"cannot change {', '.join(sorted(unknown))}")
+        columns = {
+            "source_kind": "source_kind",
+            "mode": "mode",
+            "recursive": "recursive",
+            "include": "include_json",
+            "exclude": "exclude_json",
+            "enabled": "enabled",
+        }
+
+        def stored(key: str, value: JsonValue) -> JsonValue:
+            if key in ("include", "exclude"):
+                return _dumps(value)
+            if key in ("recursive", "enabled"):
+                return int(bool(value))
+            return value
+
+        sets = [f"{columns[k]} = ?" for k in changes]
+        values = [stored(k, v) for k, v in changes.items()]
+        cur = self.conn.execute(
+            f"UPDATE watched_folders SET {', '.join([*sets, 'updated_at = ?'])} "  # noqa: S608
+            "WHERE id = ?",
+            (*values, utc_now(), folder_id),
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"watched folder {folder_id} not found")
+        return self.get(folder_id)
+
+    def record_scan(
+        self,
+        folder_id: int,
+        *,
+        available: bool,
+        scanned: bool,
+        error: dict[str, JsonValue] | None,
+        when: str | None = None,
+    ) -> WatchedFolderRow:
+        now = when or utc_now()
+        cur = self.conn.execute(
+            "UPDATE watched_folders SET availability = ?, last_error_json = ?, "
+            "last_scan_at = CASE WHEN ? THEN ? ELSE last_scan_at END WHERE id = ?",
+            (
+                "available" if available else "unavailable",
+                None if available or error is None else _dumps(error),
+                int(scanned and available),
+                now,
+                folder_id,
+            ),
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"watched folder {folder_id} not found")
+        return self.get(folder_id)
+
+    def delete(self, folder_id: int) -> None:
+        _delete(self.conn, "watched_folders", folder_id, "watched folder")
+
+    # -- files -------------------------------------------------------------------------
+
+    def file(self, folder_id: int, relative_path: str) -> WatchedFileRow | None:
+        row = self.conn.execute(
+            "SELECT * FROM watched_files WHERE folder_id = ? AND relative_path = ?",
+            (folder_id, relative_path),
+        ).fetchone()
+        return None if row is None else WatchedFileRow(**dict(row))
+
+    def files(self, folder_id: int, *, limit: int = 200, offset: int = 0) -> list[WatchedFileRow]:
+        rows = self.conn.execute(
+            "SELECT * FROM watched_files WHERE folder_id = ? "
+            "ORDER BY updated_at DESC, relative_path LIMIT ? OFFSET ?",
+            (folder_id, limit, offset),
+        ).fetchall()
+        return [WatchedFileRow(**dict(r)) for r in rows]
+
+    def save_file(self, row: WatchedFileRow) -> None:
+        try:
+            self.conn.execute(
+                "INSERT INTO watched_files (folder_id, relative_path, size_bytes, mtime_ns, "
+                "attempts, job_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT (folder_id, relative_path) DO UPDATE SET "
+                "size_bytes = excluded.size_bytes, mtime_ns = excluded.mtime_ns, "
+                "attempts = excluded.attempts, job_id = excluded.job_id, "
+                "updated_at = excluded.updated_at",
+                (
+                    row.folder_id,
+                    row.relative_path,
+                    row.size_bytes,
+                    row.mtime_ns,
+                    row.attempts,
+                    row.job_id,
+                    row.updated_at,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def job_states(self, folder_id: int) -> list[tuple[str | None, str | None]]:
+        """(job_id, job state) for every tracked file of a folder; state None when the
+        job no longer exists."""
+        rows = self.conn.execute(
+            "SELECT f.job_id, j.state FROM watched_files f "
+            "LEFT JOIN jobs j ON j.id = f.job_id WHERE f.folder_id = ?",
+            (folder_id,),
+        ).fetchall()
+        return [(r[0], r[1]) for r in rows]
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> WatchedFolderRow:
+        return WatchedFolderRow(
+            id=row["id"],
+            path=row["path"],
+            source_kind=row["source_kind"],
+            mode=row["mode"],
+            recursive=bool(row["recursive"]),
+            include=_loads(row["include_json"]),
+            exclude=_loads(row["exclude_json"]),
+            enabled=bool(row["enabled"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"] or row["created_at"],
+            last_scan_at=row["last_scan_at"],
+            availability=row["availability"],
+            last_error=_loads(row["last_error_json"]),
         )
 
 
