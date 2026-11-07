@@ -142,6 +142,8 @@ describe("keyboard-only walkthrough", () => {
     await user.tab();
     expect(document.activeElement?.textContent).toBe("Library");
     await user.tab();
+    expect(document.activeElement?.textContent).toBe("Sessions");
+    await user.tab();
     expect(document.activeElement?.textContent).toBe("Settings");
     await user.tab();
     expect(document.activeElement?.textContent).toBe("Import");

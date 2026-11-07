@@ -226,6 +226,7 @@ pub async fn worker_api(
     let method = match method.as_str() {
         "GET" => reqwest::Method::GET,
         "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
         _ => return Err(crate::media::route_refused()),
     };
     supervisor(&state)?
