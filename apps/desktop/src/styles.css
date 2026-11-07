@@ -573,3 +573,186 @@ a.button[aria-current="page"] {
 .status-interrupted {
   color: var(--warn);
 }
+
+/* Sessions (M11-M13) */
+.sessions .session-item {
+  position: relative;
+}
+
+.sessions .select {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.session-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.session-player:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.session-screen {
+  position: relative;
+  width: 100%;
+  max-height: 60vh;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.session-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  visibility: hidden;
+}
+
+.session-video.active {
+  visibility: visible;
+}
+
+.session-screen .player-empty,
+.player-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ddd;
+}
+
+.player-loading {
+  background: color-mix(in srgb, #000 40%, transparent);
+}
+
+.transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.scrub {
+  width: 100%;
+}
+
+.track-lane {
+  position: relative;
+  display: flex;
+  height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.track-segment {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 2px solid var(--accent);
+  background: var(--surface);
+}
+
+.track-segment:last-child {
+  border-right: none;
+}
+
+.track-thumbs {
+  display: flex;
+  height: 40px;
+  overflow: hidden;
+}
+
+.track-thumbs img {
+  height: 40px;
+  width: auto;
+}
+
+.segment-wave {
+  width: 100%;
+  height: 32px;
+}
+
+.track-duplicate {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--warn) 35%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  pointer-events: none;
+}
+
+.track-hidden {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 6px;
+  background: var(--warn);
+  pointer-events: none;
+}
+
+.track-head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--fg);
+  pointer-events: none;
+}
+
+.track-legend,
+.clips {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.track-legend li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.clip {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.clip-head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.source-time {
+  min-height: 1.2em;
+  font-variant-numeric: tabular-nums;
+}

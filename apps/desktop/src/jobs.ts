@@ -30,6 +30,8 @@ const LABELS: Record<string, string> = {
   probe: "Read media details",
   relink: "Relink file",
   check_sources: "Check original files",
+  group: "Group sessions",
+  align: "Find repeated footage",
   diagnostic: "Diagnostic",
 };
 
@@ -42,6 +44,7 @@ const STATE_LABELS: Record<string, string> = {
   probing: "Reading media",
   fingerprinting: "Fingerprinting",
   proxying: "Preparing playback",
+  grouping: "Grouping",
   analyzing: "Working",
   ready: "Done",
   failed: "Failed",
@@ -105,6 +108,9 @@ export function upsertJob(job: Job): void {
   }
   if (previous?.state !== job.state && job.state === "failed" && job.kind === "proxy") {
     invalidate("derived:");
+  }
+  if (finished && (job.kind === "group" || job.kind === "align")) {
+    invalidate("sessions");
   }
 }
 

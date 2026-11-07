@@ -66,6 +66,26 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "jobs", id, "cancel" | "retry"]) => {
             is_id(id, "job_") && query.is_none()
         }
+        // Sessions (M11-M13).
+        ("GET", ["", "v1", "sessions"]) => true,
+        ("POST", ["", "v1", "sessions", "recompute" | "align" | "merge"]) => query.is_none(),
+        ("GET", ["", "v1", "sessions", id]) => is_id(id, "ses_") && query.is_none(),
+        ("GET", ["", "v1", "sessions", id, "overlaps" | "corrections"]) => {
+            is_id(id, "ses_") && query.is_none()
+        }
+        (
+            "POST",
+            [
+                "",
+                "v1",
+                "sessions",
+                id,
+                "split" | "order" | "remove" | "confirm",
+            ],
+        ) => is_id(id, "ses_") && query.is_none(),
+        ("PUT", ["", "v1", "sessions", id, "overlaps", asset]) => {
+            is_id(id, "ses_") && is_id(asset, "ast_") && query.is_none()
+        }
         _ => false,
     }
 }
@@ -248,6 +268,7 @@ mod tests {
 
     const ASSET: &str = "ast_01JCBQ00000000000000000001";
     const JOB: &str = "job_01JCBQ00000000000000000021";
+    const SESSION: &str = "ses_01JCBQ00000000000000000002";
 
     #[test]
     fn only_listed_routes_are_allowed() {
@@ -262,6 +283,15 @@ mod tests {
             ("POST", &format!("/v1/jobs/{JOB}/retry")),
             ("GET", "/v1/jobs?limit=200"),
             ("GET", "/v1/capabilities"),
+            ("GET", "/v1/sessions?limit=200"),
+            ("GET", &format!("/v1/sessions/{SESSION}")),
+            ("GET", &format!("/v1/sessions/{SESSION}/overlaps")),
+            ("POST", "/v1/sessions/recompute"),
+            ("POST", "/v1/sessions/align"),
+            ("POST", "/v1/sessions/merge"),
+            ("POST", &format!("/v1/sessions/{SESSION}/order")),
+            ("POST", &format!("/v1/sessions/{SESSION}/split")),
+            ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{ASSET}")),
         ] {
             assert!(api_route_allowed(method, path), "{method} {path}");
         }
@@ -277,6 +307,10 @@ mod tests {
             ("POST", "/v1/imports?mode=managed"),
             ("GET", &format!("/v1/jobs/{JOB}/../../shutdown")),
             ("POST", "/v1/watched-folders"),
+            ("DELETE", &format!("/v1/sessions/{SESSION}")),
+            ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{SESSION}")),
+            ("POST", "/v1/sessions/recompute?max_gap_ms=1"),
+            ("GET", "/v1/sessions/ses_bad"),
         ] {
             assert!(!api_route_allowed(method, path), "{method} {path}");
         }

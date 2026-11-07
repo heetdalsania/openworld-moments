@@ -4,9 +4,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AssetDerivedMedia,
+  AssetOverlap,
   ImportResult,
   Job,
   MediaAsset,
+  Session,
 } from "@openworld-moments/contracts";
 
 /** A contract ErrorInfo, or a stand-in for transport failures. */
@@ -48,7 +50,7 @@ export function describeError(error: ApiError): string {
   return EXPLAIN[error.code] ?? error.message;
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
   try {
     return await invoke<T>("worker_api", { method, path, body: body ?? null });
   } catch (error) {
@@ -100,4 +102,55 @@ export function retryJob(id: string): Promise<Job> {
   return call("POST", `/v1/jobs/${id}/retry`);
 }
 
-export type { AssetDerivedMedia, ImportResult, Job, MediaAsset };
+// -- sessions (M11-M13) ---------------------------------------------------------------
+
+export function listSessions(): Promise<Session[]> {
+  return call("GET", "/v1/sessions?limit=200");
+}
+
+export function getSession(id: string): Promise<Session> {
+  return call("GET", `/v1/sessions/${id}`);
+}
+
+export function sessionOverlaps(id: string): Promise<AssetOverlap[]> {
+  return call("GET", `/v1/sessions/${id}/overlaps`);
+}
+
+export function recomputeSessions(): Promise<Job> {
+  return call("POST", "/v1/sessions/recompute", {});
+}
+
+export function alignSessions(sessionIds?: string[]): Promise<Job> {
+  return call("POST", "/v1/sessions/align", sessionIds ? { session_ids: sessionIds } : {});
+}
+
+export function mergeSessions(sessionIds: string[]): Promise<Session> {
+  return call("POST", "/v1/sessions/merge", { session_ids: sessionIds });
+}
+
+export function splitSession(id: string, afterAssetId: string): Promise<Session[]> {
+  return call("POST", `/v1/sessions/${id}/split`, { after_asset_id: afterAssetId });
+}
+
+export function reorderSession(id: string, assetIds: string[]): Promise<Session> {
+  return call("POST", `/v1/sessions/${id}/order`, { asset_ids: assetIds });
+}
+
+export function removeFromSession(id: string, assetId: string): Promise<Session[]> {
+  return call("POST", `/v1/sessions/${id}/remove`, { asset_id: assetId });
+}
+
+export function confirmSession(id: string): Promise<Session> {
+  return call("POST", `/v1/sessions/${id}/confirm`);
+}
+
+/** Set the overlap before `assetId` (0 = no overlap) or clear the override (null). */
+export function setOverlap(
+  id: string,
+  assetId: string,
+  overlapMs: number | null,
+): Promise<Session> {
+  return call("PUT", `/v1/sessions/${id}/overlaps/${assetId}`, { overlap_ms: overlapMs });
+}
+
+export type { AssetDerivedMedia, AssetOverlap, ImportResult, Job, MediaAsset, Session };

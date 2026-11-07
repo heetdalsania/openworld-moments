@@ -26,8 +26,9 @@ Rust host ──worker://job-event, worker://resync, worker://status──▶ Re
 
   | Method | Route |
   |---|---|
-  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities` |
-  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry` |
+  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities`, `/v1/sessions` (query: `limit`, …), `/v1/sessions/{id}`, `/v1/sessions/{id}/overlaps`, `/v1/sessions/{id}/corrections` |
+  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry`, `/v1/sessions/recompute`, `/v1/sessions/align`, `/v1/sessions/merge`, `/v1/sessions/{id}/split`, `/v1/sessions/{id}/order`, `/v1/sessions/{id}/remove`, `/v1/sessions/{id}/confirm` |
+  | PUT | `/v1/sessions/{id}/overlaps/{asset_id}` |
 
   IDs must be well-formed and query strings contain only `[A-Za-z0-9_=&-]`.
   Watched folders keep their own M07 commands.
@@ -60,12 +61,14 @@ Routes are hash-based, so reloading the window returns to the same screen.
 |---|---|---|
 | `#/library` (default) | `LibraryView` | Newest clips first, 60 per page. Thumbnail, name, duration, size, and badges (Original missing, HDR, No audio, Copied to library). Loading, error with retry, and empty states (with Import and a pointer to watched folders) |
 | `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
+| `#/sessions` | `SessionsView` | Candidate sessions (M11) with played duration, hidden repeated footage, state, and grouping confidence; group, find repeated footage, and merge ([session timeline](./session-timeline.md)) |
+| `#/session/<id>` | `SessionView` | The session as one continuous timeline (M13): two-element player, track with boundaries, thumbnails, waveforms, and hidden-overlap markers, reveal toggle, keyboard controls, and per-clip corrections ([session timeline](./session-timeline.md)) |
 | `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
 | `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |
 
 Global, in `App.tsx`:
 
-- **Navigation:** Library and Settings. Other spec 10.1 sections arrive with
+- **Navigation:** Library, Sessions, and Settings. Other spec 10.1 sections arrive with
   their milestones.
 - **Import:** opens `ImportPanel`. Choose files or folders, or drop them onto the
   window, then choose reference (the default, remembered) or managed.
@@ -82,6 +85,8 @@ Supporting modules:
 | `jobs.ts` | Durable job store. Loaded from `GET /v1/jobs` at start, after a worker (re)start, and on resync; live events update it. Finished imports refresh the library, finished `proxy` jobs refresh that asset |
 | `media.ts` | `owm-media` URLs, waveform parsing (`owm-waveform` v1), durations |
 | `route.ts` | Hash router |
+| `timeline.ts` | Source ↔ virtual session time mapping (M13) |
+| `player.ts` | `SessionPlayer`: two-element playback across clip boundaries (M13) |
 
 ## Behavior worth knowing
 
@@ -119,7 +124,7 @@ Supporting modules:
 - **Keyboard:** every primary control is a native link, button, or form field.
   Tab order:
   1. Skip to content;
-  2. Library and Settings;
+  2. Library, Sessions, and Settings;
   3. Import and Background jobs;
   4. view controls;
   5. clip cards.
@@ -157,7 +162,9 @@ Supporting modules:
   - **a moved original:** reported as missing while the proxy still plays;
   - **a worker crash and restart:** jobs and media survive.
 
-  CI installs FFmpeg for this test (`OWM_REQUIRE_FFMPEG=1`).
+  CI installs FFmpeg for this test (`OWM_REQUIRE_FFMPEG=1`). `session_e2e`
+  does the same for sessions: group, align, reorder, and override through the
+  allow-listed routes ([session timeline](./session-timeline.md#tests)).
 
 ## Known player limitations
 
@@ -168,8 +175,10 @@ Supporting modules:
   keyframe per second.
 - **Waveform:** shown for orientation; it is not linked to the playhead yet.
 - **Thumbnails** seek the player but do not scrub.
-- **No frame-accurate stepping, playback speed, or A/V offset controls.** The
-  editor milestones (M21, M22) own those.
+- **No playback speed or A/V offset controls.** The editor milestones (M21, M22)
+  own those. Frame stepping exists on the session screen (M13), not on a single
+  clip's page. Session playback has its own limitations
+  ([session timeline](./session-timeline.md#player-limitations)).
 - **Bounded responses:** large files are served in 4 MiB ranges. Players that
   request without a Range header get the first 4 MiB of a file larger than
   16 MiB with status 206. Every supported web view sends ranges.

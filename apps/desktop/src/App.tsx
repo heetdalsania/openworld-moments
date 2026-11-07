@@ -9,6 +9,8 @@ import { isActive, useJobFeed, useJobs } from "./jobs";
 import { LibraryView } from "./LibraryView";
 import { PhoneImport } from "./PhoneImport";
 import { type Route, routeHref, useRoute } from "./route";
+import { SessionsView } from "./SessionsView";
+import { SessionView } from "./SessionView";
 import { WatchedFolders } from "./WatchedFolders";
 import type { WatchedFolderView } from "./watched";
 import { XboxOnboarding } from "./XboxOnboarding";
@@ -107,7 +109,9 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
 
 function NavLink({ route, current, children }: { route: Route; current: Route; children: string }) {
   const active =
-    current.view === route.view || (route.view === "library" && current.view === "asset");
+    current.view === route.view ||
+    (route.view === "library" && current.view === "asset") ||
+    (route.view === "sessions" && current.view === "session");
   return (
     <a href={routeHref(route)} aria-current={active ? "page" : undefined}>
       {children}
@@ -151,6 +155,9 @@ export function App() {
           <NavLink route={{ view: "library" }} current={route}>
             Library
           </NavLink>
+          <NavLink route={{ view: "sessions" }} current={route}>
+            Sessions
+          </NavLink>
           <NavLink route={{ view: "settings" }} current={route}>
             Settings
           </NavLink>
@@ -189,6 +196,16 @@ export function App() {
               </section>
             ))}
           {route.view === "asset" && ready && <AssetView key={route.id} id={route.id} />}
+          {route.view === "sessions" &&
+            (ready ? (
+              <SessionsView />
+            ) : (
+              <section className="view">
+                <h1>Sessions</h1>
+                <p role="status">Sessions open once the media worker is running.</p>
+              </section>
+            ))}
+          {route.view === "session" && ready && <SessionView key={route.id} id={route.id} />}
           {route.view === "settings" && <SettingsView workerReady={ready} />}
           {route.view === "phone" &&
             (ready ? (

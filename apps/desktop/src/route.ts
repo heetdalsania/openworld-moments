@@ -3,15 +3,24 @@
 import { useEffect, useState } from "react";
 
 export type Route =
-  { view: "library" } | { view: "asset"; id: string } | { view: "settings" } | { view: "phone" };
+  | { view: "library" }
+  | { view: "asset"; id: string }
+  | { view: "settings" }
+  | { view: "phone" }
+  | { view: "sessions" }
+  | { view: "session"; id: string };
 
 const ASSET = /^#\/asset\/(ast_[0-9A-HJKMNP-TV-Z]{26})$/;
+const SESSION = /^#\/session\/(ses_[0-9A-HJKMNP-TV-Z]{26})$/;
 
 export function parseRoute(hash: string): Route {
   const asset = ASSET.exec(hash);
   if (asset?.[1]) return { view: "asset", id: asset[1] };
   if (hash === "#/settings") return { view: "settings" };
   if (hash === "#/phone") return { view: "phone" };
+  if (hash === "#/sessions") return { view: "sessions" };
+  const session = SESSION.exec(hash);
+  if (session?.[1]) return { view: "session", id: session[1] };
   return { view: "library" };
 }
 
@@ -25,6 +34,10 @@ export function routeHref(route: Route): string {
       return "#/settings";
     case "phone":
       return "#/phone";
+    case "sessions":
+      return "#/sessions";
+    case "session":
+      return `#/session/${route.id}`;
   }
 }
 

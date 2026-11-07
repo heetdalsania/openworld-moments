@@ -274,9 +274,11 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M10 | In review | [#15](https://github.com/heetdalsania/openworld-moments/pull/15) | — | Arun Velkumar | Separate LAN gateway process on one chosen private address; 256-bit token, 10-minute expiry, closes with the screen; streamed uploads with extension, magic, size, count, and free-space checks into `staging/phone/<session>/NNNN/`; managed `phone_upload` imports; threat tests and E2E. **Pending: real-phone smoke test on a Windows private network** |
 | M11 | Complete | [#16](https://github.com/heetdalsania/openworld-moments/pull/16) | — | Arun Velkumar | Capture-time estimator v1 (filename patterns, container, mtime; agreement/disagreement confidence, time-zone notes, copy artefacts); `owm-metadata-gap` v1 grouping (source, format, 15-min gap, import order) with per-join evidence; idempotent `group` job; merge/split/reorder/remove/confirm corrections with a log; synthetic fixtures; contracts 1.7, migration 0008 |
 | M12 | Complete | [#18](https://github.com/heetdalsania/openworld-moments/pull/18) | — | Arun Velkumar | `owm-overlap` v1: dhash256 vote-and-verify alignment of A's tail with B's head (≥4 compared, ≥80% matching, ≥2 s unbroken run), ambiguity rejection for repeating footage, envelope cross-correlation refinement; applies only `matched` (≥0.6) or user overrides via the shared session layout; cached per pair and version; `align` job and override API; contracts 1.8, migration 0009 |
-| M13 | Ready | — | — | — | — |
+| M13 | Complete | [#19](https://github.com/heetdalsania/openworld-moments/pull/19) | — | Arun Velkumar | Pure source ↔ virtual time mapping (`timeline.ts`; round trips within one frame at 23.976–120 fps and VFR averages); two-element `SessionPlayer` that preloads the next clip at its first unique frame, switches at boundaries without replaying hidden overlap, keeps audio with the visible clip, and keeps the moment across reveal/reorder; Sessions and session screens with track, thumbnails, waveforms, overlap confidence, reveal toggle, keyboard controls, and reorder/split/remove/merge/override/confirm; session routes and PUT allow-listed in the host; E2E against the real worker |
 | M14 | Ready | — | — | — | — |
-| M15–M39 | See dependency graph | — | — | — | — |
+| M15–M20 | See dependency graph | — | — | — | — |
+| M21 | Ready | — | — | — | — |
+| M22–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 
