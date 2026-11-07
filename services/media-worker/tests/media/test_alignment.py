@@ -69,7 +69,15 @@ def clips(tmp_path_factory: pytest.TempPathFactory, ffmpeg: ToolInfo) -> Path:
 
     cut("a.mp4", 0, 40)  # A: master 0-40 s
     cut("b.mp4", 30, 40)  # B: master 30-70 s, repeats A's last 10 s
-    cut("b_recompressed.mp4", 30, 40, "-crf", "38", "-vf", "scale=256:144,scale=320:180")
+    # A realistic lossy copy: re-encoded at lower resolution and quality. Measured
+    # margin: dhash matching holds 20/20 frames through CRF 32 on every x264 preset
+    # and only breaks down around CRF 36-40, where encoder versions start to differ.
+    cut(
+        "b_recompressed.mp4",
+        30,
+        40,
+        *("-preset", "veryfast", "-crf", "30", "-vf", "scale=256:144,scale=320:180"),
+    )
     cut("a_silent.mp4", 0, 40, audio=False)
     cut("b_silent.mp4", 30, 40, audio=False)
     cut("c.mp4", 45, 25)  # no overlap with A (starts 5 s after A ends)
@@ -93,7 +101,7 @@ def clips(tmp_path_factory: pytest.TempPathFactory, ffmpeg: ToolInfo) -> Path:
     _ffmpeg(
         ffmpeg,
         *("-f", "lavfi", "-i", "smptebars=s=320x180:r=30:d=8"),
-        *("-f", "lavfi", "-i", LIFE.format(seed=99) + ":rate=30"),
+        *("-f", "lavfi", "-i", LIFE.format(seed=99)),
         *("-f", "lavfi", "-i", TONE),
         "-filter_complex",
         "[1:v]trim=duration=22,setpts=PTS-STARTPTS[life];[0:v][life]concat=n=2:v=1:a=0[v];"

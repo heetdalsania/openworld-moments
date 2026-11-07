@@ -164,7 +164,7 @@ Life video and a quasi-periodic tone, cut so that B repeats A's last 10 s
 | Case | Result |
 |---|---|
 | Exact | `matched`, offset 30 000 ms, confidence 0.95, 20/20 frames, audio correlation 0.98 |
-| Recompressed (CRF 38, downscaled and upscaled) | `matched`, 30 000 ms, 19/20 frames |
+| Recompressed (re-encoded at 256×144, CRF 30, upscaled back) | `matched`, 30 000 ms, 20/20 frames |
 | Audio 300 ms late | `matched`, 30 000 ms. The shifted audio is not trusted, and the visual offset stands |
 | Silent | `matched`, 30 000 ms, visual only |
 | Repeated menu (A ends and D starts on the same static bars) | `ambiguous`, not applied |
@@ -179,6 +179,10 @@ Life video and a quasi-periodic tone, cut so that B repeats A's last 10 s
 - **Fades and black frames:** flat frames are ignored. An overlap that is mostly
   black lacks evidence (`insufficient` or `no_match`).
 - **Heavy recompression or scaling:** tolerated within 24 of 256 bits per frame.
+  On fine-grained synthetic footage, matching held 20/20 frames through CRF 32 at
+  reduced resolution on every x264 preset and broke down around CRF 36–40, where
+  encoder versions differ. Real captures with large-scale structure are more
+  robust; very low-bitrate copies may not align.
   Different crops or HUD overlays (for example a streamer overlay on one copy
   only) can break matching.
 - **Overlaps longer than 30 s:** only the last 30 s of A and the first 30 s of B
