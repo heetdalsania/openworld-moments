@@ -18,7 +18,14 @@ from openworld_moments_contracts import load, normalize
 from openworld_moments.derived.service import DerivedCancelled, DerivedMedia
 from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.example import BrightRegion
-from openworld_moments.detectors.inputs import SAMPLER_VERSION, content_hash, decode_frames
+from openworld_moments.detectors.inputs import (
+    ROI_SAMPLER_VERSION,
+    SAMPLER_VERSION,
+    content_hash,
+    decode_frames,
+    decode_region,
+    require_roi_detail,
+)
 from openworld_moments.detectors.profiles import (
     ProfileCatalog,
     ResolvedProfile,
@@ -35,6 +42,7 @@ from openworld_moments.detectors.sdk import (
     Detector,
     checkpoint,
 )
+from openworld_moments.detectors.wanted import WantedState
 from openworld_moments.ids import new_id
 from openworld_moments.media.process import ToolCancelled
 from openworld_moments.media.tools import MediaTools
@@ -51,7 +59,7 @@ from openworld_moments.storage.repositories import SCHEMA_VERSION
 
 Progress = Callable[[int, int, str], None]
 Registry = Mapping[str, Callable[[], Detector]]
-BUILTINS: Registry = MappingProxyType({BrightRegion.id: BrightRegion})
+BUILTINS: Registry = MappingProxyType({BrightRegion.id: BrightRegion, WantedState.id: WantedState})
 MAX_EVENTS = 10_000
 
 
@@ -108,7 +116,9 @@ class Analyzer:
                 # Reject incompatibility for each clip without discarding other clips.
                 prepared: tuple[Path, str, dict[str, str]] | None = None
                 frames = None
+                frames_key = ""
                 for setting in settings:
+                    context = None
                     checkpoint(cancel)
                     outcome: dict[str, Any] = {
                         "asset_id": link.asset_id,
@@ -144,7 +154,16 @@ class Analyzer:
                             )
                         if prepared is None:
                             prepared = self._prepare(conn, link.asset_id, job_id, cancel)
-                        path, input_key, versions = prepared
+                        path, input_key, base_versions = prepared
+                        versions = dict(base_versions)
+                        sample_region = getattr(detector, "sample_region", None)
+                        roi = tuple(profile["regions"][sample_region]) if sample_region else None
+                        sample_key = canonical(roi)
+                        if roi is not None:
+                            versions["sampler"] = ROI_SAMPLER_VERSION
+                            require_roi_detail(
+                                width, height, roi, setting.get("wanted", {}).get("max_level", 5)
+                            )
                         key = digest(
                             [
                                 resolved.key,
@@ -162,8 +181,14 @@ class Analyzer:
                         if cached is not None and not params.get("force", False):
                             outcome.update(status="cached", event_ids=cached)
                         else:
-                            if frames is None:
-                                frames = decode_frames(path, self.tools.tool("ffmpeg"), cancel)
+                            if frames is None or frames_key != sample_key:
+                                frames = None
+                                frames = (
+                                    decode_region(path, self.tools.tool("ffmpeg"), cancel, roi)
+                                    if roi is not None
+                                    else decode_frames(path, self.tools.tool("ffmpeg"), cancel)
+                                )
+                                frames_key = sample_key
 
                             def frame_progress(done: int, count: int, unit: int = ordinal) -> None:
                                 report(

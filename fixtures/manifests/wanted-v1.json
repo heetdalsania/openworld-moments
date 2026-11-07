@@ -1,0 +1,75 @@
+{
+  "format": "owm-synthetic-wanted-manifest",
+  "version": 1,
+  "generator": "services/media-worker/openworld_moments/detectors/wanted_fixtures.py",
+  "generator_version": "wanted-synthetic-v1",
+  "provenance": "Original analytic polygons and discs authored for this repository; no game assets, models, footage or extracted templates.",
+  "license": "AGPL-3.0-or-later",
+  "sample_ms": 500,
+  "default_profile": "generic-wanted",
+  "cases": [
+    {
+      "id": "state-estimation",
+      "shapes": ["star", "disc"],
+      "maximum": [1, 3, 5, 10],
+      "levels": "0 through maximum",
+      "brightness": [0.55, 0.8, 1.0],
+      "expected": "known prefix states; outline is required for inactive slots"
+    },
+    {
+      "id": "transitions",
+      "levels": [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0],
+      "expected_from_to": [
+        [0, 2],
+        [2, 5],
+        [5, 0]
+      ],
+      "first_ms": [3000, 6000, 9000],
+      "confirmed_ms": [4000, 7000, 10000]
+    },
+    {
+      "id": "real-encode",
+      "resolution": [
+        [1280, 720],
+        [1920, 1080],
+        [3840, 2160]
+      ],
+      "h264_crf": [18, 32, 38],
+      "brightness": [1, 0.7, 1],
+      "expected_from_to": [
+        [0, 2],
+        [2, 5],
+        [5, 0]
+      ]
+    },
+    {
+      "id": "hud-scale",
+      "scale": 0.75,
+      "region": [0.3, 0.4, 0.3375, 0.12],
+      "expected": "uncalibrated unknown; calibrated transition sequence"
+    },
+    {
+      "id": "negative-patterns",
+      "patterns": [
+        "absent",
+        "rectangles",
+        "nonprefix",
+        "ambiguous",
+        "wrong-shape",
+        "compressed-testsrc2"
+      ],
+      "expected": "unknown, no false transitions"
+    },
+    {
+      "id": "temporal",
+      "patterns": [
+        "isolated-level-flicker",
+        "single-missing-sample",
+        "sustained-unknown",
+        "cooldown-flips",
+        "timestamp-gap"
+      ],
+      "expected": "brief misses do not flicker; extended absence/gap reacquires baseline without an invented change"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-SDK_VERSION = "1.0.0"
+SDK_VERSION = "1.1.0"
 
 
 class AnalysisCancelled(Exception):
@@ -28,6 +28,7 @@ class Frame:
     width: int
     height: int
     pixels: bytes  # packed, row-major grayscale, 0..255
+    region: tuple[float, ...] | None = None  # None = whole picture; otherwise global ROI
 
 
 @dataclass(frozen=True, slots=True)

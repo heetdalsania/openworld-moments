@@ -20,6 +20,10 @@ To add a built-in detector:
 bright frames do not emit observations. Run it with
 `uv run --directory services/media-worker owm demo` from the repository root.
 
+M16's [wanted detector guide](./wanted.md) documents the shipped analytic estimator,
+confirmation/debounce settings, synthetic case table, local replay and benchmark.
+`generic-wanted` uses the saved calibration overrides and the same analyze API.
+
 Event review and the reproducible precision/recall evaluation harness arrive in M19.
 
 ## Calibrating an installed profile
