@@ -106,8 +106,11 @@ inspection uses this CLI. No new UI is introduced in M16.
 [Manifest wanted-v1](../../fixtures/manifests/wanted-v1.json) records all recipes.
 The original scanline polygon fixture renderer is separate from the estimator's
 point-in-polygon masks. No official art, models, fonts, screenshots or game footage
-are used. Renderer/media fixture pixels are AGPL-3.0-or-later; the reference JSON
-profile is Apache-2.0. Generated media stays in scratch directories.
+are used. Full-picture fixtures use background 64 outside the dark indicator ROI
+(background 20), scaled by brightness. This keeps the unrelated picture away from
+M08's whole-frame black cutoff of 24 across FFmpeg builds; detector contrast and
+compression cases remain inside the unchanged ROI. Renderer/media fixture pixels
+are AGPL-3.0-or-later; the reference JSON profile is Apache-2.0. Generated media stays in scratch directories.
 
 | Case | Expected and validated result |
 |---|---|

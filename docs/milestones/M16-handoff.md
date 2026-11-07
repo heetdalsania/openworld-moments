@@ -65,6 +65,13 @@
     five runs, median **5.599 s** (5.594–6.919), **642.9× real time**. Meets the
     2× processing budget on this reference machine; excludes proxy/decode/I/O,
     minimum Windows CPU and actual gameplay performance.
+  - CI follow-up: Linux and Windows initially failed the 4K fixture before detector
+    execution. Expanded diagnostics exposed M08's black-frame validation: Linux
+    source/proxy luma 25.1/23.3 straddled cutoff 24 at 6000 ms. Set only the fixture
+    canvas outside the ROI to brightness-scaled 64 and assert a >10-level raw
+    luma margin. The dark ROI (20), compression cases, expected transitions and
+    production proxy/detector thresholds remain unchanged. Persist proxy failure
+    details in integration-test diagnostics; record background values in the manifest.
 - Decisions made:
   - **Small prerequisite repair:** M14's 64×36 whole-frame sampler discarded
     individual HUD detail. Add fixed trusted-built-in ROI sampling (200×40 at

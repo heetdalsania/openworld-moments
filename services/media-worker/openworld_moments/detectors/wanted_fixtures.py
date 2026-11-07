@@ -123,7 +123,9 @@ def canvas_pixels(
     left, top = int(x * width), int(y * height)
     rw, rh = int(w * width), int(h * height)
     row = row_pixels(rw, rh, level, shape=shape, brightness=brightness)
-    canvas = bytearray([round(20 * brightness)]) * (width * height)
+    # Keep the unrelated picture clear of M08's whole-frame black cutoff (24).
+    # The actual indicator ROI retains its dark background and contrast cases.
+    canvas = bytearray([round(64 * brightness)]) * (width * height)
     for j in range(rh):
         canvas[(top + j) * width + left : (top + j) * width + left + rw] = row[
             j * rw : (j + 1) * rw

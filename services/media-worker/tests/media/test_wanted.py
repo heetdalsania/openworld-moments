@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from openworld_moments_contracts import load
 
 from openworld_moments.api.app import ApiSettings, create_app
-from openworld_moments.derived.service import DerivedMedia
+from openworld_moments.derived.service import DARK, DerivedMedia
 from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.inputs import ROI_SAMPLER_VERSION, decode_region
 from openworld_moments.detectors.profiles import ProfileCatalog
@@ -54,6 +54,9 @@ def generate(
         level: canvas_pixels(width, height, level, region=region, brightness=brightness)
         for level in (0, 2, 5)
     }
+    # This tests indicator robustness, not M08's black-frame boundary. Keep a
+    # deliberate luma margin before lossy encoding; retain the real proxy checks.
+    assert all(sum(frame) / len(frame) > DARK + 10 for frame in pixels.values())
     with raw.open("wb") as stream:
         for level in [0] * 6 + [2] * 6 + [5] * 6 + [0] * 6:
             stream.write(pixels[level])

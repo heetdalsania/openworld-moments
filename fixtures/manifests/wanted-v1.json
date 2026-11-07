@@ -6,6 +6,8 @@
   "provenance": "Original analytic polygons and discs authored for this repository; no game assets, models, footage or extracted templates.",
   "license": "AGPL-3.0-or-later",
   "sample_ms": 500,
+  "canvas_background": 64,
+  "roi_background": 20,
   "default_profile": "generic-wanted",
   "cases": [
     {
