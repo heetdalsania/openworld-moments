@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from openworld_moments_contracts import load
@@ -658,6 +659,120 @@ class DerivedArtifactRepository:
         )
 
 
+OverlapStatus = Literal["matched", "weak", "ambiguous", "no_match", "insufficient", "pending"]
+
+
+class OverlapRow(_Model):
+    """Alignment of clip B after clip A (M12). ``override_overlap_ms`` is the user's."""
+
+    asset_a: str
+    asset_b: str
+    algorithm: str
+    version: int = Field(ge=1)
+    status: OverlapStatus
+    offset_ms: int | None = None
+    overlap_ms: int | None = Field(default=None, ge=0)
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    evidence: dict[str, JsonValue]
+    computed_at: str
+    override_overlap_ms: int | None = Field(default=None, ge=0)
+    overridden_at: str | None = None
+
+
+@dataclass(frozen=True)
+class EffectiveOverlap:
+    """What a session timeline uses for a pair: how much of B repeats A's end."""
+
+    overlap_ms: int
+    confidence: float | None
+    source: Literal["user", "auto", "none"]
+
+
+class OverlapRepository:
+    """asset_overlaps: cached alignments per ordered pair, plus user overrides."""
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        self.conn = conn
+
+    def get(self, asset_a: str, asset_b: str) -> OverlapRow | None:
+        row = self.conn.execute(
+            "SELECT * FROM asset_overlaps WHERE asset_a = ? AND asset_b = ?", (asset_a, asset_b)
+        ).fetchone()
+        return self._from_row(row) if row else None
+
+    def save_result(self, row: OverlapRow) -> None:
+        """Insert or replace the automatic result; an existing override is kept."""
+        try:
+            self.conn.execute(
+                "INSERT INTO asset_overlaps (asset_a, asset_b, algorithm, version, status, "
+                "offset_ms, overlap_ms, confidence, evidence_json, computed_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT (asset_a, asset_b) DO UPDATE SET algorithm = excluded.algorithm, "
+                "version = excluded.version, status = excluded.status, "
+                "offset_ms = excluded.offset_ms, overlap_ms = excluded.overlap_ms, "
+                "confidence = excluded.confidence, evidence_json = excluded.evidence_json, "
+                "computed_at = excluded.computed_at",
+                (
+                    row.asset_a,
+                    row.asset_b,
+                    row.algorithm,
+                    row.version,
+                    row.status,
+                    row.offset_ms,
+                    row.overlap_ms,
+                    row.confidence,
+                    _dumps(row.evidence),
+                    row.computed_at,
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def set_override(
+        self, asset_a: str, asset_b: str, overlap_ms: int | None, *, algorithm: str, version: int
+    ) -> None:
+        """Set (or clear, with None) the user's overlap for a pair. 0 means "no overlap"."""
+        now = utc_now() if overlap_ms is not None else None
+        try:
+            self.conn.execute(
+                "INSERT INTO asset_overlaps (asset_a, asset_b, algorithm, version, status, "
+                "evidence_json, computed_at, override_overlap_ms, overridden_at) "
+                "VALUES (?, ?, ?, ?, 'pending', '{}', ?, ?, ?) "
+                "ON CONFLICT (asset_a, asset_b) DO UPDATE SET "
+                "override_overlap_ms = excluded.override_overlap_ms, "
+                "overridden_at = excluded.overridden_at",
+                (asset_a, asset_b, algorithm, version, utc_now(), overlap_ms, now),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise _translate(exc) from exc
+
+    def effective(
+        self, pairs: list[tuple[str, str]], *, algorithm: str, version: int
+    ) -> dict[tuple[str, str], EffectiveOverlap]:
+        """Overlaps a timeline applies: the user's override, else a current ``matched``
+        result. Weak, ambiguous, stale, or missing results apply nothing."""
+        out: dict[tuple[str, str], EffectiveOverlap] = {}
+        for a, b in pairs:
+            row = self.get(a, b)
+            if row is None:
+                continue
+            if row.override_overlap_ms is not None:
+                out[(a, b)] = EffectiveOverlap(row.override_overlap_ms, 1.0, "user")
+            elif (
+                row.status == "matched"
+                and (row.algorithm, row.version) == (algorithm, version)
+                and row.overlap_ms is not None
+            ):
+                out[(a, b)] = EffectiveOverlap(row.overlap_ms, row.confidence, "auto")
+        return out
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> OverlapRow:
+        data = dict(row)
+        evidence = data.pop("evidence_json")
+        return OverlapRow(**data, evidence=_loads(evidence))
+
+
 ReviewState = Literal["unreviewed", "duplicate", "distinct"]
 
 
@@ -1093,7 +1208,7 @@ class SessionRepository:
 
     def log_correction(
         self,
-        kind: Literal["merge", "split", "reorder", "remove", "confirm"],
+        kind: Literal["merge", "split", "reorder", "remove", "confirm", "overlap"],
         session_ids: list[str],
         asset_ids: list[str],
         detail: dict[str, JsonValue] | None = None,

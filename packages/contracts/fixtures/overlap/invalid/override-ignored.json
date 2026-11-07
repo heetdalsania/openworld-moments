@@ -1,0 +1,27 @@
+{
+  "description": "an override is what applies",
+  "expect": "semantic",
+  "path": "applied",
+  "document": {
+    "schema_version": "1.8",
+    "asset_a": "ast_01JCBQ00000000000000000001",
+    "asset_b": "ast_01JCBQ00000000000000000014",
+    "algorithm": "owm-overlap",
+    "version": 1,
+    "status": "ambiguous",
+    "current": true,
+    "evidence": {
+      "reason": "repeating_footage",
+      "rival_offsets_ms": [31500, 33000]
+    },
+    "computed_at": "2026-11-21T09:00:00Z",
+    "override": {
+      "overlap_ms": 0,
+      "set_at": "2026-11-21T09:05:00Z"
+    },
+    "applied": {
+      "overlap_ms": 0,
+      "source": "none"
+    }
+  }
+}

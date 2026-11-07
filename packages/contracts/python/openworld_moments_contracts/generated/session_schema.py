@@ -40,6 +40,23 @@ class SessionMember(BaseModel):
         ),
     ]
     capture_time: media_asset_schema.CaptureTimeEstimate | None = None
+    overlap_with_previous_ms: Annotated[
+        int | None,
+        Field(
+            description="How much of this clip repeats the end of the previous one (M12); 0 or absent for the first clip (checked semantically).",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ] = None
+    alignment_confidence: Annotated[
+        float | None,
+        Field(
+            description="Confidence of the applied overlap: 1 for a user override.",
+            ge=0.0,
+            le=1.0,
+            title="Confidence",
+        ),
+    ] = None
 
 
 class GroupingLink(BaseModel):
@@ -235,7 +252,7 @@ class SessionCorrection(BaseModel):
         extra="forbid",
     )
     id: Annotated[int, Field(ge=1)]
-    kind: Literal["merge", "split", "reorder", "remove", "confirm"]
+    kind: Literal["merge", "split", "reorder", "remove", "confirm", "overlap"]
     session_ids: list[common_schema.SessionId]
     asset_ids: list[common_schema.AssetId]
     detail: dict[str, str | int | float | bool | None] | None = None

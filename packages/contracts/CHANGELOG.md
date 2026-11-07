@@ -2,6 +2,22 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.8 — 2026-11-07 (M12)
+
+Additive; every 1.7 document is valid 1.8.
+
+- `overlap` (new): `AssetOverlap`, the alignment of clip B after clip A (status
+  `matched` / `weak` / `ambiguous` / `no_match` / `insufficient` / `pending`,
+  offset, overlap, confidence, evidence, algorithm version, whether current,
+  user override, and what is applied), with `$defs` `AlignRequest`,
+  `AlignResult`, and `OverlapOverride`. Semantic rules: different assets; matched
+  results carry offset, overlap, and confidence; an override is what applies;
+  only a current matched result applies automatically.
+- `session`: `SessionMember` gains `overlap_with_previous_ms` and
+  `alignment_confidence`; `SessionCorrection.kind` gains `overlap`. Semantic
+  rule: the first member has no overlap.
+- `job`: new kind `align`.
+
 ## 1.7 — 2026-11-07 (M11)
 
 Additive; every 1.6 document is valid 1.7.

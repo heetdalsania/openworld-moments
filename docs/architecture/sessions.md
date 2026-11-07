@@ -146,6 +146,7 @@ sessions, **corrections survive every future run**.
 | Split | `POST /v1/sessions/{id}/split {after_asset_id}` | Clips up to that one stay; the rest form a new corrected session |
 | Reorder | `POST /v1/sessions/{id}/order {asset_ids}` | Every member once, in the user's order. Out-of-time-order clips are then placed end to end (`session_start_ms` = cumulative durations) |
 | Mark unrelated | `POST /v1/sessions/{id}/remove {asset_id}` | The clip moves to a corrected session of its own and is never regrouped |
+| Overlap | `PUT /v1/sessions/{id}/overlaps/{asset_id}` | Set or clear the overlap with the previous clip (M12). Logged as `overlap`; the session's membership is unchanged |
 | Confirm | `POST /v1/sessions/{id}/confirm` | `unreviewed` → `confirmed`; membership and evidence are kept and locked |
 
 - **A corrected session has no automatic evidence:** `grouping` and
@@ -156,12 +157,17 @@ sessions, **corrections survive every future run**.
 
 ## Session order and offsets
 
+Positions come from one function, `grouping.layout`, shared with overlap
+alignment (M12, [overlap](./overlap.md)).
+
 - **`order_index`** is 0, 1, 2, … in session order.
-- **`session_start_ms` in chronological sessions** comes from capture times
-  relative to the first clip. It never decreases: overlapping clips start no
-  earlier than the clip before them.
-- **In hand-ordered sessions** clips are placed end to end. M12 will replace
-  these offsets with measured overlaps (`overlap_with_previous_ms`).
+- **An applied overlap comes first:** the later clip starts that much before the
+  earlier one ends, and the member records `overlap_with_previous_ms` and
+  `alignment_confidence`.
+- **Otherwise, in chronological sessions,** `session_start_ms` comes from
+  capture times relative to the first clip. It never decreases: overlapping
+  clips start no earlier than the clip before them.
+- **Otherwise, in hand-ordered sessions,** clips are placed end to end.
 
 ## Fixtures and tests
 

@@ -29,14 +29,21 @@
     },
     "grouping_confidence": {
       "description": "How sure the grouping is: the weakest join, or for one clip how sure its start time is. Null on corrected sessions. See docs/architecture/sessions.md.",
-      "oneOf": [{ "$ref": "common.schema.json#/$defs/Confidence" }, { "type": "null" }]
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "review_state": {
       "type": "string",
       "enum": ["unreviewed", "confirmed", "corrected"]
     },
     "assets": {
-      "description": "Members in session order: order_index is 0, 1, 2, … and session_start_ms never decreases (checked semantically).",
+      "description": "Members in session order: order_index is 0, 1, 2, \u2026 and session_start_ms never decreases (checked semantically).",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -44,7 +51,14 @@
       }
     },
     "grouping": {
-      "oneOf": [{ "$ref": "#/$defs/SessionGrouping" }, { "type": "null" }]
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SessionGrouping"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "created_at": {
       "$ref": "common.schema.json#/$defs/UtcTimestamp"
@@ -76,6 +90,14 @@
         },
         "capture_time": {
           "$ref": "media-asset.schema.json#/$defs/CaptureTimeEstimate"
+        },
+        "overlap_with_previous_ms": {
+          "description": "How much of this clip repeats the end of the previous one (M12); 0 or absent for the first clip (checked semantically).",
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "alignment_confidence": {
+          "description": "Confidence of the applied overlap: 1 for a user override.",
+          "$ref": "common.schema.json#/$defs/Confidence"
         }
       }
     },
@@ -102,15 +124,25 @@
       "additionalProperties": false,
       "required": ["from_asset_id", "to_asset_id", "gap_ms", "confidence", "reasons"],
       "properties": {
-        "from_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
-        "to_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
-        "gap_ms": { "type": "integer" },
-        "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "from_asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "to_asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "gap_ms": {
+          "type": "integer"
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
         "reasons": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/GroupingReason" }
+          "items": {
+            "$ref": "#/$defs/GroupingReason"
+          }
         }
       }
     },
@@ -121,31 +153,49 @@
       "additionalProperties": false,
       "required": ["algorithm", "version", "settings", "links"],
       "properties": {
-        "algorithm": { "type": "string", "enum": ["owm-metadata-gap"] },
-        "version": { "type": "integer", "minimum": 1 },
+        "algorithm": {
+          "type": "string",
+          "enum": ["owm-metadata-gap"]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
         "settings": {
           "type": "object",
           "additionalProperties": false,
           "required": ["max_gap_ms"],
           "properties": {
-            "max_gap_ms": { "type": "integer", "minimum": 60000, "maximum": 86400000 }
+            "max_gap_ms": {
+              "type": "integer",
+              "minimum": 60000,
+              "maximum": 86400000
+            }
           }
         },
         "links": {
           "type": "array",
-          "items": { "$ref": "#/$defs/GroupingLink" }
+          "items": {
+            "$ref": "#/$defs/GroupingLink"
+          }
         },
         "split_before": {
           "description": "Why the first clip did not join the previous clip from the same source.",
           "type": "array",
           "uniqueItems": true,
-          "items": { "$ref": "#/$defs/GroupingReason" }
+          "items": {
+            "$ref": "#/$defs/GroupingReason"
+          }
         },
         "notes": {
-          "description": "Capture-time caveats of the members (time-zone mismatch, copy times, …).",
+          "description": "Capture-time caveats of the members (time-zone mismatch, copy times, \u2026).",
           "type": "array",
           "maxItems": 50,
-          "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
         }
       }
     },
@@ -155,7 +205,11 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "max_gap_ms": { "type": "integer", "minimum": 60000, "maximum": 86400000 }
+        "max_gap_ms": {
+          "type": "integer",
+          "minimum": 60000,
+          "maximum": 86400000
+        }
       }
     },
     "GroupResult": {
@@ -173,17 +227,35 @@
         "sessions_removed"
       ],
       "properties": {
-        "considered_assets": { "type": "integer", "minimum": 0 },
+        "considered_assets": {
+          "type": "integer",
+          "minimum": 0
+        },
         "locked_assets": {
           "description": "Assets in corrected or confirmed sessions, left as they are.",
           "type": "integer",
           "minimum": 0
         },
-        "capture_times_updated": { "type": "integer", "minimum": 0 },
-        "sessions_created": { "type": "integer", "minimum": 0 },
-        "sessions_updated": { "type": "integer", "minimum": 0 },
-        "sessions_unchanged": { "type": "integer", "minimum": 0 },
-        "sessions_removed": { "type": "integer", "minimum": 0 }
+        "capture_times_updated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_created": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_updated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_unchanged": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions_removed": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "MergeRequest": {
@@ -197,7 +269,9 @@
           "minItems": 2,
           "maxItems": 50,
           "uniqueItems": true,
-          "items": { "$ref": "common.schema.json#/$defs/SessionId" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/SessionId"
+          }
         }
       }
     },
@@ -208,7 +282,9 @@
       "additionalProperties": false,
       "required": ["after_asset_id"],
       "properties": {
-        "after_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" }
+        "after_asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        }
       }
     },
     "ReorderRequest": {
@@ -222,7 +298,9 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "$ref": "common.schema.json#/$defs/AssetId" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/AssetId"
+          }
         }
       }
     },
@@ -233,7 +311,9 @@
       "additionalProperties": false,
       "required": ["asset_id"],
       "properties": {
-        "asset_id": { "$ref": "common.schema.json#/$defs/AssetId" }
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        }
       }
     },
     "SessionCorrection": {
@@ -243,26 +323,42 @@
       "additionalProperties": false,
       "required": ["id", "kind", "session_ids", "asset_ids", "created_at"],
       "properties": {
-        "id": { "type": "integer", "minimum": 1 },
-        "kind": { "type": "string", "enum": ["merge", "split", "reorder", "remove", "confirm"] },
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["merge", "split", "reorder", "remove", "confirm", "overlap"]
+        },
         "session_ids": {
           "type": "array",
-          "items": { "$ref": "common.schema.json#/$defs/SessionId" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/SessionId"
+          }
         },
         "asset_ids": {
           "type": "array",
-          "items": { "$ref": "common.schema.json#/$defs/AssetId" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/AssetId"
+          }
         },
         "detail": {
           "oneOf": [
             {
               "type": "object",
-              "additionalProperties": { "$ref": "common.schema.json#/$defs/ScalarValue" }
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/ScalarValue"
+              }
             },
-            { "type": "null" }
+            {
+              "type": "null"
+            }
           ]
         },
-        "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+        "created_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
       }
     }
   }

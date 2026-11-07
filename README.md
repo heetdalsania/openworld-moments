@@ -28,6 +28,7 @@ Completed milestones:
 | M09 — Desktop library and jobs UI | The first usable app: import by button or drag and drop, a paged library with thumbnails, clip pages that play a proxy or the original over a range-capable media protocol, automatic playback preparation, and a background-job center with progress, cancel, retry, and readable errors ([desktop UI](./docs/architecture/desktop-ui.md)) |
 | M10 — Phone QR upload (in review: real-phone smoke test on Windows pending) | "Import from phone": a temporary, separate LAN upload gateway on a chosen private address with a 256-bit, 10-minute QR link; streamed, size-limited, type-checked uploads into a fixed staging folder; managed imports of received clips ([phone upload](./docs/architecture/phone-upload.md), [guide](./docs/guides/phone-upload.md)) |
 | M11 — Session grouping | Explainable capture-time estimates (filename, container, mtime, with confidence and time-zone caveats), deterministic metadata grouping into candidate sessions with per-join evidence, an idempotent recompute job, and merge/split/reorder/remove/confirm corrections that survive recomputation ([sessions](./docs/architecture/sessions.md)) |
+| M12 — Visual and audio overlap | Finds repeated replay footage between adjacent clips from fingerprints (continuous frame matching, ambiguity rejection, audio refinement), applies only confident results to the session layout, and keeps user overrides above recomputation ([overlap](./docs/architecture/overlap.md)) |
 
 You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically; there are no sessions, analysis, or editing yet. Those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -341,7 +342,7 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M10 needs its real-phone smoke test on a Windows private network ([steps](./docs/guides/phone-upload.md)) before it is marked complete. M12 and M14 are ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
+M10 needs its real-phone smoke test on a Windows private network ([steps](./docs/guides/phone-upload.md)) before it is marked complete. M13 and M14 are ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
 
-- [M12 — Visual and audio overlap](./docs/milestones/M12-overlap-alignment.md): duplicate-time alignment between adjacent clips, with confidence.
+- [M13 — Virtual session timeline](./docs/milestones/M13-virtual-session-timeline.md): unique-time playback across a session's source files, using the M12 overlaps.
 - [M14 — Detector SDK and profile schema](./docs/milestones/M14-detector-sdk-and-profiles.md): the extensible detector and profile runtime.

@@ -202,6 +202,8 @@ def _session(doc: Document) -> Iterable[str]:
     started, ended = doc.get("started_at"), doc.get("ended_at")
     if started and ended and _instant(ended) < _instant(started):
         yield "ended_at: before started_at"
+    if members and members[0].get("overlap_with_previous_ms", 0) > 0:
+        yield "assets[0].overlap_with_previous_ms: the first clip has nothing before it"
     grouping = doc.get("grouping")
     if grouping:
         pairs = set(pairwise(ids))
@@ -210,7 +212,29 @@ def _session(doc: Document) -> Iterable[str]:
                 yield f"grouping.links[{i}]: must join adjacent members"
 
 
+def _overlap(doc: Document) -> Iterable[str]:
+    if doc["asset_a"] == doc["asset_b"]:
+        yield "asset_b: must differ from asset_a"
+    if doc["status"] == "matched":
+        for field in ("offset_ms", "overlap_ms", "confidence"):
+            if field not in doc:
+                yield f"{field}: required when status is 'matched'"
+    applied = doc["applied"]
+    override = doc.get("override")
+    if override is not None and (
+        applied["source"] != "user" or applied["overlap_ms"] != override["overlap_ms"]
+    ):
+        yield "applied: must be the override when one is set"
+    if (
+        override is None
+        and applied["source"] == "auto"
+        and (doc["status"] != "matched" or not doc["current"])
+    ):
+        yield "applied: only a current matched result can be applied"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "overlap": _overlap,
     "session": _session,
     "derived-media": _derived_media,
     "event": _event,

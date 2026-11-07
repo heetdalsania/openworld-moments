@@ -12,6 +12,8 @@
   waveform), ``openworld_moments.derived``.
 * ``group`` (M11): rebuild unreviewed sessions from capture times and metadata,
   ``openworld_moments.sessions``.
+* ``align`` (M12): find repeated footage between adjacent session clips,
+  ``openworld_moments.alignment``.
 
 Later product handlers (analyze, transcribe, ...) arrive in their milestones.
 """
@@ -23,6 +25,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from openworld_moments.alignment.service import AlignCancelled, Aligner
 from openworld_moments.derived.service import DerivedCancelled, DerivedFailure, DerivedMedia
 from openworld_moments.fingerprints.service import (
     FingerprintCancelled,
@@ -40,7 +43,7 @@ from openworld_moments.media.probe import (
     probe_file,
 )
 from openworld_moments.media.tools import MediaTools
-from openworld_moments.sessions.service import GroupCancelled, SessionService
+from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
 from openworld_moments.storage import Database
 
 MAX_STEPS = 10_000
@@ -306,6 +309,46 @@ def group_handler(service: SessionService) -> JobHandler:
     return JobHandler("group", run, validate_group, "grouping", True, 3)
 
 
+_SESSION_ID = re.compile(r"^ses_[0-9A-HJKMNP-TV-Z]{26}$")
+MAX_ALIGN_SESSIONS = 10_000
+
+
+def validate_align(params: Mapping[str, Any]) -> dict[str, Any]:
+    """AlignRequest (contract overlap.schema.json#/$defs/AlignRequest)."""
+    _reject_unknown(params, {"session_ids", "force"})
+    force = params.get("force", False)
+    if not isinstance(force, bool):
+        raise ValueError("'force' must be true or false")
+    clean: dict[str, Any] = {"force": force}
+    if "session_ids" in params:
+        ids = params["session_ids"]
+        if not isinstance(ids, list) or not 1 <= len(ids) <= MAX_ALIGN_SESSIONS:
+            raise ValueError(f"'session_ids' must list 1 to {MAX_ALIGN_SESSIONS} session IDs")
+        if any(not isinstance(i, str) or not _SESSION_ID.match(i) for i in ids):
+            raise ValueError("'session_ids' must contain session IDs only")
+        if len(set(ids)) != len(ids):
+            raise ValueError("'session_ids' must not repeat a session")
+        clean["session_ids"] = list(ids)
+    return clean
+
+
+def align_handler(aligner: Aligner) -> JobHandler:
+    """The ``align`` job. Pair results are committed one by one and current ones are
+    cache hits, so a requeued job continues where it stopped."""
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return aligner.run(ctx.params, cancel=ctx.cancel_event, progress=ctx.progress)
+        except AlignCancelled as exc:
+            raise Cancelled from exc
+        except FingerprintFailure as exc:
+            raise JobFailure(exc.code, exc.message, retryable=exc.retryable) from exc
+        except SessionError as exc:
+            raise JobFailure(exc.code, exc.message) from exc
+
+    return JobHandler("align", run, validate_align, "analyzing", True, 3)
+
+
 def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
     _reject_unknown(params, set())
     return {}
@@ -383,4 +426,6 @@ def build_handlers(
         handlers[proxy.kind] = proxy
         grouper = group_handler(SessionService(database))
         handlers[grouper.kind] = grouper
+        aligner = align_handler(Aligner(database, importer.fingerprinter))
+        handlers[aligner.kind] = aligner
     return handlers

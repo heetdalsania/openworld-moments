@@ -2,6 +2,7 @@
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
   AssetDerivedMedia,
+  AssetOverlap,
   Session,
   Event,
   Evidence,
@@ -242,6 +243,9 @@ function* session(doc: Session): Generator<string> {
   if (doc.started_at && doc.ended_at && Date.parse(doc.ended_at) < Date.parse(doc.started_at)) {
     yield "ended_at: before started_at";
   }
+  if ((members[0]?.overlap_with_previous_ms ?? 0) > 0) {
+    yield "assets[0].overlap_with_previous_ms: the first clip has nothing before it";
+  }
   const pairs = new Set(ids.slice(1).map((id, i) => `${ids[i] ?? ""}>${id}`));
   for (const [i, link] of (doc.grouping?.links ?? []).entries()) {
     if (!pairs.has(`${link.from_asset_id}>${link.to_asset_id}`)) {
@@ -250,8 +254,25 @@ function* session(doc: Session): Generator<string> {
   }
 }
 
+function* overlap(doc: AssetOverlap): Generator<string> {
+  if (doc.asset_a === doc.asset_b) yield "asset_b: must differ from asset_a";
+  if (doc.status === "matched") {
+    for (const field of ["offset_ms", "overlap_ms", "confidence"] as const) {
+      if (doc[field] === undefined) yield `${field}: required when status is 'matched'`;
+    }
+  }
+  const { applied, override } = doc;
+  if (override && (applied.source !== "user" || applied.overlap_ms !== override.overlap_ms)) {
+    yield "applied: must be the override when one is set";
+  }
+  if (!override && applied.source === "auto" && (doc.status !== "matched" || !doc.current)) {
+    yield "applied: only a current matched result can be applied";
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  overlap,
   session,
   "derived-media": derivedMedia,
   event,

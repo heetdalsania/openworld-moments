@@ -1,0 +1,34 @@
+{
+  "description": "matched results carry offset, overlap, confidence",
+  "expect": "semantic",
+  "path": "offset_ms",
+  "document": {
+    "schema_version": "1.8",
+    "asset_a": "ast_01JCBQ00000000000000000001",
+    "asset_b": "ast_01JCBQ00000000000000000014",
+    "algorithm": "owm-overlap",
+    "version": 1,
+    "status": "matched",
+    "current": true,
+    "overlap_ms": 9980,
+    "confidence": 0.95,
+    "evidence": {
+      "a_frames": 60,
+      "b_frames": 60,
+      "candidates": 3,
+      "compared_frames": 20,
+      "matching_frames": 20,
+      "longest_run": 20,
+      "visual_offset_ms": 30000,
+      "audio_correlation": 0.93,
+      "audio_offset_ms": 30020,
+      "max_distance": 24
+    },
+    "computed_at": "2026-11-21T09:00:00Z",
+    "applied": {
+      "overlap_ms": 9980,
+      "source": "auto",
+      "confidence": 0.95
+    }
+  }
+}

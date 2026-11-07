@@ -46,6 +46,7 @@ Rules:
 | `WatchedFolderRepository` | `watched_folders` (0001, extended in 0006), `watched_files` (0006) | Folder settings (mode, recursion, include/exclude, availability, last scan) and the latest version (size, mtime) of each file with its import job. Deleting a folder deletes only these rows ([watched folders](./watched-folders.md)) |
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets`, `session_corrections` (0008) | `Session` (since 0008 with `grouping` evidence and `updated_at`), `SessionAsset`; `update`, `replace_assets`, `newest`, `session_of`, `has_stories`, `has_attached_data` / `with_attached_data`, and the correction log (`log_correction`, `corrections`). Rows never delete media ([sessions](./sessions.md)) |
+| `OverlapRepository` | `asset_overlaps` (0009) | One alignment per ordered clip pair (status, offset, overlap, confidence, evidence, algorithm version) plus a separate user override; `effective` returns what timelines apply. Cascades with either asset ([overlap](./overlap.md)) |
 | `EventRepository` | `events` | contract `Event` |
 | `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002, `result` since 0003, `idempotency_key` since 0004 with `find_by_idempotency_key`) |
 | `StoryRepository` | `stories` | `Story`, whose `timeline` is a contract `Project` with the same ID |

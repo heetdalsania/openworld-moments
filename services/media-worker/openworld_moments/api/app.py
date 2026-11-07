@@ -34,6 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from openworld_moments import __version__
+from openworld_moments.alignment.service import Aligner
 from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
@@ -219,6 +220,22 @@ class ReorderSession(BaseModel):
 class RemoveFromSession(BaseModel):
     model_config = ConfigDict(extra="forbid")
     asset_id: str
+
+
+class SubmitAlign(BaseModel):
+    """AlignRequest plus an optional idempotency key. Params are checked by the handler."""
+
+    model_config = ConfigDict(extra="forbid")
+    session_ids: list[Any] | None = None
+    force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SetOverlap(BaseModel):
+    """OverlapOverride: an overlap in ms (0 = no overlap), or null to clear."""
+
+    model_config = ConfigDict(extra="forbid")
+    overlap_ms: int | None
 
 
 class SubmitBackfill(BaseModel):
@@ -484,6 +501,31 @@ def create_app(
         if body.max_gap_ms is not None:
             params["max_gap_ms"] = body.max_gap_ms
         return await submit_job("group", params, body.idempotency_key, request, response)
+
+    aligner = Aligner(engine.database)
+
+    @app.post("/v1/sessions/align", status_code=201)
+    async def align_sessions(
+        body: SubmitAlign, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"force": body.force}
+        if body.session_ids is not None:
+            params["session_ids"] = body.session_ids
+        return await submit_job("align", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/sessions/{session_id}/overlaps")
+    async def session_overlaps(session_id: str) -> list[dict[str, Any]]:
+        docs: list[dict[str, Any]] = await asyncio.to_thread(
+            with_conn, lambda conn: aligner.overlaps_doc(conn, session_id)
+        )
+        return docs
+
+    @app.put("/v1/sessions/{session_id}/overlaps/{asset_id}")
+    async def set_overlap(session_id: str, asset_id: str, body: SetOverlap) -> dict[str, Any]:
+        doc: dict[str, Any] = await asyncio.to_thread(
+            aligner.set_override, session_id, asset_id, body.overlap_ms
+        )
+        return doc
 
     @app.post("/v1/sessions/merge")
     async def merge_sessions(body: MergeSessions) -> dict[str, Any]:
