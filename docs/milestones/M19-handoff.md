@@ -102,6 +102,7 @@
     preserve supporting-only audio semantics.
   - **M21** remains independently ready. M26 can consume review views for search.
   - M29/M32/M34 retain platform/package/real-engine qualification work.
+- Pull request: [#25](https://github.com/heetdalsania/openworld-moments/pull/25)
 - Screenshots, reports, or artifacts:
   - [Sample report](../evaluation/sample/report.md), [JSON](../evaluation/sample/report.json),
     [frozen observations](../evaluation/sample/observations.json), and
