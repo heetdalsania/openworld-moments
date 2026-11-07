@@ -534,3 +534,79 @@ def test_roi_decode_cancellation_and_failure_keep_other_completed_units(
     assert [r["status"] for r in result["outcomes"]] == ["cached", "failed"]
     assert result["outcomes"][1]["error"]["code"] == "analysis.decode_failed"
     assert events(analyzer, sid) == old
+
+
+def test_ocr_model_cache_failure_unavailability_and_resume(
+    rig: tuple[Analyzer, str, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openworld_moments.detectors.inputs import OCR_SIZE
+    from openworld_moments.detectors.text import TextDetector
+    from openworld_moments.detectors.text_fixtures import BANNER_REGION
+    from openworld_moments.media.process import ToolCancelled
+    from tests.detectors.test_text import VOCABULARY, Backend, reading
+
+    analyzer, sid, _ = rig
+    doc = manifest()
+    doc["regions"]["mission_banner"] = list(BANNER_REGION)
+    doc["locales"]["en"].update(ocr_language="eng", vocabulary=VOCABULARY)
+    doc["detectors"].append(
+        {
+            "id": TextDetector.id,
+            "enabled": True,
+            "locale": "en",
+            "confirmation_frames": 2,
+            "min_confidence": 0.3,
+        }
+    )
+    write_profile(analyzer.catalog.root, doc)
+    backend = Backend({0: reading("CAUGHT")})
+    analyzer.registry = {**analyzer.registry, TextDetector.id: lambda: TextDetector(backend)}
+    decoded = []
+
+    def decode(
+        _path: Any, _tool: Any, _cancel: Any, roi: tuple[float, ...], size: tuple[int, int]
+    ) -> tuple[Frame, ...]:
+        decoded.append((roi, size))
+        return tuple(Frame(i * 500, *size, bytes(size[0] * size[1]), roi) for i in range(4))
+
+    monkeypatch.setattr(module, "decode_region", decode)
+    first = run(analyzer, sid)
+    assert [o["status"] for o in first["outcomes"]] == ["computed", "computed"]
+    assert decoded == [(BANNER_REGION, OCR_SIZE)]
+    assert [o["status"] for o in run(analyzer, sid)["outcomes"]] == ["cached", "cached"]
+    backend.hash = "b" * 64
+    changed = run(analyzer, sid)
+    assert [o["status"] for o in changed["outcomes"]] == ["cached", "computed"]
+    assert changed["outcomes"][1]["event_ids"] != first["outcomes"][1]["event_ids"]
+    old = [e for e in events(analyzer, sid) if e["source"]["detector_id"] == TextDetector.id]
+    original_prepare = backend.prepare
+
+    def unavailable(*args: Any, **kwargs: Any) -> Any:
+        raise AnalysisError("ocr.unavailable", "Local OCR unavailable")
+
+    monkeypatch.setattr(backend, "prepare", unavailable)
+    assert [o["status"] for o in run(analyzer, sid)["outcomes"]] == ["cached", "skipped"]
+    monkeypatch.setattr(backend, "prepare", original_prepare)
+
+    def failed(*args: Any, **kwargs: Any) -> Any:
+        raise AnalysisError("ocr.process_failed", "Local OCR failed")
+
+    monkeypatch.setattr(backend, "read", failed)
+    assert [o["status"] for o in run(analyzer, sid, force=True)["outcomes"]] == [
+        "computed",
+        "failed",
+    ]
+    assert [
+        e for e in events(analyzer, sid) if e["source"]["detector_id"] == TextDetector.id
+    ] == old
+
+    def cancelled(*args: Any, **kwargs: Any) -> Any:
+        raise ToolCancelled("cancelled")
+
+    monkeypatch.setattr(backend, "read", cancelled)
+    with pytest.raises(AnalysisCancelled):
+        run(analyzer, sid, force=True)
+    assert [
+        e for e in events(analyzer, sid) if e["source"]["detector_id"] == TextDetector.id
+    ] == old
+    assert [o["status"] for o in run(analyzer, sid)["outcomes"]] == ["cached", "cached"]

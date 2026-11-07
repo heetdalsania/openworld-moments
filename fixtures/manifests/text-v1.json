@@ -1,0 +1,86 @@
+{
+  "format": "owm-synthetic-text-manifest",
+  "version": 1,
+  "generator": "services/media-worker/openworld_moments/detectors/text_fixtures.py",
+  "generator_version": "text-synthetic-v1",
+  "provenance": "Original generic phrases drawn in scratch images using OpenCV's Hershey renderer. No official font, screenshot, text corpus, footage or game assets.",
+  "renderer": {
+    "implementation": "opencv-python-headless",
+    "locked_version": "4.14.0.94",
+    "styles": ["FONT_HERSHEY_SIMPLEX", "FONT_HERSHEY_DUPLEX"],
+    "license": "Apache-2.0; Hershey tables retain OpenCV BSD terms",
+    "scope": "development dependency only; no font files or generated images committed"
+  },
+  "recipe_license": "AGPL-3.0-or-later",
+  "profile": "generic-text",
+  "locale": "en",
+  "sample_ms": 500,
+  "regions": { "mission_banner": [0.1, 0.2, 0.8, 0.24], "subtitle": [0.1, 0.72, 0.8, 0.24] },
+  "canvas_background": 64,
+  "roi_background": 20,
+  "cases": [
+    {
+      "id": "known-banners",
+      "phrases": {
+        "failure": "TRY AGAIN",
+        "arrest": "CAUGHT",
+        "mission-started": "TASK STARTED",
+        "mission-objective": "NEW OBJECTIVE",
+        "mission-completed": "TASK COMPLETE",
+        "mission-failed": "TASK FAILED"
+      },
+      "variants": ["base", "small", "contrast", "outline", "duplex", "multiline"],
+      "expected": "36 correct categories with OCR confidence >=0.75"
+    },
+    {
+      "id": "encoded-sequence",
+      "resolutions": [
+        [1280, 720],
+        [1920, 1080],
+        [3840, 2160]
+      ],
+      "h264_crf": [18, 30, 32],
+      "brightness": [1, 0.7, 1],
+      "outline": [false, true, false],
+      "expected": "one mission-completed interval, one low-confidence unknown OCR interval, one arrest interval and two subtitle intervals"
+    },
+    {
+      "id": "persistent-dialogue",
+      "text": "MORGAN: MEET AT BRIDGE\nBRING THE BLUE CASE",
+      "next_text": "WAIT BY THE RIVER",
+      "expected_intervals_ms": [
+        [1000, 3000],
+        [3000, 5000]
+      ],
+      "speaker": "MORGAN"
+    },
+    {
+      "id": "unknown-banner",
+      "text": "BLUE UMBRELLA",
+      "expected": "openworld.ocr_text with confidence <=0.49; no mission classification"
+    },
+    {
+      "id": "wrong-region",
+      "banner_region": [0.1, 0.45, 0.8, 0.24],
+      "expected": "no banner events before calibration, three afterward"
+    },
+    {
+      "id": "temporal-and-failures",
+      "cases": [
+        "brief-miss",
+        "sustained-absence",
+        "reappearance",
+        "changed-text",
+        "OCR-spelling-variation",
+        "ambiguous-vocabulary",
+        "low-confidence",
+        "cancel",
+        "timeout",
+        "unavailable-engine",
+        "changed-language-data",
+        "model-cache-invalidation"
+      ],
+      "expected": "confirmed bounded intervals; no fabricated semantic category; old successful events preserved on failed replacements"
+    }
+  ]
+}

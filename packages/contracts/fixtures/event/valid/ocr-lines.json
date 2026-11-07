@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.12",
+  "id": "evt_01JCBQ00000000000000000003",
+  "session_id": "ses_01JCBQ00000000000000000002",
+  "asset_id": "ast_01JCBQ00000000000000000001",
+  "type": "openworld.subtitle",
+  "start_ms": 823400,
+  "end_ms": 824100,
+  "confidence": 0.97,
+  "attributes": {
+    "from": 2,
+    "to": 4
+  },
+  "evidence": [
+    {
+      "kind": "ocr",
+      "region": [0.1, 0.2, 0.8, 0.24],
+      "text": "MORGAN: MEET AT BRIDGE",
+      "score": 0.9,
+      "frame_ms": 1000,
+      "lines": [
+        {
+          "region": [0.15, 0.25, 0.5, 0.05],
+          "text": "MORGAN: MEET AT BRIDGE",
+          "score": 0.9
+        }
+      ]
+    }
+  ],
+  "source": {
+    "kind": "detector",
+    "detector_id": "wanted-stars",
+    "detector_version": "0.3.0",
+    "profile_id": "open-world-vi-1080p-en",
+    "profile_version": "1.0.0",
+    "tool_versions": {
+      "sdk": "1.0.0",
+      "sampler": "gray64x36-2fps-v1",
+      "ffmpeg": "synthetic"
+    },
+    "input_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "review_state": "unreviewed"
+}

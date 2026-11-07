@@ -24,6 +24,11 @@ M16's [wanted detector guide](./wanted.md) documents the shipped analytic estima
 confirmation/debounce settings, synthetic case table, local replay and benchmark.
 `generic-wanted` uses the saved calibration overrides and the same analyze API.
 
+M17's [text detector guide](./text.md) covers local Tesseract, locale packs,
+region preprocessing, appearance/disappearance intervals, line evidence, missing
+OCR behavior and real-engine synthetic tests. [ADR-0005](../architecture/adr/0005-local-ocr.md)
+records the dependency, model and packaging decisions.
+
 Event review and the reproducible precision/recall evaluation harness arrive in M19.
 
 ## Calibrating an installed profile

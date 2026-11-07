@@ -10,10 +10,12 @@ open it in the same pull request as the change it justifies.
 | [0002](./adr/0002-contract-schemas-and-generation.md) | JSON Schema contracts with generated types | Accepted |
 | [0003](./adr/0003-sqlite-migrations.md) | Standard-library SQLite with an in-house migration runner | Accepted |
 | [0004](./adr/0004-worker-ipc.md) | Worker IPC: stdin token, loopback HTTP, WebSocket events | Accepted |
+| [0005](./adr/0005-local-ocr.md) | Local region OCR with Tesseract | M17 implementation |
 
 Other architecture notes:
 
 - [Profile calibration](./profile-calibration.md): upright normalized ROI canvas, keyboard controls, local overrides, safe patches, crop and SDK previews.
+- [Banner and subtitle OCR](../detectors/text.md): local OCR, locale matching, line evidence, temporal intervals, optional data and validation limits.
 - [Wanted-state detector](../detectors/wanted.md): calibrated analytic indicators, temporal confirmation, local replay/crops, synthetic validation and benchmark.
 - [Detector runtime](./detectors.md): trusted built-in SDK, immutable derived samples, profile inheritance/compatibility, provenance, caching, failure isolation and CLI.
 

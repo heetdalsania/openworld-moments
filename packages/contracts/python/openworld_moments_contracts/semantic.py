@@ -42,6 +42,13 @@ def _event(doc: Document) -> Iterable[str]:
 def _evidence(path: str, item: Document) -> Iterable[str]:
     if "region" in item:
         yield from _region(f"{path}.region", item["region"])
+    if item["kind"] == "ocr":
+        for i, line in enumerate(item.get("lines", [])):
+            yield from _region(f"{path}.lines[{i}].region", line["region"])
+            x, y, w, h = line["region"]
+            rx, ry, rw, rh = item["region"]
+            if x < rx or y < ry or x + w > rx + rw + 1e-9 or y + h > ry + rh + 1e-9:
+                yield f"{path}.lines[{i}].region: line lies outside the OCR region"
     if "start_ms" in item:
         yield from _range(f"{path}.end_ms", item["start_ms"], item["end_ms"])
 

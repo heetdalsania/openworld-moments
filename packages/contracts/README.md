@@ -38,7 +38,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 | Event and evidence | `event.schema.json`, `evidence.schema.json` | `Event`, `Evidence` | `generated.event_schema.Event` | M14, M16–M19 |
 | Analysis result | `analysis.schema.json` | `AnalysisResult` | `generated.analysis_schema.AnalysisResult` | M14 |
 | Profile patch | `profile-patch.schema.json` | `ProfilePatch` | `generated.profile_patch_schema.ProfilePatch` | M15 |
-| Profile | `profile.schema.json` | `Profile` (including optional `WantedSettings`) | `generated.profile_schema.Profile` | M14–M16 |
+| Profile | `profile.schema.json` | `Profile` (including optional `WantedSettings`/`OcrSettings`) | `generated.profile_schema.Profile` | M14–M16 |
 | Project (EDL) | `project.schema.json` | `Project` | `generated.project_schema.Project` | M21 |
 | Render preset | `render-preset.schema.json` | `RenderPreset` | `generated.render_preset_schema.RenderPreset` | M24 |
 | Export manifest | `export-manifest.schema.json` | `ExportManifest` | `generated.export_manifest_schema.ExportManifest` | M24, M27 |

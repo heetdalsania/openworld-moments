@@ -43,6 +43,16 @@ function* range(path: string, start: number, end: number, strict = false): Gener
 
 function* evidence(path: string, item: Evidence): Generator<string> {
   if ("region" in item) yield* region(`${path}.region`, item.region);
+  if (item.kind === "ocr" && item.lines) {
+    for (const [i, line] of item.lines.entries()) {
+      yield* region(`${path}.lines[${i}].region`, line.region);
+      const [x, y, w, h] = line.region;
+      const [rx, ry, rw, rh] = item.region;
+      if (x < rx || y < ry || x + w > rx + rw + 1e-9 || y + h > ry + rh + 1e-9) {
+        yield `${path}.lines[${i}].region: line lies outside the OCR region`;
+      }
+    }
+  }
   if ("start_ms" in item) yield* range(`${path}.end_ms`, item.start_ms, item.end_ms);
 }
 

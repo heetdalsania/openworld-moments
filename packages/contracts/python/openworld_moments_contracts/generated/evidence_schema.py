@@ -72,34 +72,6 @@ class ColorRuleEvidence(BaseModel):
     ]
 
 
-class OcrEvidence(BaseModel):
-    """
-    Text recognized inside a region, constrained to a vocabulary.
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    kind: Literal["ocr"]
-    region: Annotated[
-        tuple[
-            common_schema.RegionItem,
-            common_schema.RegionItem,
-            common_schema.RegionItem2,
-            common_schema.RegionItem2,
-        ],
-        Field(
-            description="Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
-            title="Region",
-        ),
-    ]
-    text: Annotated[str, Field(max_length=500, min_length=1)]
-    score: Annotated[
-        float,
-        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
-    ]
-
-
 class TemporalConsistencyEvidence(BaseModel):
     """
     The state was observed consistently across this many frames.
@@ -201,3 +173,67 @@ class ModelFrameEvidence(BaseModel):
         float,
         Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
     ]
+
+
+class OcrLine(BaseModel):
+    """
+    A recognized line in upright global normalized source coordinates.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    text: Annotated[str, Field(max_length=500, min_length=1)]
+    region: Annotated[
+        tuple[
+            common_schema.RegionItem,
+            common_schema.RegionItem,
+            common_schema.RegionItem2,
+            common_schema.RegionItem2,
+        ],
+        Field(
+            description="Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
+            title="Region",
+        ),
+    ]
+    score: Annotated[
+        float,
+        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
+    ]
+
+
+class OcrEvidence(BaseModel):
+    """
+    Text recognized inside a region, constrained to a vocabulary.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    kind: Literal["ocr"]
+    region: Annotated[
+        tuple[
+            common_schema.RegionItem,
+            common_schema.RegionItem,
+            common_schema.RegionItem2,
+            common_schema.RegionItem2,
+        ],
+        Field(
+            description="Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
+            title="Region",
+        ),
+    ]
+    text: Annotated[str, Field(max_length=500, min_length=1)]
+    score: Annotated[
+        float,
+        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
+    ]
+    frame_ms: Annotated[
+        int | None,
+        Field(
+            description="Position on a media or session timeline in integer milliseconds from its start.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ] = None
+    lines: Annotated[list[OcrLine] | None, Field(max_length=32, min_length=1)] = None

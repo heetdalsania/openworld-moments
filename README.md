@@ -33,8 +33,9 @@ Completed milestones:
 | M14 — Detector SDK and profiles | Local JSON profile validation/inheritance, immutable derived-frame inputs, isolated cancellable built-in detectors, versioned caches and evidence-backed events; a synthetic temporal example and `owm` CLI ([detector runtime](./docs/architecture/detectors.md)) |
 | M15 — Profile calibration UI | Settings-based frame capture and accessible normalized ROI editing; durable local overrides, crop/preprocessing and synthetic SDK previews, base comparison/reset, and media-free profile patches ([calibration](./docs/architecture/profile-calibration.md)) |
 | M16 — Wanted-state detector | Calibrated analytic star/disc rows, conservative temporal changes with local crop references and explainable scores, replay traces and benchmark; synthetic validation only, game compatibility unvalidated ([wanted detector](./docs/detectors/wanted.md)) |
+| M17 — Banner and subtitle detectors | Local region-only Tesseract OCR, versioned locale vocabulary, confirmed banner/subtitle intervals with line evidence and mission spoiler-risk metadata; synthetic validation, optional engine/data and explicit unavailable results ([text detectors](./docs/detectors/text.md)) |
 
-You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Game compatibility remains unvalidated. Event review and editing arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions. Game compatibility remains unvalidated. Event review and editing arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -53,6 +54,7 @@ You can import clips (by button, drag and drop, a watched folder, or from your p
 | Python | 3.12 (`.python-version`) | `uv` can install it: `uv python install 3.12` |
 | uv | 0.13 or newer | Python dependency management |
 | FFmpeg | 6.0 or newer, with `libx264` | `ffprobe` probes media; `ffmpeg` generates test fixtures. Check with `pnpm media:doctor` ([details](./docs/architecture/media.md#ffmpeg-requirement)) |
+| Tesseract | 5+ (optional) | Required for M17 OCR; install selected language data explicitly. CI/local OCR validation uses `OWM_REQUIRE_OCR=1`; see [setup and limits](./docs/detectors/text.md). |
 | Tauri system dependencies | — | See [Tauri prerequisites](https://tauri.app/start/prerequisites/): WebView2 + MSVC build tools on Windows, Xcode on macOS, WebKitGTK on Linux |
 
 ### Setup
@@ -83,6 +85,8 @@ Run from the repository root:
 | `uv run --directory services/media-worker owm profiles validate ../../profiles/generic-open-world/profile.json` | Validate a local JSON profile (manifest path is relative to the worker directory) |
 | `uv run --directory services/media-worker owm demo` | Generate temporary synthetic media and run the example detector end to end |
 | `uv run --directory services/media-worker owm wanted benchmark` | Measure the wanted estimator and temporal filter on one hour of synthetic ROI samples |
+| `uv run --directory services/media-worker owm text doctor` | Check the optional local Tesseract engine and installed English data |
+| `uv run --directory services/media-worker owm text benchmark` | Measure uncached banner and subtitle OCR on generated development fixtures |
 | `pnpm check` | `format:check`, `lint`, `typecheck`, `test`, and `contracts:check` together |
 
 Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm test:py`.
@@ -350,11 +354,12 @@ The product specification includes links to console capture documentation, exist
 ## Current next step
 
 M10 still needs its real-phone smoke test on a Windows private network before it
-is marked complete. M16 delivers the wanted detector; the next milestone is M17.
-The independently ready work is also listed below:
-- [M17 — Banner and subtitle detectors](./docs/milestones/M17-banner-and-subtitle-detectors.md): OCR-based state and dialogue observations.
+is marked complete. M17 delivers local banner/subtitle OCR. The next milestone
+is M18; M21 remains independently ready:
+
 - [M18 — Audio analysis and transcription](./docs/milestones/M18-audio-and-transcription.md): deterministic audio evidence and optional local transcription.
 - [M21 — Editor project model](./docs/milestones/M21-editor-project-model.md): the non-destructive edit list, autosave, and undo model.
 
-The wanted detector has synthetic and local FFmpeg validation; GTA profiles remain
-unvalidated placeholders. See the [M16 handoff](./docs/milestones/M16-handoff.md).
+Wanted and OCR detectors have synthetic/local validation; GTA profiles remain
+unvalidated placeholders. See the [M17 handoff](./docs/milestones/M17-handoff.md).
+M19 event review still waits on M18.
