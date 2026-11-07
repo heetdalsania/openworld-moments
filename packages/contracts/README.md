@@ -37,6 +37,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 | Import | `import.schema.json` | `ImportResult` (+ `ImportRequest`, `RelinkRequest`, `RelinkResult`, `SourceCheckResult`) | `generated.import_schema.ImportResult` | M05 |
 | Event and evidence | `event.schema.json`, `evidence.schema.json` | `Event`, `Evidence` | `generated.event_schema.Event` | M14, M16–M19 |
 | Analysis result | `analysis.schema.json` | `AnalysisResult` | `generated.analysis_schema.AnalysisResult` | M14 |
+| Profile patch | `profile-patch.schema.json` | `ProfilePatch` | `generated.profile_patch_schema.ProfilePatch` | M15 |
 | Profile | `profile.schema.json` | `Profile` | `generated.profile_schema.Profile` | M14, M15 |
 | Project (EDL) | `project.schema.json` | `Project` | `generated.project_schema.Project` | M21 |
 | Render preset | `render-preset.schema.json` | `RenderPreset` | `generated.render_preset_schema.RenderPreset` | M24 |

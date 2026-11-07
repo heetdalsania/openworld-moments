@@ -21,3 +21,12 @@ bright frames do not emit observations. Run it with
 `uv run --directory services/media-worker owm demo` from the repository root.
 
 Event review and the reproducible precision/recall evaluation harness arrive in M19.
+
+## Calibrating an installed profile
+
+Use Settings → Calibrate detector profile regions to select an imported frame,
+adjust named regions, compare defaults and save local overrides. Export a
+media-free JSON patch for coordinate review; a patch is not a complete profile
+manifest and is imported through the calibration screen. Crop samples are a
+separate explicit export. See [calibration](../architecture/profile-calibration.md)
+for coordinates, keyboard controls, compatibility, schema, API and preview limits.

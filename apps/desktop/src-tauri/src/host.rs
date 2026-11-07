@@ -416,3 +416,48 @@ pub async fn watched_folder_files(
         .await
         .map_err(to_ui_error)
 }
+
+/// Export only the worker-validated, saved media-free patch. No webview path input.
+#[tauri::command]
+pub async fn calibration_export_patch(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    profile_id: String,
+) -> Result<bool, Value> {
+    let path = format!("/v1/profiles/{profile_id}/calibration");
+    if !crate::media::api_route_allowed("GET", &path) {
+        return Err(crate::media::route_refused());
+    }
+    let doc = supervisor(&state)?
+        .request(reqwest::Method::GET, &path, None, None)
+        .await
+        .map_err(to_ui_error)?;
+    let patch = doc.get("patch").filter(|p| p.is_object())
+        .ok_or_else(|| json!({"code":"calibration.unsaved", "message":"Save local overrides before exporting.", "retryable":false}))?;
+    let bytes = serde_json::to_vec_pretty(patch).map_err(|_| unavailable())?;
+    calibration_save(app, bytes, "profile-patch.json", "json").await
+}
+
+/// Crop export is a separate explicit action and never enters a profile patch.
+#[tauri::command]
+pub async fn calibration_export_sample(app: AppHandle, data: Vec<u8>) -> Result<bool, Value> {
+    if data.len() > 4 * 1024 * 1024 || !data.starts_with(b"\x89PNG\r\n\x1a\n") {
+        return Err(crate::media::route_refused());
+    }
+    calibration_save(app, data, "roi-sample.png", "png").await
+}
+
+async fn calibration_save(
+    app: AppHandle,
+    bytes: Vec<u8>,
+    name: &'static str,
+    ext: &'static str,
+) -> Result<bool, Value> {
+    use tauri_plugin_dialog::DialogExt;
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app.dialog().file().add_filter(ext, &[ext]).set_file_name(name).blocking_save_file() else { return Ok(false) };
+        let path = file.into_path().map_err(|_| crate::media::route_refused())?;
+        crate::calibration::write_export(&path, &bytes, ext).map_err(|_| json!({"code":"calibration.export_failed", "message":"Choose a new filename with the expected extension. Existing files are never replaced.", "retryable":true}))?;
+        Ok(true)
+    }).await.map_err(|_| unavailable())?
+}

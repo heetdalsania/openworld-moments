@@ -13,6 +13,7 @@ open it in the same pull request as the change it justifies.
 
 Other architecture notes:
 
+- [Profile calibration](./profile-calibration.md): upright normalized ROI canvas, keyboard controls, local overrides, safe patches, crop and SDK previews.
 - [Detector runtime](./detectors.md): trusted built-in SDK, immutable derived samples, profile inheritance/compatibility, provenance, caching, failure isolation and CLI.
 
 - [Storage](./storage.md): what lives in SQLite vs on disk, delete policies, migrations, backups.

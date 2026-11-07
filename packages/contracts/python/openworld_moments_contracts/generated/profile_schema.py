@@ -98,6 +98,15 @@ class LocalePack(BaseModel):
     ]
 
 
+class ProfileFrame1(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    aspect_ratios: Annotated[list[AspectRatio], Field(min_length=1)]
+    min_width: Annotated[int, Field(ge=1)]
+    min_height: Annotated[int, Field(ge=1)]
+
+
 class Profile(BaseModel):
     """
     Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.

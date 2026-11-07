@@ -756,3 +756,118 @@ a.button[aria-current="page"] {
   min-height: 1.2em;
   font-variant-numeric: tabular-nums;
 }
+
+/* M15: the overlay covers the upright picture exactly, without letterbox bars. */
+.calibration {
+  max-width: 1350px;
+}
+.calibration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 1.2rem;
+  margin: 1rem 0;
+}
+.calibration label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.4rem 0.6rem 0.4rem 0;
+}
+.calibration label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+}
+.calibration select {
+  max-width: 100%;
+}
+.calibration fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.calibration fieldset input {
+  width: 100%;
+}
+.calibration .row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.calibration-video {
+  display: block;
+  width: min(400px, 100%);
+  max-height: 220px;
+  background: #111;
+  margin: 0.5rem 0;
+}
+.roi-stage {
+  position: relative;
+  width: 100%;
+  background: #10151d;
+  overflow: hidden;
+}
+.roi-stage img,
+.roi-stage svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+}
+.roi-stage svg {
+  touch-action: none;
+}
+.roi {
+  fill: #69b9fa18;
+  stroke: #7dccff;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  cursor: move;
+}
+.roi.selected {
+  stroke: #a86600;
+  stroke-width: 3px;
+}
+.roi:focus {
+  outline: none;
+  stroke: #fff;
+  stroke-width: 5px;
+}
+.roi-base {
+  fill: none;
+  stroke: #fff;
+  stroke-dasharray: 6 4;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.roi-draft {
+  fill: #ffffff22;
+  stroke: #fff;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.crop-preview {
+  max-width: 100%;
+  max-height: 180px;
+  display: block;
+  object-fit: contain;
+  background: #111;
+  margin: 0.7rem 0;
+}
+.crop-preview[hidden] {
+  display: none;
+}
+.calibration input[type="file"] {
+  max-width: 210px;
+}
+@media (max-width: 850px) {
+  .calibration-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calibration li {
+  overflow-wrap: anywhere;
+}

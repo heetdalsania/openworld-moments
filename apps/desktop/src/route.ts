@@ -6,6 +6,7 @@ export type Route =
   | { view: "library" }
   | { view: "asset"; id: string }
   | { view: "settings" }
+  | { view: "calibration" }
   | { view: "phone" }
   | { view: "sessions" }
   | { view: "session"; id: string };
@@ -16,6 +17,7 @@ const SESSION = /^#\/session\/(ses_[0-9A-HJKMNP-TV-Z]{26})$/;
 export function parseRoute(hash: string): Route {
   const asset = ASSET.exec(hash);
   if (asset?.[1]) return { view: "asset", id: asset[1] };
+  if (hash === "#/calibration") return { view: "calibration" };
   if (hash === "#/settings") return { view: "settings" };
   if (hash === "#/phone") return { view: "phone" };
   if (hash === "#/sessions") return { view: "sessions" };
@@ -30,6 +32,8 @@ export function routeHref(route: Route): string {
       return "#/library";
     case "asset":
       return `#/asset/${route.id}`;
+    case "calibration":
+      return "#/calibration";
     case "settings":
       return "#/settings";
     case "phone":

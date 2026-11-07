@@ -154,3 +154,57 @@ export function setOverlap(
 }
 
 export type { AssetDerivedMedia, AssetOverlap, ImportResult, Job, MediaAsset, Session };
+
+// -- calibration (M15) ---------------------------------------------------------------
+export interface CalibrationState {
+  base: import("@openworld-moments/contracts").Profile;
+  base_key: string;
+  effective: import("@openworld-moments/contracts").Profile;
+  patch: import("@openworld-moments/contracts").ProfilePatch | null;
+  base_changed: boolean;
+  conflict: string | null;
+}
+export interface ProfileSummary {
+  id: string;
+  display_name: string;
+  profile_version: string;
+}
+export const listProfiles = (): Promise<ProfileSummary[]> => call("GET", "/v1/profiles");
+export const getCalibration = (id: string): Promise<CalibrationState> =>
+  call("GET", `/v1/profiles/${id}/calibration`);
+export const saveCalibration = (
+  id: string,
+  baseKey: string,
+  regions: object,
+): Promise<CalibrationState> =>
+  call("PUT", `/v1/profiles/${id}/calibration`, { base_key: baseKey, regions });
+export const importProfilePatch = (id: string, patch: unknown): Promise<CalibrationState> =>
+  call("POST", `/v1/profiles/${id}/patch`, patch);
+export const resetCalibration = (id: string): Promise<CalibrationState> =>
+  call("POST", `/v1/profiles/${id}/reset`);
+export const exportProfilePatch = (id: string): Promise<boolean> =>
+  invoke("calibration_export_patch", { profileId: id });
+export const exportCropSample = (data: number[]): Promise<boolean> =>
+  invoke("calibration_export_sample", { data });
+export interface DetectorPreview {
+  available: boolean;
+  message?: string;
+  detector_id?: string;
+  detector_version?: string;
+  sample_count?: number;
+  confirmation_frames?: number;
+  detections?: { type: string; start_ms: number; end_ms: number; confidence: number }[];
+}
+export const previewCalibration = (
+  id: string,
+  baseKey: string,
+  regions: object,
+  gray: number[],
+  sourceMs: number,
+): Promise<DetectorPreview> =>
+  call("POST", `/v1/profiles/${id}/preview`, {
+    base_key: baseKey,
+    regions,
+    gray,
+    source_ms: sourceMs,
+  });

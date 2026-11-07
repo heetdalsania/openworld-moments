@@ -241,6 +241,9 @@ RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "job": _job,
     "job-event": _job_event,
     "profile": _profile,
+    "profile-patch": lambda doc: (
+        issue for name, r in doc["regions"].items() for issue in _region(f"regions.{name}", r)
+    ),
     "project": _project,
     "render-preset": _render_preset,
     "export-manifest": _export_manifest,

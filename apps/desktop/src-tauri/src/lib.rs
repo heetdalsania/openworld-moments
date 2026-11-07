@@ -8,6 +8,7 @@
 
 use serde::Serialize;
 
+pub mod calibration;
 mod host;
 pub mod media;
 pub mod phone;
@@ -57,6 +58,8 @@ pub fn run() {
             host::worker_cancel_job,
             host::worker_list_jobs,
             host::worker_api,
+            host::calibration_export_patch,
+            host::calibration_export_sample,
             host::phone_interfaces,
             host::phone_status,
             host::phone_start,
