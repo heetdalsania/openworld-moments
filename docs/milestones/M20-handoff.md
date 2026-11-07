@@ -111,6 +111,7 @@
     List custom generations with their matching options and show stale history clearly.
   - M26 may index candidate/story metadata. M32 retains real gameplay/editor/release
     qualification; M20 does not satisfy those later gates.
+- Pull request: [#26](https://github.com/heetdalsania/openworld-moments/pull/26)
 - Screenshots, reports, or artifacts:
   - [Algorithm/presets/scoring/reconciliation](../architecture/stories.md),
     [CLI and coverage guide](../stories/README.md).
