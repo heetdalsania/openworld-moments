@@ -35,6 +35,14 @@ class RegionTemplateEvidence(BaseModel):
         float,
         Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
     ]
+    frame_ms: Annotated[
+        int | None,
+        Field(
+            description="With the enclosing event asset_id and region, locates a local reconstructable crop. No image bytes or private path are embedded.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ] = None
 
 
 class ColorRuleEvidence(BaseModel):

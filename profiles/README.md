@@ -4,7 +4,9 @@ Detector and HUD-region profiles, introduced by **M14 — Detector SDK and profi
 schema**.
 
 - `generic-open-world/` — synthetic temporal example (M14), not gameplay detection.
-- `gta-v/` — reference profile for a released game, used for calibration.
+- `generic-wanted/` — M16 analytic star/disc row, synthetic validation only;
+  [settings, replay and limits](./generic-wanted/README.md).
+- `gta-v/` — unvalidated placeholder; no game-specific manifest or templates bundled.
 - `open-world-vi/` — first target profile; stays unvalidated until measured on
   legitimately obtained post-release footage.
 

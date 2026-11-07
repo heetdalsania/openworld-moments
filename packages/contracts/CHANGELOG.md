@@ -2,6 +2,19 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.11 — 2026-11-07 (M16)
+
+Additive; existing 1.10 documents remain valid.
+
+- `profile.DetectorSettings.wanted`: optional bounded analytic settings (`max_level`
+  1–10, `shape` star/disc, `max_missing_frames` 0–20, `debounce_ms` 0–30000).
+  This is data only; no executable templates or filter expressions.
+- `evidence.RegionTemplateEvidence.frame_ms`: optional source timestamp. Together
+  with the event asset ID, normalized region and input provenance, this identifies
+  a locally reconstructable crop. Events contain no image bytes or local paths.
+- SDK 1.1.0 separately adds immutable `Frame.region` metadata for trusted built-in
+  ROI sampling; existing whole-frame consumers retain `region=None`.
+
 ## 1.10 — 2026-11-06 (M15)
 
 Additive; existing 1.9 documents remain valid.

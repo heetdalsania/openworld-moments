@@ -1,9 +1,11 @@
-# Detector runtime and local profiles (M14)
+# Detector runtime and local profiles (M14–M16)
 
 M14 supplies the runtime through which **trusted, shipped built-in detectors**
-read derived media and emit validated observations. The only shipped detector is
-`synthetic-bright-region`, an example for generated fixtures. It does not detect
-gameplay. The GTA profile directories remain unvalidated placeholders.
+read derived media and emit validated observations. Shipped built-ins are
+`synthetic-bright-region` (the generated-fixture example) and `wanted-indicators`
+(the analytic temporal detector, validated on synthetic fixtures). See the
+[wanted guide](../detectors/wanted.md). The GTA profile directories remain
+unvalidated placeholders.
 
 ## Entry points
 
@@ -17,12 +19,13 @@ gameplay. The GTA profile directories remain unvalidated placeholders.
   `python -m openworld_moments.detectors`.
 
 No downloader, arbitrary-code plugin loader, cloud inference, model, OCR engine,
-game-specific detector, calibration UI or event-review UI is introduced.
+game-specific template or event-review UI is introduced. M15 supplies the
+[calibration UI](./profile-calibration.md).
 
 ## Profile manifest
 
 The canonical profile contract remains `packages/contracts/schemas/profile.schema.json`
-(contracts 1.9). Older 1.x manifests remain contract-readable. To **run analysis**,
+(contracts 1.11). Older 1.x manifests remain contract-readable. To **run analysis**,
 the resolved profile must also declare its license and capabilities.
 
 | Field | Meaning |
@@ -32,7 +35,7 @@ the resolved profile must also declare its license and capabilities.
 | `frame` | Minimum upright source dimensions and permitted aspect ratios (1% tolerance) |
 | `regions` | Named normalized `[x,y,w,h]` regions, checked fully inside the frame |
 | `capabilities` | Allowed input capabilities; currently only `frames.gray` |
-| `detectors` | Built-in IDs, enable flags, confidence threshold, confirmation frames, optional locale |
+| `detectors` | Built-in IDs, enable flags, confidence threshold, confirmation frames, optional locale and analytic wanted settings |
 | `locales` | Language tags → `{version, license, vocabulary}`; vocabulary maps named categories to strings |
 | `safe_zones` | Named regions for downstream layout use |
 | `extends` | An optional local catalog profile ID; never a URL, path or code entry point |
@@ -74,7 +77,8 @@ choose an input file, obtain a database connection or specify a writable path.
 Each unit receives a frozen `AnalysisContext` containing:
 
 - asset ID and duration;
-- immutable frames (`Frame.source_ms`, width, height, packed grayscale `bytes`);
+- immutable frames (`Frame.source_ms`, width, height, packed grayscale `bytes`,
+  optional normalized `Frame.region` identifying a global ROI);
 - read-only region/settings/vocabulary maps (regions and vocabulary use tuples);
 - cancellation and progress callbacks.
 
@@ -84,9 +88,14 @@ hostile Python code. Third-party executable plugins remain out of scope.
 
 The orchestrator obtains an M08 proxy with `proxy_policy: always`, preserving the
 original. It checks the derived path, verifies the proxy's SHA-256 against its row,
-and decodes only that proxy. Detectors never open the original. Sampling v1 is
-64×36 grayscale at 2 fps; timestamps are source milliseconds at 500 ms intervals.
-The sampling granularity is not a claim of source-frame-accurate detection.
+and decodes only that proxy. Detectors never open the original. The default sampler
+is 64×36 grayscale at 2 fps. M16 adds a 200×40 grayscale ROI sampler at 2 fps for
+`wanted-indicators`; its fixed built-in `sample_region` permission selects the
+calibrated `wanted_indicator` region. Numeric bounds and proxy detail are checked
+before decode. This small M14 prerequisite repair preserves HUD detail that the
+whole-frame sampler discards. Profiles cannot supply FFmpeg expressions. Sampler
+versions differ in cache/provenance; frames are reused only for the same ROI.
+Timestamps remain source milliseconds at 500 ms intervals, not source-frame accuracy.
 
 FFmpeg uses argument arrays, file-only input protocols, a 600-second timeout and
 a 64 MiB raw-output cap per asset. Samples are retained for one asset at a time,
@@ -192,7 +201,7 @@ temporal observation. It cleans up on exit. No media, model or database is commi
 These are local synthetic/automated results. They do not validate game compatibility,
 physical-device quality, desktop playback, or release packaging.
 
-### Synthetic processing measurement
+### Historical M14 example processing measurement
 
 On the local arm64 development machine, five runs over 7,200 in-memory 64×36
 white frames (one hour at 2 fps) produced one temporal event in a median **0.099 s**
