@@ -16,6 +16,7 @@
   ``openworld_moments.alignment``.
 
 * ``analyze`` (M14): isolated, cached built-in detector runs over derived media.
+* ``transcribe`` (M18): optional local whisper.cpp transcription, per clip, cached.
 
 Later product handlers (transcribe, ...) arrive in their milestones.
 """
@@ -50,6 +51,8 @@ from openworld_moments.media.probe import (
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
 from openworld_moments.storage import Database
+from openworld_moments.transcripts.service import Transcriber
+from openworld_moments.transcripts.whisper import TranscriptionCancelled, TranscriptionError
 
 MAX_STEPS = 10_000
 MAX_STEP_MS = 60_000
@@ -405,6 +408,50 @@ def analyze_handler(analyzer: Analyzer) -> JobHandler:
     return JobHandler("analyze", run, validate, "analyzing", True, 3)
 
 
+_MODEL_NAME = re.compile(r"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$")
+
+
+def transcribe_handler(transcriber: Transcriber) -> JobHandler:
+    def validate(params: Mapping[str, Any]) -> dict[str, Any]:
+        _reject_unknown(params, {"session_id", "model", "language", "force"})
+        sid, model = params.get("session_id"), params.get("model")
+        if not isinstance(sid, str) or not _SESSION_ID.fullmatch(sid):
+            raise ValueError("session_id: expected a session ID")
+        if not isinstance(model, str) or len(model) > 64 or not _MODEL_NAME.fullmatch(model):
+            raise ValueError("model: expected an installed speech-model name")
+        language = params.get("language", "auto")
+        if not isinstance(language, str) or not re.fullmatch(r"auto|[a-z]{2,3}", language):
+            raise ValueError("language: expected 'auto' or a language code")
+        if not isinstance(params.get("force", False), bool):
+            raise ValueError("force: expected a boolean")
+        try:
+            # Transcription is optional: refuse clearly instead of downloading anything.
+            transcriber.check_request(model)
+        except TranscriptionError as exc:
+            raise ValueError(exc.message) from exc
+        return {**params, "language": language}
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            result = transcriber.run(
+                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except TranscriptionCancelled as exc:
+            raise Cancelled from exc
+        except TranscriptionError as exc:
+            raise JobFailure(exc.code, exc.message) from exc
+        if any(o["status"] == "failed" for o in result["outcomes"]):
+            raise JobFailure(
+                "transcription.partial_failure",
+                "Some clips could not be transcribed; completed clips are kept.",
+                retryable=True,
+                result=result,
+            )
+        return result
+
+    return JobHandler("transcribe", run, validate, "transcribing", True, 3)
+
+
 def _job_failure(exc: ImportFailure) -> JobFailure:
     return JobFailure(
         exc.code,
@@ -463,6 +510,7 @@ def build_handlers(
     probe_timeout_s: float = DEFAULT_TIMEOUT_S,
     database: Database | None = None,
     derived: DerivedMedia | None = None,
+    transcriber: Transcriber | None = None,
 ) -> dict[str, JobHandler]:
     """Every handler the worker serves. Import handlers need the library ``database``.
     Pass the API's ``derived`` service so jobs and cleanup share one lock."""
@@ -482,4 +530,6 @@ def build_handlers(
         handlers[aligner.kind] = aligner
         analysis = analyze_handler(Analyzer(database, tools, media))
         handlers[analysis.kind] = analysis
+        speech = transcribe_handler(transcriber or Transcriber(database, tools, media))
+        handlers[speech.kind] = speech
     return handlers

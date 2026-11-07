@@ -20,6 +20,9 @@ import profile from "../schemas/profile.schema.json" with { type: "json" };
 import project from "../schemas/project.schema.json" with { type: "json" };
 import renderPreset from "../schemas/render-preset.schema.json" with { type: "json" };
 import session from "../schemas/session.schema.json" with { type: "json" };
+import speechModels from "../schemas/speech-models.schema.json" with { type: "json" };
+import transcript from "../schemas/transcript.schema.json" with { type: "json" };
+import transcription from "../schemas/transcription.schema.json" with { type: "json" };
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
@@ -39,6 +42,9 @@ import type {
   Project,
   RenderPreset,
   Session,
+  SpeechModels,
+  Transcript,
+  TranscriptionResult,
   WatchedFolder,
 } from "./generated/types.ts";
 import { semanticIssues } from "./semantic.ts";
@@ -62,6 +68,9 @@ export interface ContractTypes {
   project: Project;
   "render-preset": RenderPreset;
   session: Session;
+  "speech-models": SpeechModels;
+  transcript: Transcript;
+  transcription: TranscriptionResult;
   "watched-folder": WatchedFolder;
 }
 export type ContractName = keyof ContractTypes;
@@ -84,6 +93,9 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   project: [project, true],
   "render-preset": [renderPreset, true],
   session: [session, true],
+  "speech-models": [speechModels, true],
+  transcript: [transcript, true],
+  transcription: [transcription, true],
   "watched-folder": [watchedFolder, true],
 };
 

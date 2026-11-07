@@ -29,6 +29,12 @@ region preprocessing, appearance/disappearance intervals, line evidence, missing
 OCR behavior and real-engine synthetic tests. [ADR-0005](../architecture/adr/0005-local-ocr.md)
 records the dependency, model and packaging decisions.
 
+M18's [audio feature guide](./audio.md) defines the deterministic loudness envelope,
+onset/impact, silence and speech-like activity features, their timing tolerance,
+the first-stream track policy and no-audio behavior. Audio events are always
+**supporting evidence**, never highlights. Optional local transcription is covered by
+[transcription](../architecture/transcription.md).
+
 Event review and the reproducible precision/recall evaluation harness arrive in M19.
 
 ## Calibrating an installed profile

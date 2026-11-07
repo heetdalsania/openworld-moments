@@ -122,7 +122,7 @@
     },
     "AudioEvidence": {
       "title": "AudioEvidence",
-      "description": "Audio energy or spectral event in a time range.",
+      "description": "Audio energy, onset, silence, or speech-activity feature in a source time range. Supporting evidence only: loudness never proves that a moment is important.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "start_ms", "end_ms", "score"],
@@ -138,6 +138,20 @@
         },
         "score": {
           "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "feature": {
+          "description": "Which deterministic feature produced this evidence (M18).",
+          "enum": ["loudness", "onset", "impact", "silence", "speech_activity"]
+        },
+        "level_dbfs": {
+          "description": "Representative level in dB relative to full scale (RMS over the feature's window).",
+          "type": "number",
+          "minimum": -160,
+          "maximum": 0
+        },
+        "role": {
+          "description": "Always 'supporting': audio features corroborate other evidence; they are not highlights.",
+          "const": "supporting"
         }
       }
     },

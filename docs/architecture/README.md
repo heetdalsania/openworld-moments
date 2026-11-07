@@ -11,12 +11,14 @@ open it in the same pull request as the change it justifies.
 | [0003](./adr/0003-sqlite-migrations.md) | Standard-library SQLite with an in-house migration runner | Accepted |
 | [0004](./adr/0004-worker-ipc.md) | Worker IPC: stdin token, loopback HTTP, WebSocket events | Accepted |
 | [0005](./adr/0005-local-ocr.md) | Local region OCR with Tesseract | M17 implementation |
+| [0006](./adr/0006-local-transcription.md) | Optional local transcription with whisper.cpp | M18 implementation |
 
 Other architecture notes:
 
 - [Profile calibration](./profile-calibration.md): upright normalized ROI canvas, keyboard controls, local overrides, safe patches, crop and SDK previews.
 - [Banner and subtitle OCR](../detectors/text.md): local OCR, locale matching, line evidence, temporal intervals, optional data and validation limits.
 - [Wanted-state detector](../detectors/wanted.md): calibrated analytic indicators, temporal confirmation, local replay/crops, synthetic validation and benchmark.
+- [Local transcription](./transcription.md): optional whisper.cpp engine, explicit model installation and licenses, per-clip cached jobs, word timing in session time, storage, privacy notice and deletion, cancellation. User guide: [Local transcription](../guides/transcription.md).
 - [Detector runtime](./detectors.md): trusted built-in SDK, immutable derived samples, profile inheritance/compatibility, provenance, caching, failure isolation and CLI.
 
 - [Storage](./storage.md): what lives in SQLite vs on disk, delete policies, migrations, backups.

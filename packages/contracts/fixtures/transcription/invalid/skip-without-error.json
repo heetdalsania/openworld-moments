@@ -1,0 +1,28 @@
+{
+  "description": "Skipped and failed outcomes explain why",
+  "expect": "schema",
+  "path": "outcomes[2]",
+  "document": {
+    "schema_version": "1.13",
+    "session_id": "ses_01JCBQ00000000000000000002",
+    "model": "base.en",
+    "outcomes": [
+      {
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "status": "computed",
+        "segment_count": 4,
+        "language": "en"
+      },
+      {
+        "asset_id": "ast_01JCBQ00000000000000000002",
+        "status": "cached",
+        "segment_count": 0
+      },
+      {
+        "asset_id": "ast_01JCBQ00000000000000000003",
+        "status": "skipped",
+        "segment_count": 0
+      }
+    ]
+  }
+}

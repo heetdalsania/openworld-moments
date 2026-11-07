@@ -31,6 +31,9 @@ from openworld_moments_contracts.generated import (
     project_schema,
     render_preset_schema,
     session_schema,
+    speech_models_schema,
+    transcript_schema,
+    transcription_schema,
     watched_folder_schema,
 )
 from openworld_moments_contracts.semantic import semantic_issues
@@ -54,6 +57,9 @@ CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
     "project": (project_schema.Project, True),
     "render-preset": (render_preset_schema.RenderPreset, True),
     "session": (session_schema.Session, True),
+    "speech-models": (speech_models_schema.SpeechModels, True),
+    "transcript": (transcript_schema.Transcript, True),
+    "transcription": (transcription_schema.TranscriptionResult, True),
     "watched-folder": (watched_folder_schema.WatchedFolder, True),
 }
 

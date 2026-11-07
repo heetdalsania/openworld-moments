@@ -8,6 +8,8 @@ schema**.
   [settings, replay and limits](./generic-wanted/README.md).
 - `generic-text/` — M17 local region OCR and English synthetic vocabulary;
   [configuration and limits](./generic-text/README.md).
+- `generic-audio/` — M18 supporting audio features (loudness onsets/impacts,
+  silence, speech-like activity); [definitions and limits](./generic-audio/README.md).
 - `gta-v/` — unvalidated placeholder; no game-specific manifest or templates bundled.
 - `open-world-vi/` — first target profile; stays unvalidated until measured on
   legitimately obtained post-release footage.

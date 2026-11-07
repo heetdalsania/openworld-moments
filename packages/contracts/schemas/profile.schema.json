@@ -103,7 +103,7 @@
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "enum": ["frames.gray"]
+        "enum": ["frames.gray", "audio.pcm"]
       }
     },
     "locales": {

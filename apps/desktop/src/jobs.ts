@@ -32,6 +32,8 @@ const LABELS: Record<string, string> = {
   check_sources: "Check original files",
   group: "Group sessions",
   align: "Find repeated footage",
+  analyze: "Analyze session",
+  transcribe: "Transcribe speech",
   diagnostic: "Diagnostic",
 };
 
@@ -46,6 +48,7 @@ const STATE_LABELS: Record<string, string> = {
   proxying: "Preparing playback",
   grouping: "Grouping",
   analyzing: "Working",
+  transcribing: "Transcribing",
   ready: "Done",
   failed: "Failed",
   cancelled: "Cancelled",
@@ -111,6 +114,10 @@ export function upsertJob(job: Job): void {
   }
   if (finished && (job.kind === "group" || job.kind === "align")) {
     invalidate("sessions");
+  }
+  // A transcription keeps completed clips even when it fails or is cancelled.
+  if (previous?.state !== job.state && job.kind === "transcribe" && !isActive(job)) {
+    invalidate("transcript:");
   }
 }
 

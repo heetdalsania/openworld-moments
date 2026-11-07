@@ -227,6 +227,7 @@ pub async fn worker_api(
         "GET" => reqwest::Method::GET,
         "POST" => reqwest::Method::POST,
         "PUT" => reqwest::Method::PUT,
+        "DELETE" => reqwest::Method::DELETE,
         _ => return Err(crate::media::route_refused()),
     };
     supervisor(&state)?

@@ -41,6 +41,7 @@ from openworld_moments.logs import configure_logging
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.redaction import Redactor
 from openworld_moments.storage import Database, StorageError
+from openworld_moments.transcripts.service import Transcriber
 
 PROTOCOL_VERSION = 1
 EXIT_STARTUP_FAILED = 3
@@ -176,12 +177,18 @@ def main(argv: list[str] | None = None) -> int:
     LibraryPaths.for_database(database.path).clean_import_staging()
     derived = DerivedMedia(database, tools)
     derived.paths.clean_staging()
+    transcriber = Transcriber(database, tools, derived)
+    transcriber.clean_staging()
     app = create_app(
-        JobEngine(database, build_handlers(tools, database=database, derived=derived)),
+        JobEngine(
+            database,
+            build_handlers(tools, database=database, derived=derived, transcriber=transcriber),
+        ),
         settings,
         on_ready=on_ready,
         capabilities=tools.capabilities,
         derived=derived,
+        transcriber=transcriber,
     )
     config = uvicorn.Config(
         app,

@@ -2,6 +2,23 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.13 — 2026-11-07 (M18)
+
+Additive; existing 1.12 documents remain valid.
+
+- `evidence.AudioEvidence`: optional `feature` (`loudness`, `onset`, `impact`,
+  `silence`, `speech_activity`), `level_dbfs` (−160..0) and `role`, which can only be
+  `supporting`. Audio is corroborating evidence, never a highlight claim.
+- `profile.capabilities`: adds `audio.pcm`.
+- New `transcript` (session segments with words, source and session times,
+  language, confidence and transcriber provenance; no speaker field), `transcription`
+  (per-clip job result) and `speech-models` (engine status, installed models and
+  catalog for manual installation). TS/Python check segment/word ordering and
+  containment, unique outcomes and models, and that an unavailable engine gives a
+  reason.
+- SDK 1.3.0 adds immutable `AudioSamples` and `AnalysisContext.audio`. Migration
+  0011 extends `transcript_segments` and adds `transcript_runs`.
+
 ## 1.12 — 2026-11-07 (M17)
 
 Additive; existing 1.11 documents remain valid.

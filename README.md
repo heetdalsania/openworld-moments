@@ -34,8 +34,9 @@ Completed milestones:
 | M15 — Profile calibration UI | Settings-based frame capture and accessible normalized ROI editing; durable local overrides, crop/preprocessing and synthetic SDK previews, base comparison/reset, and media-free profile patches ([calibration](./docs/architecture/profile-calibration.md)) |
 | M16 — Wanted-state detector | Calibrated analytic star/disc rows, conservative temporal changes with local crop references and explainable scores, replay traces and benchmark; synthetic validation only, game compatibility unvalidated ([wanted detector](./docs/detectors/wanted.md)) |
 | M17 — Banner and subtitle detectors | Local region-only Tesseract OCR, versioned locale vocabulary, confirmed banner/subtitle intervals with line evidence and mission spoiler-risk metadata; synthetic validation, optional engine/data and explicit unavailable results ([text detectors](./docs/detectors/text.md)) |
+| M18 — Audio analysis and transcription | Deterministic audio features from the playback copy's first audio stream (onsets/impacts, silence, speech-like activity), always labelled supporting evidence; optional local whisper.cpp transcription with explicitly installed models, word timings in session time, per-clip cached and cancellable jobs, a privacy notice and text-only deletion in the session screen ([audio](./docs/detectors/audio.md), [transcription](./docs/architecture/transcription.md), [guide](./docs/guides/transcription.md)) |
 
-You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions. Game compatibility remains unvalidated. Event review and editing arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Event review and editing arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -354,12 +355,14 @@ The product specification includes links to console capture documentation, exist
 ## Current next step
 
 M10 still needs its real-phone smoke test on a Windows private network before it
-is marked complete. M17 delivers local banner/subtitle OCR. The next milestone
-is M18; M21 remains independently ready:
+is marked complete. M18 delivers supporting audio evidence and optional local
+transcription. M19 and M21 are ready and can be worked independently (see
+[MILESTONES.md](./MILESTONES.md)):
 
-- [M18 — Audio analysis and transcription](./docs/milestones/M18-audio-and-transcription.md): deterministic audio evidence and optional local transcription.
+- [M19 — Event review and evaluation](./docs/milestones/M19-event-review-and-evaluation.md): the evidence review UI, corrections and reproducible detector metrics.
 - [M21 — Editor project model](./docs/milestones/M21-editor-project-model.md): the non-destructive edit list, autosave, and undo model.
 
-Wanted and OCR detectors have synthetic/local validation; GTA profiles remain
-unvalidated placeholders. See the [M17 handoff](./docs/milestones/M17-handoff.md).
-M19 event review still waits on M18.
+Audio, wanted and OCR detectors have synthetic/local validation only; GTA profiles
+remain unvalidated placeholders. Transcription is tested with a whisper.cpp test
+double, so real recognition quality is unmeasured. See the
+[M18 handoff](./docs/milestones/M18-handoff.md).

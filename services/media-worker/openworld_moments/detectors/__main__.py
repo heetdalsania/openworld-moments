@@ -72,6 +72,40 @@ def demo(root: Path, catalog: ProfileCatalog, tools: MediaTools) -> dict[str, ob
     return {"analysis": analyzed, "events": events}
 
 
+def speech_command(args: argparse.Namespace) -> int:
+    """Audio benchmark, engine check and explicit local model management (M18)."""
+    from openworld_moments.transcripts.models import SpeechModels
+    from openworld_moments.transcripts.service import default_engine
+    from openworld_moments.transcripts.whisper import TranscriptionError
+
+    try:
+        if args.command == "audio":
+            from openworld_moments.detectors.audio_benchmark import benchmark as audio_benchmark
+
+            result = audio_benchmark(args.minutes, args.repeats)
+            print(json.dumps(result, sort_keys=True))
+            return 0 if result["budget_2x_met"] else 1
+        if args.command == "speech":
+            engine = default_engine()
+            print(
+                json.dumps({"available": True, "engine": "whisper.cpp", "version": engine.version})
+            )
+            return 0
+        models = SpeechModels(args.library)
+        if args.operation == "install":
+            output: Any = models.install(args.file, args.name, args.license).public()
+        elif args.operation == "remove":
+            models.remove(args.name)
+            output = {"removed": args.name}
+        else:
+            output = [m.public() for m in models.installed()]
+        print(json.dumps(output, sort_keys=True))
+        return 0
+    except TranscriptionError as exc:
+        print(json.dumps({"error": {"code": exc.code, "message": exc.message}}))
+        return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="owm")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -105,8 +139,25 @@ def main() -> int:
     text_bench = text_cli.add_parser("benchmark")
     text_bench.add_argument("--samples", type=int, default=60)
     text_bench.add_argument("--repeats", type=int, default=3)
+    audio_cli = sub.add_parser("audio").add_subparsers(dest="operation", required=True)
+    audio_bench = audio_cli.add_parser("benchmark")
+    audio_bench.add_argument("--minutes", type=int, default=10)
+    audio_bench.add_argument("--repeats", type=int, default=3)
+    speech_cli = sub.add_parser("speech").add_subparsers(dest="operation", required=True)
+    speech_cli.add_parser("doctor")
+    models_cli = sub.add_parser("models").add_subparsers(dest="operation", required=True)
+    for name in ("list", "install", "remove"):
+        command = models_cli.add_parser(name)
+        command.add_argument("--library", type=Path, required=True)
+        if name != "list":
+            command.add_argument("name", help="Model name, e.g. base.en")
+        if name == "install":
+            command.add_argument("file", type=Path, help="A local whisper.cpp ggml model file")
+            command.add_argument("--license", required=True, help="The model's license, e.g. MIT")
     args = parser.parse_args()
     try:
+        if args.command in ("audio", "speech", "models"):
+            return speech_command(args)
         if args.command == "text":
             from openworld_moments.detectors.ocr import Tesseract
             from openworld_moments.detectors.text_benchmark import benchmark as text_benchmark

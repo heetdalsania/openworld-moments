@@ -206,7 +206,7 @@ class Profile(BaseModel):
         ),
     ] = None
     license: Annotated[str | None, Field(max_length=128, min_length=1)] = None
-    capabilities: list[Literal["frames.gray"]] | None = None
+    capabilities: list[Literal["frames.gray", "audio.pcm"]] | None = None
     locales: Annotated[
         dict[
             Annotated[

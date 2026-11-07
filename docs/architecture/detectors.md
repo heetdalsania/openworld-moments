@@ -6,7 +6,9 @@ read derived media and emit validated observations. Shipped built-ins are
 (the analytic temporal detector, validated on synthetic fixtures). See the
 [wanted guide](../detectors/wanted.md). The GTA profile directories remain
 unvalidated placeholders. M17 adds `region-banner-ocr` and `region-subtitle-ocr`
-with a local optional Tesseract adapter; see [OCR](../detectors/text.md).
+with a local optional Tesseract adapter; see [OCR](../detectors/text.md). M18 adds
+`audio-features` (supporting audio evidence from the proxy's first audio stream; see
+[audio](../detectors/audio.md)) and SDK **1.3.0**.
 
 ## Entry points
 
@@ -35,7 +37,7 @@ the resolved profile must also declare its license and capabilities.
 | `license` | Recorded license identifier/expression; not a legal clearance check |
 | `frame` | Minimum upright source dimensions and permitted aspect ratios (1% tolerance) |
 | `regions` | Named normalized `[x,y,w,h]` regions, checked fully inside the frame |
-| `capabilities` | Allowed input capabilities; currently only `frames.gray` |
+| `capabilities` | Allowed input capabilities: `frames.gray` and, since contracts 1.13, `audio.pcm` |
 | `detectors` | Built-in IDs, enable flags, confidence threshold, confirmation frames, optional locale and analytic wanted/OCR settings |
 | `locales` | Language tags → `{version, license, vocabulary, ocr_language?}`; vocabulary maps named categories to strings |
 | `safe_zones` | Named regions for downstream layout use |
@@ -106,8 +108,14 @@ Timestamps remain source milliseconds at 500 ms intervals, not source-frame accu
 FFmpeg uses argument arrays, file-only input protocols, a 600-second timeout and
 a 64 MiB raw-output cap per asset. Samples are retained for one asset at a time,
 reused across its detectors, and released before the next asset. Peak memory also
-includes the raw output and Python object overhead. The current SDK supports
-frames only; audio/transcription capabilities arrive in M18.
+includes the raw output and Python object overhead.
+
+Detectors declaring `audio.pcm` (M18) receive `AnalysisContext.audio`: immutable
+mono 8 kHz 16-bit full-band and 300–3400 Hz speech-band samples of the proxy's
+first audio stream (sampler `pcm8k-mono-speechband-v1`), or `None` for a clip
+without audio. Audio-only detectors skip the picture-geometry compatibility check,
+and their provenance records `audio_track` (`first-of-N` or `none`). Transcription is
+not a detector: it is a separate optional job ([transcription](./transcription.md)).
 
 `close()` runs even if setup/detection fails. Built-ins check cancellation between
 samples, and the orchestrator also checks between outputs/units and before commit.

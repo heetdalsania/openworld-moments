@@ -240,7 +240,49 @@ def _overlap(doc: Document) -> Iterable[str]:
         yield "applied: only a current matched result can be applied"
 
 
+def _transcript(doc: Document) -> Iterable[str]:
+    previous = None
+    for i, seg in enumerate(doc["segments"]):
+        path = f"segments[{i}]"
+        yield from _range(f"{path}.end_ms", seg["start_ms"], seg["end_ms"])
+        yield from _range(f"{path}.source_end_ms", seg["source_start_ms"], seg["source_end_ms"])
+        if previous is not None and seg["start_ms"] < previous:
+            yield f"{path}.start_ms: segments must be ordered by session time"
+        previous = seg["start_ms"]
+        last = seg["start_ms"]
+        for j, word in enumerate(seg["words"]):
+            wpath = f"{path}.words[{j}]"
+            yield from _range(f"{wpath}.end_ms", word["start_ms"], word["end_ms"])
+            yield from _range(
+                f"{wpath}.source_end_ms", word["source_start_ms"], word["source_end_ms"]
+            )
+            if word["start_ms"] < seg["start_ms"] or word["end_ms"] > seg["end_ms"]:
+                yield f"{wpath}: word lies outside its segment"
+            if word["start_ms"] < last:
+                yield f"{wpath}.start_ms: words must be ordered"
+            last = word["start_ms"]
+
+
+def _transcription(doc: Document) -> Iterable[str]:
+    seen: set[str] = set()
+    for i, outcome in enumerate(doc["outcomes"]):
+        if outcome["asset_id"] in seen:
+            yield f"outcomes[{i}].asset_id: each clip appears once"
+        seen.add(outcome["asset_id"])
+
+
+def _speech_models(doc: Document) -> Iterable[str]:
+    names = [m["name"] for m in doc["installed"]]
+    if len(names) != len(set(names)):
+        yield "installed: model names must be unique"
+    if not doc["engine"]["available"] and "reason" not in doc["engine"]:
+        yield "engine.reason: required when the engine is unavailable"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "transcript": _transcript,
+    "transcription": _transcription,
+    "speech-models": _speech_models,
     "overlap": _overlap,
     "session": _session,
     "derived-media": _derived_media,

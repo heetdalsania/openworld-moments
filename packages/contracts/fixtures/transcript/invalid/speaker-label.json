@@ -1,0 +1,95 @@
+{
+  "description": "Speaker diarization is out of scope; segments carry no speaker",
+  "expect": "schema",
+  "path": "segments[0]",
+  "document": {
+    "schema_version": "1.13",
+    "session_id": "ses_01JCBQ00000000000000000002",
+    "segments": [
+      {
+        "id": 1,
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "start_ms": 1000,
+        "end_ms": 2400,
+        "source_start_ms": 1000,
+        "source_end_ms": 2400,
+        "text": "Meet me at the bridge.",
+        "language": "en",
+        "confidence": 0.91,
+        "words": [
+          {
+            "text": "Meet",
+            "start_ms": 1000,
+            "end_ms": 1300,
+            "source_start_ms": 1000,
+            "source_end_ms": 1300,
+            "confidence": 0.95
+          },
+          {
+            "text": "me",
+            "start_ms": 1300,
+            "end_ms": 1450,
+            "source_start_ms": 1300,
+            "source_end_ms": 1450,
+            "confidence": 0.93
+          },
+          {
+            "text": "at",
+            "start_ms": 1450,
+            "end_ms": 1600,
+            "source_start_ms": 1450,
+            "source_end_ms": 1600,
+            "confidence": 0.9
+          },
+          {
+            "text": "the",
+            "start_ms": 1600,
+            "end_ms": 1750,
+            "source_start_ms": 1600,
+            "source_end_ms": 1750,
+            "confidence": 0.88
+          },
+          {
+            "text": "bridge.",
+            "start_ms": 1750,
+            "end_ms": 2400,
+            "source_start_ms": 1750,
+            "source_end_ms": 2400,
+            "confidence": 0.89
+          }
+        ],
+        "transcriber": {
+          "engine": "whisper.cpp",
+          "engine_version": "1.7.6",
+          "engine_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "model": "base.en",
+          "model_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "transcriber_version": "1.0.0",
+          "requested_language": "auto"
+        },
+        "speaker": "Morgan"
+      },
+      {
+        "id": 2,
+        "asset_id": "ast_01JCBQ00000000000000000002",
+        "start_ms": 40000,
+        "end_ms": 41000,
+        "source_start_ms": 10500,
+        "source_end_ms": 11500,
+        "text": "Go.",
+        "language": null,
+        "confidence": 0.7,
+        "words": [],
+        "transcriber": {
+          "engine": "whisper.cpp",
+          "engine_version": "1.7.6",
+          "engine_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "model": "base.en",
+          "model_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "transcriber_version": "1.0.0",
+          "requested_language": "auto"
+        }
+      }
+    ]
+  }
+}

@@ -30,6 +30,7 @@ import { fetchWaveform, formatDuration, mediaUrl, thumbnailUrl, type Waveform } 
 import { type PlayerState, SessionPlayer } from "./player";
 import { invalidate, useAction, useQuery } from "./query";
 import { routeHref } from "./route";
+import { TranscriptPanel } from "./TranscriptPanel";
 import {
   buildTimeline,
   frameMs,
@@ -680,6 +681,7 @@ export function SessionView({ id }: { id: string }) {
         timeline={timeline}
         onSeek={seek}
       />
+      <TranscriptPanel sessionId={id} onSeek={seek} />
     </section>
   );
 }

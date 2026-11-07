@@ -16,6 +16,12 @@ from typing import Any
 from openworld_moments_contracts import load, normalize
 
 from openworld_moments.derived.service import DerivedCancelled, DerivedMedia
+from openworld_moments.detectors.audio import AudioFeatures
+from openworld_moments.detectors.audio_input import (
+    AUDIO_SAMPLER_VERSION,
+    decode_audio,
+    track_policy,
+)
 from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.example import BrightRegion
 from openworld_moments.detectors.inputs import (
@@ -41,6 +47,7 @@ from openworld_moments.detectors.sdk import (
     AnalysisCancelled,
     AnalysisContext,
     AnalysisError,
+    AudioSamples,
     Detection,
     Detector,
     checkpoint,
@@ -69,6 +76,7 @@ BUILTINS: Registry = MappingProxyType(
         WantedState.id: WantedState,
         TextDetector.id: TextDetector,
         SubtitleDetector.id: SubtitleDetector,
+        AudioFeatures.id: AudioFeatures,
     }
 )
 MAX_EVENTS = 10_000
@@ -137,6 +145,8 @@ class Analyzer:
                 prepared: tuple[Path, str, dict[str, str]] | None = None
                 frames = None
                 frames_key = ""
+                audio: AudioSamples | None = None
+                audio_ready = False
                 for setting in settings:
                     context = None
                     checkpoint(cancel)
@@ -155,7 +165,10 @@ class Analyzer:
                         if video.rotation in (90, 270):
                             width, height = height, width
                         locale = params.get("locale") or setting.get("locale")
-                        compatibility(profile, width, height, locale)
+                        hears = "audio.pcm" in detector.capabilities
+                        if detector.capabilities != {"audio.pcm"}:
+                            # Picture geometry does not constrain audio-only detectors.
+                            compatibility(profile, width, height, locale)
                         if not detector.capabilities <= set(profile["capabilities"]):
                             raise AnalysisError(
                                 "profile.incompatible",
@@ -187,6 +200,9 @@ class Analyzer:
                         dimensions = getattr(detector, "sample_dimensions", (200, 40))
                         roi = tuple(profile["regions"][sample_region]) if sample_region else None
                         sample_key = canonical([roi, dimensions])
+                        if hears:
+                            versions["sampler"] = AUDIO_SAMPLER_VERSION
+                            versions["audio_track"] = track_policy(len(asset.audio or []))
                         if roi is not None:
                             if dimensions == OCR_SIZE:
                                 versions["sampler"] = OCR_SAMPLER_VERSION
@@ -216,7 +232,16 @@ class Analyzer:
                         if cached is not None and not params.get("force", False):
                             outcome.update(status="cached", event_ids=cached)
                         else:
-                            if frames is None or frames_key != sample_key:
+                            if hears:
+                                if not audio_ready:
+                                    # The first audio stream, like the proxy; none → no events.
+                                    audio = (
+                                        decode_audio(path, self.tools.tool("ffmpeg"), cancel)
+                                        if asset.audio
+                                        else None
+                                    )
+                                    audio_ready = True
+                            elif frames is None or frames_key != sample_key:
                                 frames = None
                                 frames = (
                                     (
@@ -243,7 +268,7 @@ class Analyzer:
                             context = AnalysisContext(
                                 link.asset_id,
                                 asset.duration_ms,
-                                frames,
+                                () if hears else (frames or ()),
                                 MappingProxyType(
                                     {k: tuple(v) for k, v in profile["regions"].items()}
                                 ),
@@ -259,6 +284,7 @@ class Analyzer:
                                 ),
                                 lambda: checkpoint(cancel),
                                 frame_progress,
+                                audio if hears else None,
                             )
                             docs: list[dict[str, Any]] = []
                             try:
@@ -347,6 +373,18 @@ class Analyzer:
                 (sid,),
             )
         ]
+
+    def checked_proxy(
+        self, conn: sqlite3.Connection, asset_id: str, job_id: str, cancel: threading.Event
+    ) -> tuple[Path, str]:
+        """A current derived proxy whose bytes match its row, and its input key. Shared
+        with transcription (M18) so no producer ever reads an original."""
+        path, key, _ = self._prepare(conn, asset_id, job_id, cancel)
+        return path, key
+
+    @staticmethod
+    def layout(conn: sqlite3.Connection, sid: str) -> list[tuple[str, int, int]]:
+        return Analyzer._layout(conn, sid)
 
     def _prepare(
         self, conn: sqlite3.Connection, asset_id: str, job_id: str, cancel: threading.Event

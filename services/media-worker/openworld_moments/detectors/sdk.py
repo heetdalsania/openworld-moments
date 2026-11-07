@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-SDK_VERSION = "1.2.0"
+SDK_VERSION = "1.3.0"
 
 
 class AnalysisCancelled(Exception):
@@ -32,6 +32,18 @@ class Frame:
 
 
 @dataclass(frozen=True, slots=True)
+class AudioSamples:
+    """Analysis audio of one clip: mono, ``sample_rate`` Hz, signed 16-bit little-endian.
+
+    ``full`` is the whole band; ``speech_band`` the same signal band-passed to
+    300-3400 Hz. Built-ins read samples only; no path or file handle is exposed."""
+
+    sample_rate: int
+    full: bytes
+    speech_band: bytes
+
+
+@dataclass(frozen=True, slots=True)
 class Detection:
     type: str
     start_ms: int  # source coordinates; host maps to unique session time
@@ -51,6 +63,8 @@ class AnalysisContext:
     vocabulary: Mapping[str, tuple[str, ...]]
     check_cancelled: Callable[[], None]
     progress: Callable[[int, int], None]
+    #: Present only for detectors declaring ``audio.pcm`` on clips with audio.
+    audio: AudioSamples | None = None
 
 
 class Detector(Protocol):
