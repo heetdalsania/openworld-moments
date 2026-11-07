@@ -35,7 +35,7 @@ the first-stream track policy and no-audio behavior. Audio events are always
 **supporting evidence**, never highlights. Optional local transcription is covered by
 [transcription](../architecture/transcription.md).
 
-Event review and the reproducible precision/recall evaluation harness arrive in M19.
+Event review and reproducible precision/recall evaluation are available in M19.
 
 ## Calibrating an installed profile
 
@@ -45,3 +45,5 @@ media-free JSON patch for coordinate review; a patch is not a complete profile
 manifest and is imported through the calibration screen. Crop samples are a
 separate explicit export. See [calibration](../architecture/profile-calibration.md)
 for coordinates, keyboard controls, compatibility, schema, API and preview limits.
+
+M19 supplies [event review](../architecture/event-review.md) and [local evaluation](../evaluation/README.md), including the [synthetic sample](../evaluation/sample/report.md).

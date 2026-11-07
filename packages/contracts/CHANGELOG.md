@@ -2,6 +2,15 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.14 — 2026-11-07 (M19)
+
+Additive: `event-review` (original/effective observations, status and bounded recent
+append-only decision history), `evaluation` (hash-addressed annotated holdouts),
+`evaluation-observations` (text-free frozen predictions/performance), and
+`evaluation-report` (metrics and compatibility rows). Shared TS/Python checks
+cover immutable review fields, history, unique media hashes and interval bounds.
+Migration 0012 stores immutable observations and separate human decisions.
+
 ## 1.13 — 2026-11-07 (M18)
 
 Additive; existing 1.12 documents remain valid.

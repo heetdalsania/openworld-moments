@@ -107,3 +107,5 @@ uv run python -m openworld_moments.storage backup  <library>/database.sqlite3
 ```
 
 Output is JSON. Exit code 0 means healthy or done, 1 means unhealthy or failed.
+
+M19 migration `0012_event_review.sql` adds immutable `event_observations` and append-only `event_decisions`. Archived observations count as attached session data. See [event review](./event-review.md).

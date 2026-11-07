@@ -33,3 +33,6 @@ Other architecture notes:
 - [Desktop library and jobs UI](./desktop-ui.md): routes and components, the allow-listed `worker_api` bridge, the `owm-media` playback protocol, job center behavior, keyboard access, tests, player limitations.
 - [Derived media](./derived-media.md): proxy policy and preset, deterministic HDR tone mapping, filmstrip thumbnails, waveform format, cache keys and invalidation, artifact layout, cleanup, minimum FFmpeg capabilities.
 - [Safe import pipeline](./import.md): reference and managed imports, staging and atomic promotion, idempotency, provenance, missing sources and relink, error codes.
+
+- [Event review](./event-review.md): immutable snapshots, audited corrections, timeline markers and explicit reconciliation.
+- [Local evaluation](../evaluation/README.md): holdout annotations, metrics, replay CLI and report privacy.

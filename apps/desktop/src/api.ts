@@ -3,6 +3,8 @@
 // which only forwards allow-listed routes; the worker token never reaches the UI.
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  EventReview,
+  EventReviewItem,
   AssetDerivedMedia,
   AssetOverlap,
   ImportResult,
@@ -249,3 +251,33 @@ export const previewCalibration = (
     gray,
     source_ms: sourceMs,
   });
+
+// -- event review (M19) --------------------------------------------------------------
+export function eventReview(id: string, offset = 0): Promise<EventReview> {
+  return call("GET", `/v1/sessions/${id}/review?offset=${offset}&limit=50`);
+}
+export interface EventReviewChange {
+  layout_key: string;
+  expected_revision: number;
+  action: "approve" | "reject" | "correct" | "reset";
+  type?: string;
+  start_ms?: number;
+  end_ms?: number;
+}
+export function reviewEvent(
+  id: string,
+  eventId: string,
+  change: EventReviewChange,
+): Promise<EventReviewItem> {
+  return call("POST", `/v1/sessions/${id}/review/${eventId}`, change);
+}
+export function addManualEvent(
+  id: string,
+  event: { layout_key: string; type: string; start_ms: number; end_ms: number },
+): Promise<EventReviewItem> {
+  return call("POST", `/v1/sessions/${id}/review`, event);
+}
+export function analyzeSession(id: string, profileId: string): Promise<Job> {
+  return call("POST", `/v1/sessions/${id}/analyze`, { profile_id: profileId, force: true });
+}
+export type { EventReview, EventReviewItem };

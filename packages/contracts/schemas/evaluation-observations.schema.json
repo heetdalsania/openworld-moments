@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/evaluation-observations.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "manifest_sha256", "profile", "detectors", "clips"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "manifest_sha256": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        }
+      },
+      "title": "EvaluationProfile"
+    },
+    "detectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Slug"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/SemVer"
+          }
+        },
+        "title": "EvaluationDetector"
+      },
+      "maxItems": 32,
+      "minItems": 1
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "processing_ms", "events"],
+        "properties": {
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/Sha256"
+          },
+          "processing_ms": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000000000.0
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "start_ms", "end_ms"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+                  "maxLength": 128
+                },
+                "start_ms": {
+                  "$ref": "common.schema.json#/$defs/TimelineMs"
+                },
+                "end_ms": {
+                  "$ref": "common.schema.json#/$defs/TimelineMs"
+                }
+              },
+              "title": "EvaluationInterval"
+            },
+            "maxItems": 500,
+            "minItems": 0
+          }
+        },
+        "title": "EvaluationObservedClip"
+      },
+      "maxItems": 100,
+      "minItems": 1
+    }
+  },
+  "title": "EvaluationObservations"
+}

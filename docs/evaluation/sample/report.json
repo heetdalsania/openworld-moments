@@ -1,0 +1,119 @@
+{
+  "algorithm": "owm-eval-1",
+  "clips": [
+    {
+      "metrics": {
+        "duration_ms": 8000,
+        "f1": 1,
+        "false_negatives": 0,
+        "false_positives": 0,
+        "false_positives_per_hour": 0,
+        "median_timestamp_error_ms": 0,
+        "precision": 1,
+        "processing_ms": 1161.968667,
+        "realtime_factor": 6.884867231966418,
+        "recall": 1,
+        "true_positives": 2
+      },
+      "sha256": "686c3516651c2ecc4953d7eede3861eb55872e6586aee99a2638e74efabe17b1"
+    },
+    {
+      "metrics": {
+        "duration_ms": 5000,
+        "f1": null,
+        "false_negatives": 0,
+        "false_positives": 0,
+        "false_positives_per_hour": 0,
+        "median_timestamp_error_ms": null,
+        "precision": null,
+        "processing_ms": 926.652542,
+        "realtime_factor": 5.395765697904921,
+        "recall": null,
+        "true_positives": 0
+      },
+      "sha256": "b043d20b060411d0c8b1bca167fc521629b1d2b5afad50394109be019ddee0bb"
+    },
+    {
+      "metrics": {
+        "duration_ms": 6000,
+        "f1": 1,
+        "false_negatives": 0,
+        "false_positives": 0,
+        "false_positives_per_hour": 0,
+        "median_timestamp_error_ms": 0,
+        "precision": 1,
+        "processing_ms": 997.324875,
+        "realtime_factor": 6.016093802934575,
+        "recall": 1,
+        "true_positives": 1
+      },
+      "sha256": "f8ac07734e5b067f1887988c3067c4b4000236af55bf8d206002c928e4847422"
+    }
+  ],
+  "compatibility": [
+    {
+      "compression": "heavy",
+      "height": 180,
+      "hud_scale": 1,
+      "locale": "en",
+      "metrics": {
+        "duration_ms": 11000,
+        "f1": 1,
+        "false_negatives": 0,
+        "false_positives": 0,
+        "false_positives_per_hour": 0,
+        "median_timestamp_error_ms": 0,
+        "precision": 1,
+        "processing_ms": 1923.977417,
+        "realtime_factor": 5.717322824480949,
+        "recall": 1,
+        "true_positives": 1
+      },
+      "status": "synthetic-only",
+      "width": 320
+    },
+    {
+      "compression": "light",
+      "height": 180,
+      "hud_scale": 1,
+      "locale": "en",
+      "metrics": {
+        "duration_ms": 8000,
+        "f1": 1,
+        "false_negatives": 0,
+        "false_positives": 0,
+        "false_positives_per_hour": 0,
+        "median_timestamp_error_ms": 0,
+        "precision": 1,
+        "processing_ms": 1161.968667,
+        "realtime_factor": 6.884867231966418,
+        "recall": 1,
+        "true_positives": 2
+      },
+      "status": "synthetic-only",
+      "width": 320
+    }
+  ],
+  "dataset_id": "synthetic-temporal-holdout-v1",
+  "detectors": [{ "id": "synthetic-bright-region", "version": "1.0.0" }],
+  "manifest_sha256": "d429ef79b0b4720dce161caa199dfc12f587d1bacdc79ffb03edc4f657cace2e",
+  "metrics": {
+    "duration_ms": 19000,
+    "f1": 1,
+    "false_negatives": 0,
+    "false_positives": 0,
+    "false_positives_per_hour": 0,
+    "median_timestamp_error_ms": 0,
+    "precision": 1,
+    "processing_ms": 3085.946084,
+    "realtime_factor": 6.15694489884678,
+    "recall": 1,
+    "true_positives": 3
+  },
+  "observations_sha256": "91cee424bd96d03093a954f22d65feaf2a2d84558c8658ce645a708d4cb2e23b",
+  "profile": { "id": "generic-open-world", "version": "1.0.0" },
+  "provenance": "synthetic",
+  "schema_version": "1.14",
+  "split": "holdout",
+  "tolerance_ms": 0
+}

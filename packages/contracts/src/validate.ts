@@ -3,6 +3,10 @@
 // Mirrors validate.py.
 import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
 import analysis from "../schemas/analysis.schema.json" with { type: "json" };
+import evaluation from "../schemas/evaluation.schema.json" with { type: "json" };
+import evaluationobservations from "../schemas/evaluation-observations.schema.json" with { type: "json" };
+import evaluationreport from "../schemas/evaluation-report.schema.json" with { type: "json" };
+import eventreview from "../schemas/event-review.schema.json" with { type: "json" };
 import common from "../schemas/common.schema.json" with { type: "json" };
 import derivedMedia from "../schemas/derived-media.schema.json" with { type: "json" };
 import error from "../schemas/error.schema.json" with { type: "json" };
@@ -26,6 +30,10 @@ import transcription from "../schemas/transcription.schema.json" with { type: "j
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
+  EvaluationManifest,
+  EvaluationObservations,
+  EvaluationReport,
+  EventReview,
   AnalysisResult,
   AssetDerivedMedia,
   AssetFingerprints,
@@ -52,6 +60,10 @@ import { checkVersion } from "./versioning.ts";
 
 /** Top-level contracts and their TypeScript types. */
 export interface ContractTypes {
+  "event-review": EventReview;
+  "evaluation-report": EvaluationReport;
+  "evaluation-observations": EvaluationObservations;
+  evaluation: EvaluationManifest;
   analysis: AnalysisResult;
   "derived-media": AssetDerivedMedia;
   error: ErrorInfo;
@@ -77,6 +89,10 @@ export type ContractName = keyof ContractTypes;
 
 /** Top-level contracts: name -> [schema, carries schema_version]. */
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
+  evaluation: [evaluation, true],
+  "evaluation-observations": [evaluationobservations, true],
+  "evaluation-report": [evaluationreport, true],
+  "event-review": [eventreview, true],
   analysis: [analysis, true],
   "derived-media": [derivedMedia, true],
   error: [error, false],
