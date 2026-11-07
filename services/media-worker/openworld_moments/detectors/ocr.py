@@ -194,7 +194,8 @@ class Tesseract:
             version = run_tool(
                 [location, "--version"], timeout_s=10, cancel=cancel, max_stdout=32768
             )
-            match = re.search(rb"tesseract (\d+\.\d+\.\d+[^\s]*)", version.stdout)
+            # Distribution builds may prefix their reported version with `v`.
+            match = re.search(rb"tesseract v?(\d+\.\d+\.\d+[^\s]*)", version.stdout)
             if version.returncode or not match or int(match[1].split(b".")[0]) < 5:
                 raise ValueError("version")
             langs = run_tool(

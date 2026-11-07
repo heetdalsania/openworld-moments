@@ -252,8 +252,9 @@ def test_ocr_cancellation_failure_and_scratch_cleanup(monkeypatch: pytest.Monkey
         backend.read(frame, "threshold", threading.Event())
 
 
+@pytest.mark.parametrize("reported_version", ["5.5.4", "v5.5.3.20260724"])
 def test_model_digest_and_mid_analysis_changes_fail_closed(
-    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, reported_version: str
 ) -> None:
     import openworld_moments.detectors.ocr as module
 
@@ -264,7 +265,7 @@ def test_model_digest_and_mid_analysis_changes_fail_closed(
 
     def reply(argv: Any, **kwargs: Any) -> ToolResult:
         data = (
-            b"tesseract 5.5.4\n"
+            f"tesseract {reported_version}\n".encode()
             if "--version" in argv
             else f'List of available languages in "{tmp_path}" (1):\neng\n'.encode()
         )
@@ -273,11 +274,29 @@ def test_model_digest_and_mid_analysis_changes_fail_closed(
     monkeypatch.setattr(module, "run_tool", reply)
     backend = Tesseract(str(executable))
     versions = backend.prepare("eng", threading.Event())
+    assert versions["ocr_engine"] == "tesseract-" + reported_version.removeprefix("v")
     assert len(versions["ocr_model_sha256"]) == 64
     backend.verify_model(threading.Event())
     model.write_bytes(b"changed language model")
     with pytest.raises(AnalysisError, match="changed"):
         backend.verify_model(threading.Event())
+
+
+@pytest.mark.parametrize("reported_version", ["4.1.1", "v4.1.1"])
+def test_old_ocr_engine_is_rejected_with_or_without_version_prefix(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch, reported_version: str
+) -> None:
+    import openworld_moments.detectors.ocr as module
+
+    executable = tmp_path / "tesseract"
+    executable.write_bytes(b"trusted tool placeholder")
+    monkeypatch.setattr(
+        module,
+        "run_tool",
+        lambda *args, **kwargs: ToolResult(0, f"tesseract {reported_version}\n".encode(), ""),
+    )
+    with pytest.raises(AnalysisError, match="unavailable"):
+        Tesseract(str(executable)).prepare("eng", threading.Event())
 
 
 def test_confirmed_banner_ocr_spelling_variants_do_not_split_the_same_phrase() -> None:

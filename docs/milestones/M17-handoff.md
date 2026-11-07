@@ -45,7 +45,7 @@
 - Test and validation results:
   - Full local quality gates pass: formatting, ESLint/Clippy/Ruff, REUSE,
     TypeScript/mypy, tests and deterministic generated-contract drift. Worker
-    **806 passed, 1 skipped** (existing Windows-only junction case on macOS);
+    **809 passed, 1 skipped** (existing Windows-only junction case on macOS);
     Python contracts **171**, TypeScript contracts **180**, desktop **130** and
     Rust **47** tests pass. No M17-required automated case skipped.
   - Production desktop build passes on macOS arm64 (no installer), with the
@@ -74,6 +74,10 @@
     OCR texts and **60/60** banner categories, including unknowns. Meets the 2×
     processing target on this reference machine; excludes proxy/decode/I/O,
     minimum Windows CPU and real-game accuracy. No held-out gameplay metric claimed.
+  - CI follow-up: Windows initially rejected a distribution version with a leading
+    `v` before recognition ran. Accept that prefix while retaining the >=5 gate;
+    regression tests cover both reported formats and reject 4.x with either form.
+    CI now runs the media-free OCR doctor before its full worker suite.
 - Decisions made:
   - Optional Tesseract 5+ executable with explicitly installed language data;
     Apache-2.0 engine/official data. Runtime adds no Python dependency. M29/M34

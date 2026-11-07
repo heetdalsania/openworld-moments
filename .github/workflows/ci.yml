@@ -67,6 +67,9 @@ jobs:
       - name: Media tool report (doctor)
         working-directory: services/media-worker
         run: uv run --locked python -m openworld_moments.doctor
+      - name: OCR tool report (doctor)
+        working-directory: services/media-worker
+        run: uv run --locked owm text doctor
       - name: Media worker
         working-directory: services/media-worker
         env:
