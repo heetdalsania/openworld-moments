@@ -228,11 +228,14 @@ class SessionService:
 
     @staticmethod
     def _locked_sessions(conn: sqlite3.Connection, sessions: SessionRepository) -> list[str]:
-        rows = conn.execute(
-            "SELECT id FROM sessions WHERE review_state <> 'unreviewed' "
-            "OR id IN (SELECT session_id FROM stories WHERE session_id IS NOT NULL) ORDER BY id"
-        ).fetchall()
-        return [r["id"] for r in rows]
+        """Sessions recompute must not change or delete: corrected or confirmed ones, and
+        any with attached data (stories, events, transcripts, collection items), which a
+        delete would drop or be blocked by."""
+        reviewed = {
+            r["id"]
+            for r in conn.execute("SELECT id FROM sessions WHERE review_state <> 'unreviewed'")
+        }
+        return sorted(reviewed | sessions.with_attached_data())
 
     def _apply(
         self,
@@ -391,9 +394,11 @@ class SessionService:
             members.sort(key=grouping.ordering_key)
             keep = targets[0]
             for other in targets[1:]:
-                if sessions.has_stories(other.id):
+                if sessions.has_attached_data(other.id):
                     raise SessionError(
-                        "session.in_use", "A merged session has stories; merge into it instead."
+                        "session.in_use",
+                        "A session being merged away has stories, events, transcripts, or "
+                        "collection entries; list it first to merge into it instead.",
                     )
                 sessions.replace_assets(other.id, [])
                 sessions.delete(other.id)
