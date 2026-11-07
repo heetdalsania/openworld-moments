@@ -330,7 +330,101 @@ def _event_review(doc: Document) -> Iterable[str]:
             )
 
 
+def _story_ranges(ranges: list[Document], start: int, end: int) -> Iterable[str]:
+    position = start
+    used: dict[str, list[tuple[int, int]]] = {}
+    for r in ranges:
+        if (
+            r["session_start_ms"] != position
+            or r["session_end_ms"] <= position
+            or r["source_out_ms"] - r["source_in_ms"] != r["session_end_ms"] - position
+        ):
+            yield (
+                "source_ranges: ranges must cover the window exactly without gaps or duplicate time"
+            )
+        for a, b in used.get(r["asset_id"], []):
+            if r["source_in_ms"] < b and a < r["source_out_ms"]:
+                yield "source_ranges: duplicate source footage"
+        used.setdefault(r["asset_id"], []).append((r["source_in_ms"], r["source_out_ms"]))
+        position = r["session_end_ms"]
+    if position != end:
+        yield "source_ranges: end differs from the window"
+
+
+def _story_candidate(doc: Document) -> Iterable[str]:
+    yield from _range("end_ms", doc["start_ms"], doc["end_ms"], strict=True)
+    maximum = {"moment": 25000, "short": 60000, "extended_short": 180000, "highlight": 120000}[
+        doc["preset"]
+    ]
+    if doc["end_ms"] - doc["start_ms"] > maximum:
+        yield "end_ms: preset maximum exceeded"
+    yield from _story_ranges(doc["source_ranges"], doc["start_ms"], doc["end_ms"])
+    ids = [e["event_id"] for e in doc["source_events"]]
+    if len(ids) != len(set(ids)):
+        yield "source_events: event IDs must be unique"
+    for e in doc["source_events"]:
+        yield from _range("source_events.end_ms", e["start_ms"], e["end_ms"], strict=True)
+    for b in doc["beats"]:
+        yield from _range("beats.end_ms", b["start_ms"], b["end_ms"], strict=True)
+        if b["start_ms"] < doc["start_ms"] or b["end_ms"] > doc["end_ms"]:
+            yield "beats: outside candidate window"
+        if not set(b["event_ids"]) <= set(ids):
+            yield "beats: unknown source event"
+    if abs(sum(doc["score_components"].values()) - doc["score"]) > 0.0000011:
+        yield "score: must equal the sum of score_components"
+    positive = {
+        "event_confidence": 0.25,
+        "setup_coverage": 0.15,
+        "payoff_coverage": 0.2,
+        "reaction_evidence": 0.1,
+        "continuity_score": 0.3,
+    }
+    negative = {
+        "duplicate_penalty": 0,
+        "dead_air_penalty": 0.15,
+        "truncation_penalty": 0.25,
+        "spoiler_risk_penalty": 0.1,
+        "rejection_penalty": 0.2,
+        "missing_payoff_penalty": 0.1,
+    }
+    if any(not 0 <= doc["score_components"][k] <= v for k, v in positive.items()) or any(
+        not -v <= doc["score_components"][k] <= 0 for k, v in negative.items()
+    ):
+        yield "score_components: component outside documented weight"
+    seen = set()
+    for a in doc["alternatives"]:
+        yield from _range("alternatives.end_ms", a["start_ms"], a["end_ms"], strict=True)
+        if a["end_ms"] - a["start_ms"] > maximum or a["kind"] in seen:
+            yield "alternatives: preset maximum or unique kind violated"
+        seen.add(a["kind"])
+        yield from _story_ranges(a["source_ranges"], a["start_ms"], a["end_ms"])
+
+
+def _story_candidates(doc: Document) -> Iterable[str]:
+    ids = [i["candidate"]["id"] for i in doc["items"]]
+    if len(ids) != len(set(ids)) or (ids and doc["offset"] + len(ids) > doc["total"]):
+        yield "items: duplicate IDs or inconsistent page total"
+    for item in doc["items"]:
+        c = item["candidate"]
+        yield from _story_candidate(c)
+        if c["session_id"] != doc["session_id"]:
+            yield "items: foreign session"
+        if item["current"] and (
+            c["input_key"] != doc["input_key"]
+            or c["layout_key"] != doc["layout_key"]
+            or c["generator"] != doc["generator"]
+            or c["end_ms"] > doc["duration_ms"]
+        ):
+            yield "items: current candidate identity or timing differs"
+        if item["revision"] == 0 and item["review_state"] != "suggested":
+            yield "items: unrecorded review decision"
+        if item.get("project_id", c["id"]) != c["id"]:
+            yield "items: project ID differs from candidate"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "story-candidate": _story_candidate,
+    "story-candidates": _story_candidates,
     "evaluation": _evaluation,
     "evaluation-observations": _evaluation,
     "event-review": _event_review,

@@ -11,3 +11,5 @@ See [fixture policy](../README.md).
   and negative/failure coverage. No gameplay or model files are bundled.
 
 - [evaluation-holdout-v1.json](./evaluation-holdout-v1.json): M19 independent temporal annotations by media hash, with [frozen observations and reports](../../docs/evaluation/README.md). Generated media and the private file map stay local.
+
+M20 [story-golden-v1.json](./story-golden-v1.json) contains ten independent synthetic metadata timelines and declared expected windows/coverage; no media or transcript text. See [coverage report](../../docs/stories/sample/report.md).

@@ -80,3 +80,5 @@ fixture suites check this.
 5. Add a `CHANGELOG.md` entry.
 
 M19 adds review and evaluation contracts at schema version 1.14; see [event review](../../docs/architecture/event-review.md) and [local evaluation](../../docs/evaluation/README.md).
+
+M20 adds `story-candidate` and `story-candidates`; see [story engine](../../docs/architecture/stories.md). The `story` job kind generates candidates without editing source media.

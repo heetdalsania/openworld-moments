@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  StoryCandidate,
+  StoryCandidates,
   EvaluationManifest,
   EvaluationObservations,
   EventReview,
@@ -394,8 +396,113 @@ function* eventReview(doc: EventReview): Generator<string> {
   }
 }
 
+function* storyRanges(
+  ranges: StoryCandidate["source_ranges"],
+  start: number,
+  end: number,
+): Generator<string> {
+  let position = start;
+  const used = new Map<string, [number, number][]>();
+  for (const r of ranges) {
+    if (
+      r.session_start_ms !== position ||
+      r.session_end_ms <= position ||
+      r.source_out_ms - r.source_in_ms !== r.session_end_ms - position
+    )
+      yield "source_ranges: ranges must cover the window exactly without gaps or duplicate time";
+    for (const [a, b] of used.get(r.asset_id) ?? [])
+      if (r.source_in_ms < b && a < r.source_out_ms)
+        yield "source_ranges: duplicate source footage";
+    used.set(r.asset_id, [...(used.get(r.asset_id) ?? []), [r.source_in_ms, r.source_out_ms]]);
+    position = r.session_end_ms;
+  }
+  if (position !== end) yield "source_ranges: end differs from the window";
+}
+function* storyCandidate(doc: StoryCandidate): Generator<string> {
+  yield* range("end_ms", doc.start_ms, doc.end_ms, true);
+  const maximum = { moment: 25000, short: 60000, extended_short: 180000, highlight: 120000 }[
+    doc.preset
+  ];
+  if (doc.end_ms - doc.start_ms > maximum) yield "end_ms: preset maximum exceeded";
+  yield* storyRanges(doc.source_ranges, doc.start_ms, doc.end_ms);
+  const ids = doc.source_events.map((e) => e.event_id);
+  if (new Set(ids).size !== ids.length) yield "source_events: event IDs must be unique";
+  for (const e of doc.source_events)
+    yield* range("source_events.end_ms", e.start_ms, e.end_ms, true);
+  for (const b of doc.beats) {
+    yield* range("beats.end_ms", b.start_ms, b.end_ms, true);
+    if (b.start_ms < doc.start_ms || b.end_ms > doc.end_ms) yield "beats: outside candidate window";
+    if (b.event_ids.some((id) => !ids.includes(id))) yield "beats: unknown source event";
+  }
+  if (
+    Math.abs(Object.values(doc.score_components).reduce((a, b) => a + b, 0) - doc.score) > 0.0000011
+  )
+    yield "score: must equal the sum of score_components";
+  const positive = {
+    event_confidence: 0.25,
+    setup_coverage: 0.15,
+    payoff_coverage: 0.2,
+    reaction_evidence: 0.1,
+    continuity_score: 0.3,
+  };
+  const negative = {
+    duplicate_penalty: 0,
+    dead_air_penalty: 0.15,
+    truncation_penalty: 0.25,
+    spoiler_risk_penalty: 0.1,
+    rejection_penalty: 0.2,
+    missing_payoff_penalty: 0.1,
+  };
+  if (
+    Object.entries(positive).some(
+      ([k, v]) =>
+        doc.score_components[k as keyof typeof doc.score_components] < 0 ||
+        doc.score_components[k as keyof typeof doc.score_components] > v,
+    ) ||
+    Object.entries(negative).some(
+      ([k, v]) =>
+        doc.score_components[k as keyof typeof doc.score_components] < -v ||
+        doc.score_components[k as keyof typeof doc.score_components] > 0,
+    )
+  )
+    yield "score_components: component outside documented weight";
+  const seen = new Set<string>();
+  for (const a of doc.alternatives) {
+    yield* range("alternatives.end_ms", a.start_ms, a.end_ms, true);
+    if (a.end_ms - a.start_ms > maximum || seen.has(a.kind))
+      yield "alternatives: preset maximum or unique kind violated";
+    seen.add(a.kind);
+    yield* storyRanges(a.source_ranges, a.start_ms, a.end_ms);
+  }
+}
+function* storyCandidates(doc: StoryCandidates): Generator<string> {
+  const ids = doc.items.map((i) => i.candidate.id);
+  if (new Set(ids).size !== ids.length || (ids.length && doc.offset + ids.length > doc.total))
+    yield "items: duplicate IDs or inconsistent page total";
+  for (const item of doc.items) {
+    const c = item.candidate;
+    yield* storyCandidate(c);
+    if (c.session_id !== doc.session_id) yield "items: foreign session";
+    if (
+      item.current &&
+      (c.input_key !== doc.input_key ||
+        c.layout_key !== doc.layout_key ||
+        c.generator.id !== doc.generator.id ||
+        c.generator.version !== doc.generator.version ||
+        c.end_ms > doc.duration_ms)
+    )
+      yield "items: current candidate identity or timing differs";
+    if (item.revision === 0 && item.review_state !== "suggested")
+      yield "items: unrecorded review decision";
+    if (item.project_id && item.project_id !== c.id)
+      yield "items: project ID differs from candidate";
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "story-candidate": storyCandidate,
+  "story-candidates": storyCandidates,
   evaluation,
   "evaluation-observations": evaluation,
   "event-review": eventReview,

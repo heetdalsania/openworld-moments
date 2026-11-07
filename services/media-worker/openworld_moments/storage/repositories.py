@@ -1192,6 +1192,7 @@ class SessionRepository:
         "SELECT session_id FROM stories WHERE session_id IS NOT NULL "
         "UNION SELECT session_id FROM events "
         "UNION SELECT session_id FROM event_observations "
+        "UNION SELECT session_id FROM story_candidates "
         "UNION SELECT session_id FROM transcript_segments "
         "UNION SELECT session_id FROM collection_items WHERE session_id IS NOT NULL"
     )

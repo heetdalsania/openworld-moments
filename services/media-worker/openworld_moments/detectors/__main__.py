@@ -157,8 +157,15 @@ def main() -> int:
     from openworld_moments.evaluation.cli import arguments as eval_arguments
 
     eval_arguments(sub)
+    from openworld_moments.stories.cli import arguments as story_arguments
+
+    story_arguments(sub)
     args = parser.parse_args()
     try:
+        if args.command in ("story", "story-review", "story-golden"):
+            from openworld_moments.stories.cli import command as story_command
+
+            return story_command(args)
         if args.command == "eval":
             from openworld_moments.evaluation.cli import command as evaluate_command
 

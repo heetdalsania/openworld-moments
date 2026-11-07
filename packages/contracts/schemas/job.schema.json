@@ -29,7 +29,8 @@
         "check_sources",
         "fingerprint",
         "group",
-        "align"
+        "align",
+        "story"
       ]
     },
     "state": {

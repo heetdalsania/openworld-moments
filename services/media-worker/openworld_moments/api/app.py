@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from openworld_moments_contracts import normalize
@@ -57,6 +57,7 @@ from openworld_moments.storage import (
     WatchedFolderRepository,
     transaction,
 )
+from openworld_moments.stories.service import StoryDecision, StoryError, StoryRequest, StoryService
 from openworld_moments.transcripts.service import Transcriber
 from openworld_moments.watched import service as watched
 
@@ -254,6 +255,10 @@ class SubmitTranscription(BaseModel):
     model: str
     language: str | None = None
     force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitStories(StoryRequest):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
@@ -602,6 +607,65 @@ def create_app(
         except NotFoundError as exc:
             raise session_missing(session_id) from exc
         return dict(result)
+
+    stories = StoryService(engine.database)
+
+    @app.exception_handler(StoryError)
+    async def story_error(request: Request, exc: StoryError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, retryable=False, correlation_id=cid(request)),
+            status_code=exc.status,
+        )
+
+    @app.post("/v1/sessions/{session_id}/stories", status_code=201)
+    async def generate_stories(
+        session_id: str, body: SubmitStories, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
+        params["session_id"] = session_id
+        return await submit_job("story", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/sessions/{session_id}/stories")
+    async def list_stories(
+        session_id: str,
+        preset: Literal["moment", "short", "extended_short", "highlight"] = "short",
+        pre_roll_ms: int | None = Query(default=None, ge=0, le=60000),
+        post_roll_ms: int | None = Query(default=None, ge=0, le=60000),
+        merge_gap_ms: int | None = Query(default=None, ge=0, le=30000),
+        avoid_spoilers: bool = False,
+        allow_unreviewed: bool = True,
+        include_history: bool = False,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        options = StoryRequest(
+            preset=preset,
+            pre_roll_ms=pre_roll_ms,
+            post_roll_ms=post_roll_ms,
+            merge_gap_ms=merge_gap_ms,
+            avoid_spoilers=avoid_spoilers,
+            allow_unreviewed=allow_unreviewed,
+        )
+        try:
+            return await asyncio.to_thread(
+                stories.page,
+                session_id,
+                options,
+                include_history=include_history,
+                offset=offset,
+                limit=limit,
+            )
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+
+    @app.post("/v1/sessions/{session_id}/stories/{candidate_id}/decision")
+    async def decide_story(
+        session_id: str, candidate_id: str, body: StoryDecision
+    ) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(stories.decide, session_id, candidate_id, body)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
 
     review = EventReviewService(engine.database)
 

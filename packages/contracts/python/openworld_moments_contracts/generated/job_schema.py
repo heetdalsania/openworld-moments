@@ -53,6 +53,7 @@ class Job(BaseModel):
         "fingerprint",
         "group",
         "align",
+        "story",
     ]
     state: Literal[
         "queued",
