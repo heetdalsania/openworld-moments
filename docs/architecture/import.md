@@ -167,13 +167,11 @@ last seen. A renamed copy of the same file adds a provenance row, not an asset.
 re-import of a missing asset update it. `managed_path` is stored relative to
 the library (`managed-media/ab/cd/…`), so the library folder can be moved.
 
-Each asset also gets `size_bytes` (contract 1.3) and a preliminary
-`capture_time`:
-
-- From the container's `creation_time`: basis `container_metadata`, confidence 0.6.
-- Otherwise from the file's mtime: basis `filesystem_mtime`, confidence 0.2.
-
-Session grouping (M11) refines it.
+Each asset also gets `size_bytes` (contract 1.3) and a `capture_time` estimated
+from its filename timestamp, container creation time, and file mtime (since M11;
+see [sessions](./sessions.md#capture-time)). The probed container time is kept
+in `container_created_at`, so the `group` job can re-estimate from all signals,
+including what one file cannot tell (copies made together share an mtime).
 
 ## Missing sources and relink
 

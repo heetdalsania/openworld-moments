@@ -185,7 +185,33 @@ def _derived_media(doc: Document) -> Iterable[str]:
             yield f"artifacts[{i}].proxy.tone_map: present exactly when tone_mapped is true"
 
 
+def _instant(timestamp: str) -> datetime:
+    return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+
+def _session(doc: Document) -> Iterable[str]:
+    members = doc["assets"]
+    if [m["order_index"] for m in members] != list(range(len(members))):
+        yield "assets: order_index must be 0, 1, 2, … in order"
+    starts = [m["session_start_ms"] for m in members]
+    if any(b < a for a, b in pairwise(starts)):
+        yield "assets: session_start_ms must not decrease"
+    ids = [m["asset_id"] for m in members]
+    if len(set(ids)) != len(ids):
+        yield "assets: an asset appears twice"
+    started, ended = doc.get("started_at"), doc.get("ended_at")
+    if started and ended and _instant(ended) < _instant(started):
+        yield "ended_at: before started_at"
+    grouping = doc.get("grouping")
+    if grouping:
+        pairs = set(pairwise(ids))
+        for i, link in enumerate(grouping["links"]):
+            if (link["from_asset_id"], link["to_asset_id"]) not in pairs:
+                yield f"grouping.links[{i}]: must join adjacent members"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "session": _session,
     "derived-media": _derived_media,
     "event": _event,
     "job": _job,

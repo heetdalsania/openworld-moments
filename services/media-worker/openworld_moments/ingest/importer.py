@@ -27,7 +27,6 @@ import threading
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -64,6 +63,7 @@ from openworld_moments.media.probe import (
     probe_file,
 )
 from openworld_moments.media.tools import MediaTools, ToolInfo
+from openworld_moments.sessions.capture import Signals, estimate
 from openworld_moments.storage import (
     AssetImportRepository,
     AssetRepository,
@@ -89,9 +89,6 @@ MAX_FILE_BYTES = 1 << 40  # 1 TiB
 #: Free space kept in reserve beyond the file itself when copying into the library.
 FREE_SPACE_MARGIN = 256 * 1024 * 1024
 MAX_MISSING_IDS = 1000
-#: Capture-time confidence by basis. Preliminary; session grouping (M11) refines it.
-CONTAINER_TIME_CONFIDENCE = 0.6
-MTIME_CONFIDENCE = 0.2
 
 
 class ImportFailure(Exception):
@@ -169,21 +166,18 @@ def _require_ffprobe(tools: MediaTools) -> ToolInfo:
     return ffprobe
 
 
-def capture_time(probe: Mapping[str, Any], mtime_ns: int) -> dict[str, Any]:
-    """Preliminary capture-time estimate: container creation time, else file mtime."""
-    created = probe.get("creation_time")
-    if created:
-        return {
-            "captured_at": created,
-            "confidence": CONTAINER_TIME_CONFIDENCE,
-            "basis": ["container_metadata"],
-        }
-    when = datetime.fromtimestamp(mtime_ns / 1e9, tz=UTC)
-    return {
-        "captured_at": when.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-        "confidence": MTIME_CONFIDENCE,
-        "basis": ["filesystem_mtime"],
-    }
+def capture_time(probe: Mapping[str, Any], mtime_ns: int, name: str = "") -> dict[str, Any]:
+    """Capture-time estimate from the filename, container time, and mtime (M11).
+
+    The ``group`` job re-estimates later with what one file cannot tell (for example
+    that a batch of copies share an mtime)."""
+    signals = Signals(
+        original_name=name,
+        container_created_at=probe.get("creation_time"),
+        mtime_ns=mtime_ns,
+        duration_ms=int(probe.get("duration_ms") or 0),
+    )
+    return estimate(signals).doc()
 
 
 @dataclass
@@ -518,7 +512,12 @@ class Importer:
                         managed_path = self._place(staged, extension) if staged else None
                         asset_id = new_id("ast")
                         asset = self._asset(asset_id, path, batch, probe, fingerprint, fast)
-                        assets.add(asset, original_path=str(path), managed_path=managed_path)
+                        assets.add(
+                            asset,
+                            original_path=str(path),
+                            managed_path=managed_path,
+                            container_created_at=probe.get("creation_time"),
+                        )
                         outcome = "imported"
                     self._record_fast(conn, asset_id, fast)
                     AssetImportRepository(conn).record(
@@ -605,7 +604,7 @@ class Importer:
             "source_kind": batch.source_kind,
             "import_mode": batch.mode,
             "size_bytes": fingerprint.size,
-            "capture_time": capture_time(probe, fingerprint.mtime_ns),
+            "capture_time": capture_time(probe, fingerprint.mtime_ns, path.name),
             "duration_ms": probe["duration_ms"],
             "container": probe["container"],
             "audio": probe["audio"],

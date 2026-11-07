@@ -119,6 +119,33 @@ export type UtcTimestamp1 = string;
  */
 export type SegmentId = string;
 /**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp2 = string;
+/**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp3 = string;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs1 = number;
+/**
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "GroupingReason".
+ */
+export type GroupingReason =
+  | "same_source"
+  | "compatible_format"
+  | "gap_within_limit"
+  | "overlapping"
+  | "time_unknown"
+  | "import_order"
+  | "codec_changed"
+  | "resolution_changed"
+  | "frame_rate_changed"
+  | "gap_exceeded";
+/**
  * This interface was referenced by `WatchedFolder`'s JSON-Schema
  * via the `definition` "SourceKind".
  */
@@ -135,7 +162,7 @@ export type Patterns = string[];
 /**
  * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
  */
-export type UtcTimestamp2 = string;
+export type UtcTimestamp4 = string;
 
 export interface ContractsBundle {
   "derived-media"?: AssetDerivedMedia;
@@ -151,6 +178,7 @@ export interface ContractsBundle {
   profile?: Profile;
   project?: Project;
   "render-preset"?: RenderPreset;
+  session?: Session;
   "watched-folder"?: WatchedFolder;
 }
 /**
@@ -1228,7 +1256,8 @@ export interface Job {
     | "probe"
     | "relink"
     | "check_sources"
-    | "fingerprint";
+    | "fingerprint"
+    | "group";
   state:
     | "queued"
     | "probing"
@@ -1247,7 +1276,7 @@ export interface Job {
    */
   params?: {};
   /**
-   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs); 'proxy': DerivedMediaResult (derived-media.schema.json#/$defs). Must not contain secrets.
+   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs); 'proxy': DerivedMediaResult (derived-media.schema.json#/$defs); 'group': GroupResult (session.schema.json#/$defs). Must not contain secrets.
    */
   result?: {};
   /**
@@ -1607,6 +1636,165 @@ export interface AudioEncoding {
   sample_rate_hz: 44100 | 48000;
 }
 /**
+ * A candidate play session (spec 8.2, M11): assets grouped by source, format, and capture-time gaps, in order, with the evidence for each join. 'review_state' says who owns it: 'unreviewed' sessions are rebuilt by the 'group' job; 'corrected' (changed by the user) and 'confirmed' sessions are never touched by automatic grouping.
+ */
+export interface Session {
+  schema_version: string;
+  id: SessionId;
+  title: string;
+  started_at?: UtcTimestamp2;
+  ended_at?: UtcTimestamp3;
+  /**
+   * How sure the grouping is: the weakest join, or for one clip how sure its start time is. Null on corrected sessions. See docs/architecture/sessions.md.
+   */
+  grouping_confidence?: Confidence | null;
+  review_state: "unreviewed" | "confirmed" | "corrected";
+  /**
+   * Members in session order: order_index is 0, 1, 2, … and session_start_ms never decreases (checked semantically).
+   *
+   * @minItems 1
+   */
+  assets: [SessionMember, ...SessionMember[]];
+  grouping?: SessionGrouping | null;
+  created_at: UtcTimestamp;
+  updated_at?: UtcTimestamp;
+}
+/**
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "SessionMember".
+ */
+export interface SessionMember {
+  asset_id: AssetId;
+  order_index: number;
+  session_start_ms: TimelineMs1;
+  duration_ms: TimelineMs;
+  capture_time?: CaptureTimeEstimate;
+}
+/**
+ * How an automatic session was formed. Null on corrected sessions: their membership is the user's decision (see the correction log).
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "SessionGrouping".
+ */
+export interface SessionGrouping {
+  algorithm: "owm-metadata-gap";
+  version: number;
+  settings: {
+    max_gap_ms: number;
+  };
+  links: GroupingLink[];
+  /**
+   * Why the first clip did not join the previous clip from the same source.
+   */
+  split_before?: GroupingReason[];
+  /**
+   * Capture-time caveats of the members (time-zone mismatch, copy times, …).
+   *
+   * @maxItems 50
+   */
+  notes?: string[];
+}
+/**
+ * Why to_asset_id continues from_asset_id (adjacent members). gap_ms is negative when the clips overlap.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "GroupingLink".
+ */
+export interface GroupingLink {
+  from_asset_id: AssetId;
+  to_asset_id: AssetId;
+  gap_ms: number;
+  confidence: Confidence;
+  /**
+   * @minItems 1
+   */
+  reasons: [GroupingReason, ...GroupingReason[]];
+}
+/**
+ * Params of a 'group' job. max_gap_ms defaults to the 'sessions.max_gap_ms' setting, else 15 minutes.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "GroupRequest".
+ */
+export interface GroupRequest {
+  max_gap_ms?: number;
+}
+/**
+ * Result of a 'group' job. A second run over unchanged assets creates, updates, and removes nothing.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "GroupResult".
+ */
+export interface GroupResult {
+  considered_assets: number;
+  /**
+   * Assets in corrected or confirmed sessions, left as they are.
+   */
+  locked_assets: number;
+  capture_times_updated: number;
+  sessions_created: number;
+  sessions_updated: number;
+  sessions_unchanged: number;
+  sessions_removed: number;
+}
+/**
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "MergeRequest".
+ */
+export interface MergeRequest {
+  /**
+   * @minItems 2
+   * @maxItems 50
+   */
+  session_ids: [SessionId, SessionId, ...SessionId[]];
+}
+/**
+ * Split after this member: it and the clips before it stay; the rest form a new session.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "SplitRequest".
+ */
+export interface SplitRequest {
+  after_asset_id: AssetId;
+}
+/**
+ * Every member exactly once, in the new order.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "ReorderRequest".
+ */
+export interface ReorderRequest {
+  /**
+   * @minItems 1
+   */
+  asset_ids: [AssetId, ...AssetId[]];
+}
+/**
+ * Mark a member as unrelated: it moves to a session of its own that automatic grouping never changes.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "RemoveRequest".
+ */
+export interface RemoveRequest {
+  asset_id: AssetId;
+}
+/**
+ * One entry of the correction log.
+ *
+ * This interface was referenced by `Session`'s JSON-Schema
+ * via the `definition` "SessionCorrection".
+ */
+export interface SessionCorrection {
+  id: number;
+  kind: "merge" | "split" | "reorder" | "remove" | "confirm";
+  session_ids: SessionId[];
+  asset_ids: AssetId[];
+  detail?: {
+    [k: string]: ScalarValue | undefined;
+  } | null;
+  created_at: UtcTimestamp;
+}
+/**
  * A user-approved folder whose completed video files are imported automatically (spec 6.1, 8.1.2, M07). The desktop host watches it and reports stable files; the worker decides whether to import. Nothing in a watched folder is ever moved, renamed, or deleted.
  */
 export interface WatchedFolder {
@@ -1630,7 +1818,7 @@ export interface WatchedFolder {
   enabled: boolean;
   created_at: UtcTimestamp;
   updated_at: UtcTimestamp;
-  last_scan_at?: UtcTimestamp2;
+  last_scan_at?: UtcTimestamp4;
   /**
    * Reported by the host: whether the folder could be read at the last check.
    */

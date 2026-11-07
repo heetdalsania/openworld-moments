@@ -116,6 +116,9 @@ class Session(_Model):
     grouping_confidence: float | None = Field(default=None, ge=0, le=1)
     review_state: Literal["unreviewed", "confirmed", "corrected"] = "unreviewed"
     created_at: str
+    #: How the session was grouped (contract ``SessionGrouping``), since 0008.
+    grouping: dict[str, JsonValue] | None = None
+    updated_at: str | None = None
 
 
 class SessionAsset(_Model):
@@ -186,6 +189,7 @@ class AssetRepository:
         original_path: str | None = None,
         managed_path: str | None = None,
         source_profile_id: str | None = None,
+        container_created_at: str | None = None,
     ) -> None:
         d = _dump_model(asset)
         capture = d.get("capture_time")
@@ -205,6 +209,7 @@ class AssetRepository:
                 "source_kind": d["source_kind"],
                 "import_mode": d["import_mode"],
                 "source_profile_id": source_profile_id,
+                "container_created_at": container_created_at,
                 "captured_at": capture["captured_at"] if capture else None,
                 "captured_at_confidence": capture["confidence"] if capture else None,
                 "captured_at_basis_json": _dumps(capture["basis"]) if capture else None,
@@ -1000,20 +1005,110 @@ class SessionRepository:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
+    @staticmethod
+    def _row(session: Session) -> dict[str, Any]:
+        row = session.model_dump(exclude={"grouping"})
+        row["grouping_json"] = _dumps(session.grouping) if session.grouping is not None else None
+        return row
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> Session:
+        data = dict(row)
+        grouping = data.pop("grouping_json", None)
+        return Session(**data, grouping=_loads(grouping) if grouping is not None else None)
+
     def add(self, session: Session) -> None:
-        _insert(self.conn, "sessions", session.model_dump())
+        _insert(self.conn, "sessions", self._row(session))
+
+    def update(self, session: Session) -> None:
+        """Replace every stored field of an existing session."""
+        row = self._row(session)
+        fields = [k for k in row if k != "id"]
+        cur = self.conn.execute(
+            f"UPDATE sessions SET {', '.join(f'{k} = :{k}' for k in fields)} "  # noqa: S608
+            "WHERE id = :id",
+            row,
+        )
+        if cur.rowcount == 0:
+            raise NotFoundError(f"session {session.id} not found")
 
     def get(self, session_id: str) -> Session:
         row = self.conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
         if row is None:
             raise NotFoundError(f"session {session_id} not found")
-        return Session(**dict(row))
+        return self._from_row(row)
 
     def all(self) -> list[Session]:
         rows = self.conn.execute(
             "SELECT * FROM sessions ORDER BY started_at IS NULL, started_at, id"
         ).fetchall()
-        return [Session(**dict(r)) for r in rows]
+        return [self._from_row(r) for r in rows]
+
+    def newest(self, *, limit: int = 200, offset: int = 0) -> list[Session]:
+        rows = self.conn.execute(
+            "SELECT * FROM sessions ORDER BY started_at IS NULL, started_at DESC, id DESC "
+            "LIMIT ? OFFSET ?",
+            (limit, offset),
+        ).fetchall()
+        return [self._from_row(r) for r in rows]
+
+    def replace_assets(self, session_id: str, links: list[SessionAsset]) -> None:
+        """Set a session's members and order in one go."""
+        self.conn.execute("DELETE FROM session_assets WHERE session_id = ?", (session_id,))
+        for link in links:
+            self.add_asset(link)
+
+    def session_of(self, asset_id: str) -> str | None:
+        row = self.conn.execute(
+            "SELECT session_id FROM session_assets WHERE asset_id = ? ORDER BY session_id LIMIT 1",
+            (asset_id,),
+        ).fetchone()
+        return row[0] if row else None
+
+    def has_stories(self, session_id: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM stories WHERE session_id = ? LIMIT 1", (session_id,)
+        ).fetchone()
+        return row is not None
+
+    def log_correction(
+        self,
+        kind: Literal["merge", "split", "reorder", "remove", "confirm"],
+        session_ids: list[str],
+        asset_ids: list[str],
+        detail: dict[str, JsonValue] | None = None,
+    ) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO session_corrections (kind, session_ids_json, asset_ids_json, "
+            "detail_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (
+                kind,
+                _dumps(session_ids),
+                _dumps(asset_ids),
+                _dumps(detail) if detail is not None else None,
+                utc_now(),
+            ),
+        )
+        return int(cur.lastrowid or 0)
+
+    def corrections(self, session_id: str | None = None) -> list[dict[str, Any]]:
+        rows = self.conn.execute("SELECT * FROM session_corrections ORDER BY id").fetchall()
+        out = []
+        for row in rows:
+            sessions = _loads(row["session_ids_json"])
+            if session_id is not None and session_id not in (sessions or []):
+                continue
+            out.append(
+                {
+                    "id": row["id"],
+                    "kind": row["kind"],
+                    "session_ids": sessions,
+                    "asset_ids": _loads(row["asset_ids_json"]),
+                    "detail": _loads(row["detail_json"]),
+                    "created_at": row["created_at"],
+                }
+            )
+        return out
 
     def add_asset(self, link: SessionAsset) -> None:
         _insert(self.conn, "session_assets", link.model_dump())
