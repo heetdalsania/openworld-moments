@@ -687,6 +687,20 @@ export interface OcrEvidence {
   region: Region;
   text: string;
   score: Confidence;
+  frame_ms?: TimelineMs;
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  lines?: [OcrLine, ...OcrLine[]];
+}
+/**
+ * A recognized line in upright global normalized source coordinates.
+ */
+export interface OcrLine {
+  text: string;
+  region: Region;
+  score: Confidence;
 }
 /**
  * The state was observed consistently across this many frames.
@@ -1666,6 +1680,7 @@ export interface DetectorSettings {
    */
   locale?: string;
   wanted?: WantedSettings;
+  ocr?: OcrSettings;
 }
 /**
  * Analytic indicator row and temporal tuning. Compatibility must be evaluated separately.
@@ -1678,6 +1693,16 @@ export interface WantedSettings {
   shape?: "star" | "disc";
   max_missing_frames?: number;
   debounce_ms?: number;
+}
+/**
+ * This interface was referenced by `Profile`'s JSON-Schema
+ * via the `definition` "OcrSettings".
+ */
+export interface OcrSettings {
+  preprocess?: "contrast" | "threshold";
+  min_text_confidence?: Confidence;
+  match_threshold?: number;
+  max_missing_frames?: number;
 }
 export interface SafeZones {
   /**
@@ -1698,6 +1723,10 @@ export interface LocalePack {
      */
     [k: string]: string[] | undefined;
   };
+  /**
+   * Installed Tesseract language ID; never a path or download URL.
+   */
+  ocr_language?: string;
 }
 /**
  * Non-destructive edit decision list (spec 11.1). References source assets by ID; never stores rendered media.

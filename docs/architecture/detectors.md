@@ -1,11 +1,12 @@
-# Detector runtime and local profiles (M14–M16)
+# Detector runtime and local profiles (M14–M17)
 
 M14 supplies the runtime through which **trusted, shipped built-in detectors**
 read derived media and emit validated observations. Shipped built-ins are
 `synthetic-bright-region` (the generated-fixture example) and `wanted-indicators`
 (the analytic temporal detector, validated on synthetic fixtures). See the
 [wanted guide](../detectors/wanted.md). The GTA profile directories remain
-unvalidated placeholders.
+unvalidated placeholders. M17 adds `region-banner-ocr` and `region-subtitle-ocr`
+with a local optional Tesseract adapter; see [OCR](../detectors/text.md).
 
 ## Entry points
 
@@ -25,7 +26,7 @@ game-specific template or event-review UI is introduced. M15 supplies the
 ## Profile manifest
 
 The canonical profile contract remains `packages/contracts/schemas/profile.schema.json`
-(contracts 1.11). Older 1.x manifests remain contract-readable. To **run analysis**,
+(contracts 1.12). Older 1.x manifests remain contract-readable. To **run analysis**,
 the resolved profile must also declare its license and capabilities.
 
 | Field | Meaning |
@@ -35,8 +36,8 @@ the resolved profile must also declare its license and capabilities.
 | `frame` | Minimum upright source dimensions and permitted aspect ratios (1% tolerance) |
 | `regions` | Named normalized `[x,y,w,h]` regions, checked fully inside the frame |
 | `capabilities` | Allowed input capabilities; currently only `frames.gray` |
-| `detectors` | Built-in IDs, enable flags, confidence threshold, confirmation frames, optional locale and analytic wanted settings |
-| `locales` | Language tags → `{version, license, vocabulary}`; vocabulary maps named categories to strings |
+| `detectors` | Built-in IDs, enable flags, confidence threshold, confirmation frames, optional locale and analytic wanted/OCR settings |
+| `locales` | Language tags → `{version, license, vocabulary, ocr_language?}`; vocabulary maps named categories to strings |
 | `safe_zones` | Named regions for downstream layout use |
 | `extends` | An optional local catalog profile ID; never a URL, path or code entry point |
 
@@ -95,6 +96,11 @@ calibrated `wanted_indicator` region. Numeric bounds and proxy detail are checke
 before decode. This small M14 prerequisite repair preserves HUD detail that the
 whole-frame sampler discards. Profiles cannot supply FFmpeg expressions. Sampler
 versions differ in cache/provenance; frames are reused only for the same ROI.
+M17 uses a second source-owned sampler size, 640×128 at 2 fps, for cropped text.
+Frame reuse distinguishes ROI **and dimensions**. Text producers prepare a local
+OCR engine/model/locale descriptor before cache lookup, so changed data invalidates
+only the relevant provenance. Missing OCR yields an explicit skipped outcome.
+Nested immutable line evidence is copied into JSON and schema-validated before commit.
 Timestamps remain source milliseconds at 500 ms intervals, not source-frame accuracy.
 
 FFmpeg uses argument arrays, file-only input protocols, a 600-second timeout and

@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-SDK_VERSION = "1.1.0"
+SDK_VERSION = "1.2.0"
 
 
 class AnalysisCancelled(Exception):

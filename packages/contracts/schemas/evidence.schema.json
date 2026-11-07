@@ -4,13 +4,27 @@
   "title": "Evidence",
   "description": "One piece of support for an event. Discriminated by 'kind'. Embedded in events.",
   "oneOf": [
-    { "$ref": "#/$defs/RegionTemplateEvidence" },
-    { "$ref": "#/$defs/ColorRuleEvidence" },
-    { "$ref": "#/$defs/OcrEvidence" },
-    { "$ref": "#/$defs/TemporalConsistencyEvidence" },
-    { "$ref": "#/$defs/AudioEvidence" },
-    { "$ref": "#/$defs/TranscriptEvidence" },
-    { "$ref": "#/$defs/ModelFrameEvidence" }
+    {
+      "$ref": "#/$defs/RegionTemplateEvidence"
+    },
+    {
+      "$ref": "#/$defs/ColorRuleEvidence"
+    },
+    {
+      "$ref": "#/$defs/OcrEvidence"
+    },
+    {
+      "$ref": "#/$defs/TemporalConsistencyEvidence"
+    },
+    {
+      "$ref": "#/$defs/AudioEvidence"
+    },
+    {
+      "$ref": "#/$defs/TranscriptEvidence"
+    },
+    {
+      "$ref": "#/$defs/ModelFrameEvidence"
+    }
   ],
   "$defs": {
     "RegionTemplateEvidence": {
@@ -20,9 +34,15 @@
       "additionalProperties": false,
       "required": ["kind", "region", "score"],
       "properties": {
-        "kind": { "const": "region_template" },
-        "region": { "$ref": "common.schema.json#/$defs/Region" },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "kind": {
+          "const": "region_template"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
         "frame_ms": {
           "$ref": "common.schema.json#/$defs/TimelineMs",
           "description": "With the enclosing event asset_id and region, locates a local reconstructable crop. No image bytes or private path are embedded."
@@ -36,9 +56,15 @@
       "additionalProperties": false,
       "required": ["kind", "region", "score"],
       "properties": {
-        "kind": { "const": "color_rule" },
-        "region": { "$ref": "common.schema.json#/$defs/Region" },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "color_rule"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
       }
     },
     "OcrEvidence": {
@@ -48,10 +74,31 @@
       "additionalProperties": false,
       "required": ["kind", "region", "text", "score"],
       "properties": {
-        "kind": { "const": "ocr" },
-        "region": { "$ref": "common.schema.json#/$defs/Region" },
-        "text": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "ocr"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "frame_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/OcrLine"
+          }
+        }
       }
     },
     "TemporalConsistencyEvidence": {
@@ -61,9 +108,16 @@
       "additionalProperties": false,
       "required": ["kind", "frames", "score"],
       "properties": {
-        "kind": { "const": "temporal_consistency" },
-        "frames": { "type": "integer", "minimum": 1 },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "temporal_consistency"
+        },
+        "frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
       }
     },
     "AudioEvidence": {
@@ -73,10 +127,18 @@
       "additionalProperties": false,
       "required": ["kind", "start_ms", "end_ms", "score"],
       "properties": {
-        "kind": { "const": "audio" },
-        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "audio"
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
       }
     },
     "TranscriptEvidence": {
@@ -86,11 +148,23 @@
       "additionalProperties": false,
       "required": ["kind", "start_ms", "end_ms", "text", "score"],
       "properties": {
-        "kind": { "const": "transcript" },
-        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "transcript"
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
       }
     },
     "ModelFrameEvidence": {
@@ -100,10 +174,40 @@
       "additionalProperties": false,
       "required": ["kind", "frame_ms", "label", "score"],
       "properties": {
-        "kind": { "const": "model_frame" },
-        "frame_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "label": { "type": "string", "minLength": 1, "maxLength": 200 },
-        "score": { "$ref": "common.schema.json#/$defs/Confidence" }
+        "kind": {
+          "const": "model_frame"
+        },
+        "frame_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
+      }
+    },
+    "OcrLine": {
+      "title": "OcrLine",
+      "description": "A recognized line in upright global normalized source coordinates.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "region", "score"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "score": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
       }
     }
   }

@@ -2,6 +2,19 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.12 — 2026-11-07 (M17)
+
+Additive; existing 1.11 documents remain valid.
+
+- `profile.LocalePack.ocr_language`: optional installed local language ID (no paths/URLs).
+- `profile.DetectorSettings.ocr`: bounded contrast/threshold preprocessing, text
+  confidence, whole-text match threshold and missing-sample settings.
+- `evidence.OcrEvidence`: optional source `frame_ms` and bounded `lines` with text,
+  global normalized box and confidence. TS/Python verify picture and parent-crop
+  containment. Existing region/text/score-only OCR evidence remains readable.
+- SDK 1.2.0 supports nested immutable line evidence, fixed trusted OCR sampling and
+  optional local OCR preparation/provenance in the existing registry. No migration.
+
 ## 1.11 — 2026-11-07 (M16)
 
 Additive; existing 1.10 documents remain valid.

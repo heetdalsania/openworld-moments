@@ -68,6 +68,13 @@ class LocalePack(BaseModel):
         ],
         Field(max_length=128),
     ]
+    ocr_language: Annotated[
+        str | None,
+        Field(
+            description="Installed Tesseract language ID; never a path or download URL.",
+            pattern="^[a-z][a-z0-9_]{1,31}$",
+        ),
+    ] = None
 
 
 class WantedSettings(BaseModel):
@@ -82,6 +89,19 @@ class WantedSettings(BaseModel):
     shape: Literal["star", "disc"] | None = None
     max_missing_frames: Annotated[int | None, Field(ge=0, le=20)] = None
     debounce_ms: Annotated[int | None, Field(ge=0, le=30000)] = None
+
+
+class OcrSettings(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    preprocess: Literal["contrast", "threshold"] | None = None
+    min_text_confidence: Annotated[
+        float | None,
+        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
+    ] = None
+    match_threshold: Annotated[float | None, Field(ge=0.8, le=1.0)] = None
+    max_missing_frames: Annotated[int | None, Field(ge=0, le=20)] = None
 
 
 class ProfileFrame1(BaseModel):
@@ -120,6 +140,7 @@ class DetectorSettings(BaseModel):
         ),
     ] = None
     wanted: WantedSettings | None = None
+    ocr: OcrSettings | None = None
 
 
 class Profile(BaseModel):

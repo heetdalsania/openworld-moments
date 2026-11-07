@@ -10,5 +10,9 @@ star/disc recipes and an explicit synthetic case table. Its independent scanline
 renderer lives in `detectors/wanted_fixtures.py`; tests generate all media in
 scratch directories. Fixture pixels are AGPL-3.0-or-later, with no third-party art.
 
+M17's [text-v1 manifest](./manifests/text-v1.json) records original generic
+phrases and scratch-only OpenCV Hershey rendering. OpenCV/NumPy are development
+dependencies; no font files, corpus, screenshots or generated media are committed.
+
 Never commit leaked or pre-release footage, official trailers, or extracted game
 assets. Media file extensions are ignored by `.gitignore` on purpose.

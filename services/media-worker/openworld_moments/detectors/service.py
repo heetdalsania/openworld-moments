@@ -19,12 +19,15 @@ from openworld_moments.derived.service import DerivedCancelled, DerivedMedia
 from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.example import BrightRegion
 from openworld_moments.detectors.inputs import (
+    OCR_SAMPLER_VERSION,
+    OCR_SIZE,
     ROI_SAMPLER_VERSION,
     SAMPLER_VERSION,
     content_hash,
     decode_frames,
     decode_region,
     require_roi_detail,
+    require_text_detail,
 )
 from openworld_moments.detectors.profiles import (
     ProfileCatalog,
@@ -42,6 +45,7 @@ from openworld_moments.detectors.sdk import (
     Detector,
     checkpoint,
 )
+from openworld_moments.detectors.text import SubtitleDetector, TextDetector
 from openworld_moments.detectors.wanted import WantedState
 from openworld_moments.ids import new_id
 from openworld_moments.media.process import ToolCancelled
@@ -59,8 +63,24 @@ from openworld_moments.storage.repositories import SCHEMA_VERSION
 
 Progress = Callable[[int, int, str], None]
 Registry = Mapping[str, Callable[[], Detector]]
-BUILTINS: Registry = MappingProxyType({BrightRegion.id: BrightRegion, WantedState.id: WantedState})
+BUILTINS: Registry = MappingProxyType(
+    {
+        BrightRegion.id: BrightRegion,
+        WantedState.id: WantedState,
+        TextDetector.id: TextDetector,
+        SubtitleDetector.id: SubtitleDetector,
+    }
+)
 MAX_EVENTS = 10_000
+
+
+def _plain(value: Any) -> Any:
+    """Copy nested immutable SDK evidence into JSON data before schema validation."""
+    if isinstance(value, Mapping):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_plain(v) for v in value]
+    return value
 
 
 class Analyzer:
@@ -152,18 +172,33 @@ class Analyzer:
                             raise AnalysisError(
                                 "analysis.invalid_detector", "Detector identity/version is invalid."
                             )
+                        extra_versions = {}
+                        if isinstance(detector, TextDetector):
+                            extra_versions = detector.configure(
+                                setting, profile.get("locales", {}).get(locale, {}), cancel
+                            )
+                            extra_versions["ocr_locale"] = locale
                         if prepared is None:
                             prepared = self._prepare(conn, link.asset_id, job_id, cancel)
                         path, input_key, base_versions = prepared
                         versions = dict(base_versions)
+                        versions.update(extra_versions)
                         sample_region = getattr(detector, "sample_region", None)
+                        dimensions = getattr(detector, "sample_dimensions", (200, 40))
                         roi = tuple(profile["regions"][sample_region]) if sample_region else None
-                        sample_key = canonical(roi)
+                        sample_key = canonical([roi, dimensions])
                         if roi is not None:
-                            versions["sampler"] = ROI_SAMPLER_VERSION
-                            require_roi_detail(
-                                width, height, roi, setting.get("wanted", {}).get("max_level", 5)
-                            )
+                            if dimensions == OCR_SIZE:
+                                versions["sampler"] = OCR_SAMPLER_VERSION
+                                require_text_detail(width, height, roi)
+                            else:
+                                versions["sampler"] = ROI_SAMPLER_VERSION
+                                require_roi_detail(
+                                    width,
+                                    height,
+                                    roi,
+                                    setting.get("wanted", {}).get("max_level", 5),
+                                )
                         key = digest(
                             [
                                 resolved.key,
@@ -184,7 +219,15 @@ class Analyzer:
                             if frames is None or frames_key != sample_key:
                                 frames = None
                                 frames = (
-                                    decode_region(path, self.tools.tool("ffmpeg"), cancel, roi)
+                                    (
+                                        decode_region(
+                                            path, self.tools.tool("ffmpeg"), cancel, roi, dimensions
+                                        )
+                                        if dimensions == OCR_SIZE
+                                        else decode_region(
+                                            path, self.tools.tool("ffmpeg"), cancel, roi
+                                        )
+                                    )
                                     if roi is not None
                                     else decode_frames(path, self.tools.tool("ffmpeg"), cancel)
                                 )
@@ -271,7 +314,9 @@ class Analyzer:
                             else "Detector analysis failed; other results are kept."
                         )
                         outcome.update(
-                            status="skipped" if code == "profile.incompatible" else "failed",
+                            status="skipped"
+                            if code in ("profile.incompatible", "ocr.unavailable")
+                            else "failed",
                             error={"code": code, "message": message, "retryable": True},
                         )
                     outcomes.append(outcome)
@@ -373,7 +418,7 @@ class Analyzer:
             "end_ms": finding.end_ms,
             "confidence": finding.confidence,
             "attributes": dict(finding.attributes),
-            "evidence": json.loads(canonical([dict(e) for e in finding.evidence])),
+            "evidence": json.loads(canonical(_plain(finding.evidence))),
             "source": source,
             "review_state": "unreviewed",
         }

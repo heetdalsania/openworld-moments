@@ -11,7 +11,7 @@ from openworld_moments_contracts import SUPPORTED_VERSION, ContractVersionError,
 
 @pytest.mark.parametrize(
     "version",
-    ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11"],
+    ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "1.10", "1.11", "1.12"],
 )
 def test_supported_versions_pass(version: str) -> None:
     assert str(check_version("event", {"schema_version": version})) == version
@@ -26,7 +26,7 @@ def test_supported_versions_pass(version: str) -> None:
         ({"schema_version": "1"}, "malformed"),
         ({"schema_version": "01.0"}, "malformed"),
         ({"schema_version": "0.9"}, "older than the supported 1.x"),
-        ({"schema_version": "1.12"}, "reads up to 1.11"),
+        ({"schema_version": "1.13"}, "reads up to 1.12"),
         ({"schema_version": "2.0"}, "newer OpenWorld Moments"),
     ],
 )

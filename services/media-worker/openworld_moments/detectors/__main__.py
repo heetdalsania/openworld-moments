@@ -99,8 +99,30 @@ def main() -> int:
     bench = wanted.add_parser("benchmark")
     bench.add_argument("--seconds", type=int, default=3600)
     bench.add_argument("--repeats", type=int, default=5)
+    text_cli = sub.add_parser("text").add_subparsers(dest="operation", required=True)
+    doctor = text_cli.add_parser("doctor")
+    doctor.add_argument("--language", default="eng")
+    text_bench = text_cli.add_parser("benchmark")
+    text_bench.add_argument("--samples", type=int, default=60)
+    text_bench.add_argument("--repeats", type=int, default=3)
     args = parser.parse_args()
     try:
+        if args.command == "text":
+            from openworld_moments.detectors.ocr import Tesseract
+            from openworld_moments.detectors.text_benchmark import benchmark as text_benchmark
+
+            if args.operation == "doctor":
+                result = {
+                    "available": True,
+                    "tool_versions": Tesseract().prepare(args.language, threading.Event()),
+                }
+                print(json.dumps(result, sort_keys=True))
+                return 0
+            result = text_benchmark(args.samples, args.repeats)
+            print(json.dumps(result, sort_keys=True))
+            return (
+                0 if result["budget_2x_met"] and result["correct_categories"] == args.samples else 1
+            )
         if args.command == "wanted":
             from openworld_moments.detectors.wanted_replay import benchmark
             from openworld_moments.detectors.wanted_replay import replay as run_replay

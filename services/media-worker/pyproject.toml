@@ -20,6 +20,7 @@ owm = "openworld_moments.detectors.__main__:main"
 dev = [
     "httpx2>=2.16.0",
     "mypy>=2.4.1",
+    "opencv-python-headless>=4.12,<5",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
 ]

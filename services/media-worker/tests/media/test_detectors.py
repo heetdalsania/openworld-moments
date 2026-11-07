@@ -138,4 +138,4 @@ def test_cli_profile_validation_and_example(tmp_path: Path, ffmpeg: ToolInfo) ->
     )
     example = cli("demo")
     assert example.returncode == 0, example.stdout + example.stderr
-    assert json.loads(example.stdout)["events"][0]["source"]["tool_versions"]["sdk"] == "1.1.0"
+    assert json.loads(example.stdout)["events"][0]["source"]["tool_versions"]["sdk"] == "1.2.0"

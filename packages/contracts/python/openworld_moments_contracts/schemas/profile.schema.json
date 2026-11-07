@@ -145,6 +145,9 @@
         },
         "wanted": {
           "$ref": "#/$defs/WantedSettings"
+        },
+        "ocr": {
+          "$ref": "#/$defs/OcrSettings"
         }
       }
     },
@@ -178,6 +181,11 @@
               "maxLength": 200
             }
           }
+        },
+        "ocr_language": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{1,31}$",
+          "description": "Installed Tesseract language ID; never a path or download URL."
         }
       }
     },
@@ -204,6 +212,29 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 30000
+        }
+      }
+    },
+    "OcrSettings": {
+      "title": "OcrSettings",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preprocess": {
+          "enum": ["contrast", "threshold"]
+        },
+        "min_text_confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "match_threshold": {
+          "type": "number",
+          "minimum": 0.8,
+          "maximum": 1
+        },
+        "max_missing_frames": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
         }
       }
     }

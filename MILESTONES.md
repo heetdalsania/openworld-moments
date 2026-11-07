@@ -278,7 +278,7 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M14 | Complete | [#20](https://github.com/heetdalsania/openworld-moments/pull/20) | — | Arun Velkumar | Built-in detector runtime, immutable derived-frame SDK, bounded local JSON profile inheritance and compatibility, independently cached and cancellable runs, evidence/provenance validation, synthetic example and CLI; contracts 1.9, migration 0010; all local quality gates and the production build pass. |
 | M15 | Complete | [#21](https://github.com/heetdalsania/openworld-moments/pull/21) | — | Arun Velkumar | Accessible upright ROI calibration from imported playback frames; sparse local overrides and base diff/reset, preprocessing and real synthetic SDK preview, safe JSON patch import/export and separate crop export; contracts 1.10, no migration. See [handoff](./docs/milestones/M15-handoff.md). |
 | M16 | Complete | [#22](https://github.com/heetdalsania/openworld-moments/pull/22) | — | Arun Velkumar | Analytic star/disc ROI estimator, temporal changes, local crop references, replay/benchmark; contracts 1.11, SDK 1.1; synthetic FFmpeg validation only, game compatibility unvalidated |
-| M17 | Ready | — | — | — | — |
+| M17 | Complete | PR pending | — | Arun Velkumar | Local ROI-only Tesseract banner/subtitle intervals, locale matching and line evidence/spoiler flags; contracts 1.12, SDK 1.2; synthetic validation, game compatibility unvalidated. See [handoff](./docs/milestones/M17-handoff.md). |
 | M18 | Ready | — | — | — | — |
 | M19–M20 | See dependency graph | — | — | — | — |
 | M21 | Ready | — | — | — | — |
