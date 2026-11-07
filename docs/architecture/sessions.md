@@ -117,14 +117,17 @@ transaction**:
 
 1. **Re-estimate** every asset's capture time and store changes.
 2. **Lock** the members of `corrected` and `confirmed` sessions, and of any
-   session a story uses. They are never moved.
+   session with **attached data**: a story, events, transcript segments, or a
+   collection entry. Deleting such a session would drop those rows (they cascade)
+   or be blocked by them, so recompute never changes or removes it.
 3. **Group** all other assets.
 4. **Reconcile with existing `unreviewed` sessions:**
    - each group keeps the ID of the unreviewed session it shares the most clips
      with (an exact match wins);
    - unchanged sessions are not written at all;
-   - unreviewed sessions that no group continues are removed (membership rows
-     only, never media).
+   - unreviewed sessions that no group continues are removed. Only sessions
+     without attached data can be in this set, so removing one deletes just its
+     membership rows, never media or anything else.
 
 **Idempotent:** a second run over the same data creates, updates, and removes
 nothing, and returns the same session documents. It is safe to requeue.
@@ -139,7 +142,7 @@ sessions, **corrections survive every future run**.
 
 | Action | API | Effect |
 |---|---|---|
-| Merge | `POST /v1/sessions/merge {session_ids}` | Members combined into the first session, in capture-time order; the others are removed. Refused if a removed session has stories |
+| Merge | `POST /v1/sessions/merge {session_ids}` | Members combined into the first session, in capture-time order; the others are removed. Refused (`session.in_use`) if a session being removed has attached data (stories, events, transcripts, collection entries); list that session first to merge into it instead |
 | Split | `POST /v1/sessions/{id}/split {after_asset_id}` | Clips up to that one stay; the rest form a new corrected session |
 | Reorder | `POST /v1/sessions/{id}/order {asset_ids}` | Every member once, in the user's order. Out-of-time-order clips are then placed end to end (`session_start_ms` = cumulative durations) |
 | Mark unrelated | `POST /v1/sessions/{id}/remove {asset_id}` | The clip moves to a corrected session of its own and is never regrouped |

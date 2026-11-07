@@ -470,3 +470,73 @@ def test_session_api(api: TestClient, database: Database) -> None:
     assert bad.status_code == 422
     assert api.post("/v1/sessions/merge", json={"session_ids": [sid]}).status_code == 422
     assert api.post("/v1/sessions/recompute", json={"max_gap_ms": 5}).status_code == 422
+
+
+# -- attached data is never dropped ---------------------------------------------------
+
+NOW = "2026-11-21T09:00:00Z"
+ATTACH = {
+    "event": (
+        "INSERT INTO events (id, session_id, type, start_ms, end_ms, confidence, "
+        "attributes_json, evidence_json, source_kind, review_state) VALUES "
+        "('evt_01JCBQ00000000000000000007', ?, 'wanted_level', 0, 1000, 0.9, '{}', '{}', "
+        "'user', 'unreviewed')",
+        "SELECT count(*) FROM events",
+    ),
+    "transcript": (
+        "INSERT INTO transcript_segments (session_id, start_ms, end_ms, text) "
+        "VALUES (?, 0, 1000, 'hello')",
+        "SELECT count(*) FROM transcript_segments",
+    ),
+    "collection": (
+        "INSERT INTO collection_items (collection_id, session_id, position, added_at) "
+        "VALUES (1, ?, 0, '2026-11-21T09:00:00Z')",
+        "SELECT count(*) FROM collection_items",
+    ),
+}
+
+
+def _attach(database: Database, kind: str, session_id: str) -> None:
+    insert, _ = ATTACH[kind]
+    with contextlib.closing(database.connect()) as conn, transaction(conn):
+        conn.execute(
+            "INSERT OR IGNORE INTO collections (id, name, created_at) VALUES (1, 'Best', ?)",
+            (NOW,),
+        )
+        conn.execute(insert, (session_id,))
+
+
+def _count(database: Database, kind: str) -> int:
+    with contextlib.closing(database.connect()) as conn:
+        return int(conn.execute(ATTACH[kind][1]).fetchone()[0])
+
+
+@pytest.mark.parametrize("kind", sorted(ATTACH))
+def test_recompute_never_drops_attached_data(
+    service: SessionService, database: Database, kind: str
+) -> None:
+    ids, docs = _group(service, database, "large_gap")
+    _attach(database, kind, docs[1]["id"])
+    # A wider gap would merge the two sessions, which would delete the second one.
+    result = service.recompute({"max_gap_ms": 3 * 3600 * 1000})
+    assert result["locked_assets"] == 1 and result["sessions_removed"] == 0
+    after = sessions(service)
+    assert docs[1]["id"] in {d["id"] for d in after}
+    assert sorted(members(after)) == sorted([[ids[0]], [ids[1]]])
+    assert _count(database, kind) == 1
+
+
+@pytest.mark.parametrize("kind", sorted(ATTACH))
+def test_merge_refuses_to_drop_attached_data(
+    service: SessionService, database: Database, kind: str
+) -> None:
+    _, docs = _group(service, database, "large_gap")
+    first, second = docs[0]["id"], docs[1]["id"]
+    _attach(database, kind, second)
+    with pytest.raises(SessionError) as caught:
+        service.merge([first, second])
+    assert caught.value.code == "session.in_use" and caught.value.status == 409
+    assert _count(database, kind) == 1
+    merged = service.merge([second, first])  # merging into it keeps everything
+    assert merged["id"] == second and len(merged["assets"]) == 2
+    assert _count(database, kind) == 1

@@ -1071,6 +1071,26 @@ class SessionRepository:
         ).fetchone()
         return row is not None
 
+    #: Rows that belong to a session and would be lost (cascade) or block (restrict)
+    #: if it were deleted: stories, events, transcript segments, collection items.
+    ATTACHED_DATA_SQL = (
+        "SELECT session_id FROM stories WHERE session_id IS NOT NULL "
+        "UNION SELECT session_id FROM events "
+        "UNION SELECT session_id FROM transcript_segments "
+        "UNION SELECT session_id FROM collection_items WHERE session_id IS NOT NULL"
+    )
+
+    def has_attached_data(self, session_id: str) -> bool:
+        """Whether deleting the session would drop or be blocked by other rows."""
+        row = self.conn.execute(
+            f"SELECT 1 FROM ({self.ATTACHED_DATA_SQL}) WHERE session_id = ? LIMIT 1",  # noqa: S608
+            (session_id,),
+        ).fetchone()
+        return row is not None
+
+    def with_attached_data(self) -> set[str]:
+        return {r[0] for r in self.conn.execute(self.ATTACHED_DATA_SQL).fetchall()}
+
     def log_correction(
         self,
         kind: Literal["merge", "split", "reorder", "remove", "confirm"],
