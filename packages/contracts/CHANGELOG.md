@@ -2,6 +2,15 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.10 — 2026-11-06 (M15)
+
+Additive; existing 1.9 documents remain valid.
+
+- New `profile-patch`: media-free sparse normalized ROI overrides, base identity,
+  compatibility and tool provenance. Both runtimes reject unknown fields and
+  out-of-bounds regions; the calibration worker also validates the effective M14
+  profile before storage or preview. Installed profiles remain immutable.
+
 ## 1.9 — 2026-11-06 (M14)
 
 Additive; existing 1.8 documents remain valid.

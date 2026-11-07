@@ -2,6 +2,7 @@
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useState } from "react";
 import { type AppInfo, fetchAppInfo } from "./appInfo";
+import { CalibrationView } from "./CalibrationView";
 import { AssetView } from "./AssetView";
 import { ImportPanel } from "./ImportPanel";
 import { JobCenter } from "./JobCenter";
@@ -98,6 +99,9 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
       {workerReady ? (
         <>
           {!hasXbox && <XboxOnboarding onAdded={() => setRefreshKey((k) => k + 1)} />}
+          <p>
+            <a href="#/calibration">Calibrate detector profile regions</a>
+          </p>
           <WatchedFolders onChange={onFolders} refreshKey={refreshKey} />
         </>
       ) : (
@@ -111,7 +115,8 @@ function NavLink({ route, current, children }: { route: Route; current: Route; c
   const active =
     current.view === route.view ||
     (route.view === "library" && current.view === "asset") ||
-    (route.view === "sessions" && current.view === "session");
+    (route.view === "sessions" && current.view === "session") ||
+    (route.view === "settings" && current.view === "calibration");
   return (
     <a href={routeHref(route)} aria-current={active ? "page" : undefined}>
       {children}
@@ -206,6 +211,7 @@ export function App() {
               </section>
             ))}
           {route.view === "session" && ready && <SessionView key={route.id} id={route.id} />}
+          {route.view === "calibration" && ready && <CalibrationView />}
           {route.view === "settings" && <SettingsView workerReady={ready} />}
           {route.view === "phone" &&
             (ready ? (

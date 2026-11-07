@@ -189,6 +189,7 @@ export interface ContractsBundle {
   job?: Job;
   "media-asset"?: MediaAsset;
   overlap?: AssetOverlap;
+  "profile-patch"?: ProfilePatch;
   profile?: Profile;
   project?: Project;
   "render-preset"?: RenderPreset;
@@ -1595,6 +1596,33 @@ export interface OverlapOverride {
   overlap_ms: TimelineMs | null;
 }
 /**
+ * Media-free local ROI overrides, separate from an installed profile.
+ */
+export interface ProfilePatch {
+  schema_version: string;
+  profile_id: Slug;
+  base_version: SemVer;
+  base_key: string;
+  game_family: Slug;
+  frame: ProfileFrame;
+  regions: {
+    [k: string]: Region | undefined;
+  };
+  provenance: {
+    tool: "owm-calibration";
+    version: "1";
+    created_at: UtcTimestamp;
+  };
+}
+export interface ProfileFrame {
+  /**
+   * @minItems 1
+   */
+  aspect_ratios: [string, ...string[]];
+  min_width: number;
+  min_height: number;
+}
+/**
  * Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.
  */
 export interface Profile {
@@ -1618,14 +1646,6 @@ export interface Profile {
   locales?: {
     [k: string]: LocalePack | undefined;
   };
-}
-export interface ProfileFrame {
-  /**
-   * @minItems 1
-   */
-  aspect_ratios: [string, ...string[]];
-  min_width: number;
-  min_height: number;
 }
 /**
  * This interface was referenced by `Profile`'s JSON-Schema

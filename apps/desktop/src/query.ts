@@ -118,3 +118,9 @@ export function useAction<A extends unknown[]>(
   );
   return { run, busy, error };
 }
+
+/** Publish a mutation's authoritative response before navigating away from its view. */
+export function setQueryData<T>(key: string, data: T): void {
+  entries.set(key, { data, loading: false, version: (entries.get(key)?.version ?? 0) + 1 });
+  emit();
+}

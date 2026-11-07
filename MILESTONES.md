@@ -276,8 +276,9 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M12 | Complete | [#18](https://github.com/heetdalsania/openworld-moments/pull/18) | — | Arun Velkumar | `owm-overlap` v1: dhash256 vote-and-verify alignment of A's tail with B's head (≥4 compared, ≥80% matching, ≥2 s unbroken run), ambiguity rejection for repeating footage, envelope cross-correlation refinement; applies only `matched` (≥0.6) or user overrides via the shared session layout; cached per pair and version; `align` job and override API; contracts 1.8, migration 0009 |
 | M13 | Complete | [#19](https://github.com/heetdalsania/openworld-moments/pull/19) | — | Arun Velkumar | Pure source ↔ virtual time mapping (`timeline.ts`; round trips within one frame at 23.976–120 fps and VFR averages); two-element `SessionPlayer` that preloads the next clip at its first unique frame, switches at boundaries without replaying hidden overlap, keeps audio with the visible clip, and keeps the moment across reveal/reorder; Sessions and session screens with track, thumbnails, waveforms, overlap confidence, reveal toggle, keyboard controls, and reorder/split/remove/merge/override/confirm; session routes and PUT allow-listed in the host; E2E against the real worker |
 | M14 | Complete | [#20](https://github.com/heetdalsania/openworld-moments/pull/20) | — | Arun Velkumar | Built-in detector runtime, immutable derived-frame SDK, bounded local JSON profile inheritance and compatibility, independently cached and cancellable runs, evidence/provenance validation, synthetic example and CLI; contracts 1.9, migration 0010; all local quality gates and the production build pass. |
-| M15 | Ready | — | — | — | — |
-| M16–M17 | See dependency graph | — | — | — | — |
+| M15 | Complete | — | — | Arun Velkumar | Accessible upright ROI calibration from imported playback frames; sparse local overrides and base diff/reset, preprocessing and real synthetic SDK preview, safe JSON patch import/export and separate crop export; contracts 1.10, no migration. See [handoff](./docs/milestones/M15-handoff.md). |
+| M16 | Ready | — | — | — | — |
+| M17 | Ready | — | — | — | — |
 | M18 | Ready | — | — | — | — |
 | M19–M20 | See dependency graph | — | — | — | — |
 | M21 | Ready | — | — | — | — |

@@ -16,6 +16,7 @@ from typing import Any
 from openworld_moments_contracts import load, normalize
 
 from openworld_moments.derived.service import DerivedCancelled, DerivedMedia
+from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.example import BrightRegion
 from openworld_moments.detectors.inputs import SAMPLER_VERSION, content_hash, decode_frames
 from openworld_moments.detectors.profiles import (
@@ -69,7 +70,7 @@ class Analyzer:
         self.registry: Registry = MappingProxyType(dict(registry))
 
     def profile(self, profile_id: str) -> ResolvedProfile:
-        profile = self.catalog.load(profile_id)
+        profile = Calibration(self.database, self.catalog).effective(profile_id)
         for index, setting in enumerate(profile.document()["detectors"]):
             if setting["enabled"] and setting["id"] not in self.registry:
                 raise AnalysisError(

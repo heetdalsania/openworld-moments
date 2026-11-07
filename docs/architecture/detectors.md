@@ -199,3 +199,11 @@ white frames (one hour at 2 fps) produced one temporal event in a median **0.099
 (range 0.097–0.130 s). This measures only the simple example's processing loop; it
 excludes proxy generation, decode and I/O and is not gameplay-detector performance
 evidence.
+
+## Local calibration overrides (M15)
+
+The analyzer applies saved, schema-validated region overrides after catalog
+resolution. Patches are sparse settings data; installed profiles stay immutable.
+The resolved input key includes the base lineage and effective regions, so a
+calibration change invalidates cached detector results. Reset restores the base
+key. See [calibration](./profile-calibration.md) for UI, API and patch format.

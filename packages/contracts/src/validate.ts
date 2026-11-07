@@ -15,6 +15,7 @@ import jobEvent from "../schemas/job-event.schema.json" with { type: "json" };
 import job from "../schemas/job.schema.json" with { type: "json" };
 import mediaAsset from "../schemas/media-asset.schema.json" with { type: "json" };
 import overlap from "../schemas/overlap.schema.json" with { type: "json" };
+import profilePatch from "../schemas/profile-patch.schema.json" with { type: "json" };
 import profile from "../schemas/profile.schema.json" with { type: "json" };
 import project from "../schemas/project.schema.json" with { type: "json" };
 import renderPreset from "../schemas/render-preset.schema.json" with { type: "json" };
@@ -34,6 +35,7 @@ import type {
   JobEvent,
   MediaAsset,
   Profile,
+  ProfilePatch,
   Project,
   RenderPreset,
   Session,
@@ -56,6 +58,7 @@ export interface ContractTypes {
   "media-asset": MediaAsset;
   overlap: AssetOverlap;
   profile: Profile;
+  "profile-patch": ProfilePatch;
   project: Project;
   "render-preset": RenderPreset;
   session: Session;
@@ -77,6 +80,7 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   "media-asset": [mediaAsset, true],
   overlap: [overlap, true],
   profile: [profile, true],
+  "profile-patch": [profilePatch, true],
   project: [project, true],
   "render-preset": [renderPreset, true],
   session: [session, true],

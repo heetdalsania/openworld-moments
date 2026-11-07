@@ -63,6 +63,7 @@ Routes are hash-based, so reloading the window returns to the same screen.
 | `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
 | `#/sessions` | `SessionsView` | Candidate sessions (M11) with played duration, hidden repeated footage, state, and grouping confidence; group, find repeated footage, and merge ([session timeline](./session-timeline.md)) |
 | `#/session/<id>` | `SessionView` | The session as one continuous timeline (M13): two-element player, track with boundaries, thumbnails, waveforms, and hidden-overlap markers, reveal toggle, keyboard controls, and per-clip corrections ([session timeline](./session-timeline.md)) |
+| `#/calibration` | `CalibrationView` | Profile defaults, local ROI overrides, frame capture, crop and built-in preview, media-free patch import/export ([calibration](./profile-calibration.md)) |
 | `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
 | `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |
 
@@ -182,3 +183,6 @@ Supporting modules:
 - **Bounded responses:** large files are served in 4 MiB ranges. Players that
   request without a Range header get the first 4 MiB of a file larger than
   16 MiB with status 206. Every supported web view sends ranges.
+
+M15 adds the profile calibration routes and two native export commands described
+in [Profile calibration](./profile-calibration.md#patch-format-and-api).

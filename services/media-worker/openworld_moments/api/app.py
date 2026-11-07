@@ -23,7 +23,7 @@ import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
@@ -36,6 +36,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from openworld_moments import __version__
 from openworld_moments.alignment.service import Aligner
 from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
+from openworld_moments.detectors.calibration import Calibration
+from openworld_moments.detectors.profiles import ProfileCatalog, ProfileError
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
@@ -240,6 +242,22 @@ class SubmitAnalysis(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class PreviewCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    base_key: str = Field(pattern=r"^[a-f0-9]{64}$")
+    regions: dict[str, Any] = Field(max_length=128)
+    gray: list[Annotated[int, Field(strict=True, ge=0, le=255)]] = Field(
+        min_length=2304, max_length=2304
+    )
+    source_ms: int = Field(ge=0, le=86400000)
+
+
+class SaveCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    base_key: str = Field(pattern=r"^[a-f0-9]{64}$")
+    regions: dict[str, Any] = Field(max_length=128)
+
+
 class SetOverlap(BaseModel):
     """OverlapOverride: an overlap in ms (0 = no overlap), or null to clear."""
 
@@ -274,6 +292,7 @@ def create_app(
     on_ready: Callable[[], None] | None = None,
     capabilities: Callable[..., dict[str, Any]] | None = None,
     derived: DerivedMedia | None = None,
+    profile_catalog: ProfileCatalog | None = None,
 ) -> ASGIApp:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -483,6 +502,41 @@ def create_app(
     async def cleanup_derived() -> dict[str, Any]:
         service = derived_service()
         return await asyncio.to_thread(service.cleanup)
+
+    # -- calibration (M15): JSON data only, no paths or media in patches ----------------
+    calibration = Calibration(engine.database, profile_catalog)
+
+    @app.exception_handler(ProfileError)
+    async def profile_error(request: Request, exc: ProfileError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=422
+        )
+
+    @app.get("/v1/profiles")
+    async def list_profiles() -> list[dict[str, Any]]:
+        return await asyncio.to_thread(calibration.list_profiles)
+
+    @app.get("/v1/profiles/{profile_id}/calibration")
+    async def get_calibration(profile_id: str) -> dict[str, Any]:
+        return await asyncio.to_thread(calibration.state, profile_id)
+
+    @app.put("/v1/profiles/{profile_id}/calibration")
+    async def save_calibration(profile_id: str, body: SaveCalibration) -> dict[str, Any]:
+        return await asyncio.to_thread(calibration.save, profile_id, body.base_key, body.regions)
+
+    @app.post("/v1/profiles/{profile_id}/patch")
+    async def import_profile_patch(profile_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        return await asyncio.to_thread(calibration.import_patch, profile_id, body)
+
+    @app.post("/v1/profiles/{profile_id}/preview")
+    async def preview_calibration(profile_id: str, body: PreviewCalibration) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            calibration.preview, profile_id, body.base_key, body.regions, body.gray, body.source_ms
+        )
+
+    @app.post("/v1/profiles/{profile_id}/reset")
+    async def reset_calibration(profile_id: str) -> dict[str, Any]:
+        return await asyncio.to_thread(calibration.reset, profile_id)
 
     # -- sessions (M11) -----------------------------------------------------------------
 

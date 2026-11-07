@@ -279,6 +279,10 @@ const RULES: Record<string, (doc: any) => Iterable<string>> = {
   job,
   "job-event": jobEvent,
   profile,
+  "profile-patch": (doc: Profile) =>
+    Object.entries(doc.regions).flatMap(([name, r]) =>
+      r ? [...region(`regions.${name}`, r)] : [],
+    ),
   project,
   "render-preset": renderPreset,
   "export-manifest": exportManifest,

@@ -66,6 +66,17 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "jobs", id, "cancel" | "retry"]) => {
             is_id(id, "job_") && query.is_none()
         }
+        // Calibration (M15), data-only profile routes. No catalog filesystem access.
+        ("GET", ["", "v1", "profiles"]) => query.is_none(),
+        ("GET" | "PUT", ["", "v1", "profiles", id, "calibration"])
+        | ("POST", ["", "v1", "profiles", id, "patch" | "reset" | "preview"]) => {
+            !id.is_empty()
+                && id.len() <= 128
+                && id
+                    .bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+                && query.is_none()
+        }
         // Sessions (M11-M13).
         ("GET", ["", "v1", "sessions"]) => true,
         ("POST", ["", "v1", "sessions", "recompute" | "align" | "merge"]) => query.is_none(),
