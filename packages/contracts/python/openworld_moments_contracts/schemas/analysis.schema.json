@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/analysis.schema.json",
+  "title": "AnalysisResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "profile_id", "outcomes"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "profile_id": {
+      "$ref": "common.schema.json#/$defs/Slug"
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DetectorOutcome"
+      }
+    }
+  },
+  "$defs": {
+    "DetectorOutcome": {
+      "title": "DetectorOutcome",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "detector_id", "status", "event_ids"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "detector_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "status": {
+          "enum": ["computed", "cached", "failed", "skipped"]
+        },
+        "event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/EventId"
+          }
+        },
+        "error": {
+          "$ref": "error.schema.json"
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["failed", "skipped"]
+          }
+        }
+      },
+      "then": {
+        "required": ["error"],
+        "properties": {
+          "event_ids": {
+            "maxItems": 0,
+            "type": "array"
+          },
+          "error": {
+            "$ref": "error.schema.json"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "error": false
+        }
+      }
+    },
+    "AnalysisRequest": {
+      "title": "AnalysisRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id"],
+      "properties": {
+        "profile_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "locale": {
+          "description": "BCP 47 language tag, e.g. 'en' or 'pt-BR'.",
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$"
+        },
+        "force": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

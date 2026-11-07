@@ -13,6 +13,9 @@ dependencies = [
     "websockets>=17.4",
 ]
 
+[project.scripts]
+owm = "openworld_moments.detectors.__main__:main"
+
 [dependency-groups]
 dev = [
     "httpx2>=2.16.0",

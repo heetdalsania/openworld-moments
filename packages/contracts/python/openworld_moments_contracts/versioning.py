@@ -23,7 +23,7 @@ class SchemaVersion:
 
 #: Version every versioned contract is currently written at. Keep in sync with
 #: SUPPORTED_VERSION in src/versioning.ts (a test enforces this).
-SUPPORTED_VERSION = SchemaVersion(1, 8)
+SUPPORTED_VERSION = SchemaVersion(1, 9)
 
 
 def check_version(contract: str, document: Any) -> SchemaVersion:

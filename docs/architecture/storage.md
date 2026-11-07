@@ -47,7 +47,7 @@ Rules:
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets`, `session_corrections` (0008) | `Session` (since 0008 with `grouping` evidence and `updated_at`), `SessionAsset`; `update`, `replace_assets`, `newest`, `session_of`, `has_stories`, `has_attached_data` / `with_attached_data`, and the correction log (`log_correction`, `corrections`). Rows never delete media ([sessions](./sessions.md)) |
 | `OverlapRepository` | `asset_overlaps` (0009) | One alignment per ordered clip pair (status, offset, overlap, confidence, evidence, algorithm version) plus a separate user override; `effective` returns what timelines apply. Cascades with either asset ([overlap](./overlap.md)) |
-| `EventRepository` | `events` | contract `Event` |
+| `EventRepository` | `events` | contract `Event`; migration 0010 adds detector `tool_versions_json` and `input_key`. `page_for_session` bounds API reads. `detector_runs` caches one successful result per session/asset/detector, atomically with its events ([detectors](./detectors.md)). |
 | `JobRepository` | `jobs` | contract `Job` (including `params` and `attempt` since migration 0002, `result` since 0003, `idempotency_key` since 0004 with `find_by_idempotency_key`) |
 | `StoryRepository` | `stories` | `Story`, whose `timeline` is a contract `Project` with the same ID |
 | `SettingsRepository` | `settings` | JSON values |

@@ -2,6 +2,20 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.9 — 2026-11-06 (M14)
+
+Additive; existing 1.8 documents remain valid.
+
+- `profile`: optional `extends`, `license`, `capabilities`, and versioned, licensed
+  `locales` vocabulary packs. The analysis loader requires license/capability
+  metadata, validates resolved inheritance, and refuses duplicate detector IDs.
+- `event.DetectorSource`: optional `tool_versions` and SHA-256 `input_key`.
+  M14's runtime always supplies detector/profile/tool versions and input identity.
+- New `analysis` result: per-clip/per-detector computed, cached, failed, or skipped
+  outcomes. Failed/skipped outcomes must carry an error and no event IDs.
+  `$defs/AnalysisRequest` describes profile, locale and forced recomputation.
+- The existing `analyze` job kind and `analyzing` state are now implemented.
+
 ## 1.8 — 2026-11-07 (M12)
 
 Additive; every 1.7 document is valid 1.8.

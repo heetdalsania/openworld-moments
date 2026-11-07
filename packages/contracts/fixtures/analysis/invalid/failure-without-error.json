@@ -1,0 +1,18 @@
+{
+  "description": "Failed outcomes must explain the error",
+  "expect": "schema",
+  "path": "outcomes[0]",
+  "document": {
+    "schema_version": "1.9",
+    "session_id": "ses_01JCBQ00000000000000000002",
+    "profile_id": "generic-open-world",
+    "outcomes": [
+      {
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "detector_id": "synthetic-bright-region",
+        "status": "failed",
+        "event_ids": []
+      }
+    ]
+  }
+}

@@ -1297,6 +1297,10 @@ class EventRepository:
                 "detector_version": source.get("detector_version"),
                 "profile_id": source.get("profile_id"),
                 "profile_version": source.get("profile_version"),
+                "tool_versions_json": _dumps(source["tool_versions"])
+                if "tool_versions" in source
+                else None,
+                "input_key": source.get("input_key"),
                 "model_id": source.get("model_id"),
                 "prompt_version": source.get("prompt_version"),
                 "sampled_frames_json": _dumps(frames) if frames is not None else None,
@@ -1313,6 +1317,13 @@ class EventRepository:
     def list_for_session(self, session_id: str) -> list[Event]:
         rows = self.conn.execute(
             "SELECT * FROM events WHERE session_id = ? ORDER BY start_ms, id", (session_id,)
+        ).fetchall()
+        return [self._from_row(r) for r in rows]
+
+    def page_for_session(self, session_id: str, *, limit: int, offset: int) -> list[Event]:
+        rows = self.conn.execute(
+            "SELECT * FROM events WHERE session_id = ? ORDER BY start_ms, id LIMIT ? OFFSET ?",
+            (session_id, limit, offset),
         ).fetchall()
         return [self._from_row(r) for r in rows]
 
@@ -1340,6 +1351,8 @@ class EventRepository:
                     "detector_version": row["detector_version"],
                     "profile_id": row["profile_id"],
                     "profile_version": row["profile_version"],
+                    "tool_versions": _loads(row["tool_versions_json"]),
+                    "input_key": row["input_key"],
                 }
             )
         elif kind == "model":

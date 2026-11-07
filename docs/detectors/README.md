@@ -1,3 +1,23 @@
 # Detector documentation
 
-Detector authoring and evaluation guides arrive with **M14** and **M19**.
+M14's [runtime guide](../architecture/detectors.md) documents the built-in SDK,
+profile format, cache, provenance, failure model and example CLI.
+
+To add a built-in detector:
+
+1. Implement `Detector` from `openworld_moments.detectors.sdk` using only the
+   immutable context. Keep work bounded and check cancellation between samples.
+2. Register its factory explicitly in `detectors.service.BUILTINS`. Profiles cannot
+   load code. Bump the detector version whenever behavior changes.
+3. Declare required regions/capabilities and a local licensed profile/locale pack.
+4. Yield source-time `Detection` records with confidence and explainable evidence.
+5. Add lawful synthetic success, failure, ambiguity, boundary and cancellation
+   cases, plus processing measurements. Do not commit game assets or footage.
+6. Document limitations and exact validation status. GTA profiles stay unvalidated
+   until measured on legitimate post-release captures.
+
+`synthetic-bright-region` demonstrates consecutive-frame confirmation; isolated
+bright frames do not emit observations. Run it with
+`uv run --directory services/media-worker owm demo` from the repository root.
+
+Event review and the reproducible precision/recall evaluation harness arrive in M19.

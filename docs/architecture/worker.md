@@ -87,6 +87,8 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/assets/{id}/derived` | `AssetDerivedMedia`: proxy decision and artifact states; see [derived media](./derived-media.md) |
 | POST | `/v1/assets/{id}/derived` | `{artifacts?, proxy_policy?, force?, idempotency_key?}` → `Job` (kind `proxy`) |
 | GET | `/v1/assets/{id}/media/{original\|proxy\|thumbnail\|waveform}?index=n` | **Host only** (not reachable from the UI): `{path, content_type, size_bytes}` of a checked file for the `owm-media` protocol; `media.source_missing`, `derived.not_ready`, `media.unknown_variant` (404). See [desktop UI](./desktop-ui.md) |
+| POST | `/v1/sessions/{id}/analyze` | `{profile_id, locale?, force?, idempotency_key?}` → `Job` (kind `analyze`); see [detectors](./detectors.md) |
+| GET | `/v1/events?session_id=&limit=&offset=` | Persisted `Event[]` snapshots with provenance; no review mutations in M14 |
 | GET | `/v1/sessions?limit&offset` | `Session[]`, newest first; see [sessions](./sessions.md) |
 | GET | `/v1/sessions/{id}` | `Session` |
 | GET | `/v1/sessions/{id}/corrections` | `SessionCorrection[]` |

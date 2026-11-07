@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, StringConstraints
+from typing_extensions import TypeAliasType
 
 from . import common_schema
 
@@ -63,6 +64,40 @@ class DetectorSettings(BaseModel):
     ] = None
 
 
+class VocabularyAdditionalPropertyItem(RootModel[str]):
+    root: Annotated[str, Field(max_length=200, min_length=1)]
+
+
+VocabularyAdditionalProperty = TypeAliasType(
+    "VocabularyAdditionalProperty",
+    Annotated[list[VocabularyAdditionalPropertyItem], Field(max_length=256)],
+)
+
+
+class LocalePack(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    version: Annotated[
+        str,
+        Field(
+            description="Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.",
+            pattern="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$",
+            title="SemVer",
+        ),
+    ]
+    license: Annotated[str, Field(max_length=128, min_length=1)]
+    vocabulary: Annotated[
+        dict[
+            Annotated[
+                str, StringConstraints(max_length=64, pattern=r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
+            ],
+            VocabularyAdditionalProperty,
+        ],
+        Field(max_length=128),
+    ]
+
+
 class Profile(BaseModel):
     """
     Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.
@@ -116,3 +151,25 @@ class Profile(BaseModel):
     ]
     detectors: list[DetectorSettings]
     safe_zones: Annotated[SafeZones | None, Field(title="SafeZones")] = None
+    extends: Annotated[
+        str | None,
+        Field(
+            description="Lowercase identifier for profiles, presets, detectors, and regions.",
+            max_length=64,
+            pattern="^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+            title="Slug",
+        ),
+    ] = None
+    license: Annotated[str | None, Field(max_length=128, min_length=1)] = None
+    capabilities: list[Literal["frames.gray"]] | None = None
+    locales: Annotated[
+        dict[
+            Annotated[
+                str,
+                StringConstraints(pattern=r"^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$"),
+            ],
+            LocalePack,
+        ]
+        | None,
+        Field(max_length=64),
+    ] = None

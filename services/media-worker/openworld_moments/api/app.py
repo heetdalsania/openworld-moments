@@ -44,6 +44,7 @@ from openworld_moments.storage import (
     AssetRepository,
     ConflictError,
     DuplicateCandidateRepository,
+    EventRepository,
     NotFoundError,
     WatchedFolderRepository,
     transaction,
@@ -227,6 +228,14 @@ class SubmitAlign(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     session_ids: list[Any] | None = None
+    force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitAnalysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    profile_id: str
+    locale: str | None = None
     force: bool = False
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
@@ -476,6 +485,27 @@ def create_app(
         return await asyncio.to_thread(service.cleanup)
 
     # -- sessions (M11) -----------------------------------------------------------------
+
+    @app.post("/v1/sessions/{session_id}/analyze", status_code=201)
+    async def analyze_session(
+        session_id: str, body: SubmitAnalysis, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
+        params["session_id"] = session_id
+        return await submit_job("analyze", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/events")
+    async def list_events(
+        session_id: str, limit: int = 200, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        # Pagination is bounded at the repository query, not after loading all events.
+        rows = await asyncio.to_thread(
+            with_conn,
+            lambda conn: EventRepository(conn).page_for_session(
+                session_id, limit=max(1, min(limit, 1000)), offset=max(0, offset)
+            ),
+        )
+        return [normalize(event) for event in rows]
 
     session_service = SessionService(engine.database)
 

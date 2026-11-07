@@ -6,8 +6,13 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import TypeAliasType
 
 from . import common_schema, evidence_schema
+
+ToolVersionsAdditionalProperty = TypeAliasType(
+    "ToolVersionsAdditionalProperty", Annotated[str, Field(max_length=300, min_length=1)]
+)
 
 
 class DetectorSource(BaseModel):
@@ -52,6 +57,15 @@ class DetectorSource(BaseModel):
             pattern="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$",
             title="SemVer",
         ),
+    ] = None
+    input_key: Annotated[
+        str | None,
+        Field(
+            description="Lowercase hex SHA-256 digest.", pattern="^[0-9a-f]{64}$", title="Sha256"
+        ),
+    ] = None
+    tool_versions: Annotated[
+        dict[str, ToolVersionsAdditionalProperty] | None, Field(max_length=32, min_length=1)
     ] = None
 
 

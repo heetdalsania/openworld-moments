@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.9",
+  "id": "generic-open-world",
+  "profile_version": "1.0.0",
+  "display_name": "Synthetic bright-region example (not a gameplay detector)",
+  "game_family": "generic-open-world",
+  "license": "Apache-2.0",
+  "capabilities": ["frames.gray"],
+  "frame": {
+    "aspect_ratios": ["16:9"],
+    "min_width": 64,
+    "min_height": 36
+  },
+  "regions": {
+    "signal": [0.1, 0.1, 0.8, 0.8]
+  },
+  "detectors": [
+    {
+      "id": "synthetic-bright-region",
+      "enabled": true,
+      "confirmation_frames": 3,
+      "min_confidence": 0.8,
+      "locale": "en"
+    }
+  ],
+  "locales": {
+    "en": {
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "vocabulary": {
+        "signal": ["bright"]
+      }
+    }
+  },
+  "safe_zones": {
+    "preserve": ["signal"]
+  }
+}

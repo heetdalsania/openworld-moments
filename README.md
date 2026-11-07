@@ -30,8 +30,9 @@ Completed milestones:
 | M11 — Session grouping | Explainable capture-time estimates (filename, container, mtime, with confidence and time-zone caveats), deterministic metadata grouping into candidate sessions with per-join evidence, an idempotent recompute job, and merge/split/reorder/remove/confirm corrections that survive recomputation ([sessions](./docs/architecture/sessions.md)) |
 | M12 — Visual and audio overlap | Finds repeated replay footage between adjacent clips from fingerprints (continuous frame matching, ambiguity rejection, audio refinement), applies only confident results to the session layout, and keeps user overrides above recomputation ([overlap](./docs/architecture/overlap.md)) |
 | M13 — Virtual session timeline | A Sessions screen and a session player that plays a whole session as one gap-free timeline: clips switch seamlessly at boundaries without replaying repeated footage, which can be revealed; frame steps, keyboard controls, a track with thumbnails, waveforms, and overlap confidence, and reorder/split/merge/override corrections, with every moment traceable to its source clip ([session timeline](./docs/architecture/session-timeline.md)) |
+| M14 — Detector SDK and profiles | Local JSON profile validation/inheritance, immutable derived-frame inputs, isolated cancellable built-in detectors, versioned caches and evidence-backed events; a synthetic temporal example and `owm` CLI ([detector runtime](./docs/architecture/detectors.md)) |
 
-You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; there is no event detection, analysis, or editing yet. Those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; the detector runtime can run a synthetic example, but there are no gameplay detectors, event-review UI, or editing yet. Those arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -77,6 +78,8 @@ Run from the repository root:
 | `pnpm contracts:check` | Regenerate and fail if the committed generated files differ |
 | `pnpm media:doctor` | Report FFprobe/FFmpeg versions and codecs; exit 1 if media probing cannot work |
 | `pnpm media:fixtures <dir>` | Generate the synthetic test clips (relative to `services/media-worker/`; never commit them) |
+| `uv run --directory services/media-worker owm profiles validate ../../profiles/generic-open-world/profile.json` | Validate a local JSON profile (manifest path is relative to the worker directory) |
+| `uv run --directory services/media-worker owm demo` | Generate temporary synthetic media and run the example detector end to end |
 | `pnpm check` | `format:check`, `lint`, `typecheck`, `test`, and `contracts:check` together |
 
 Each command also has per-toolchain variants, such as `pnpm lint:rs` or `pnpm test:py`.
@@ -343,7 +346,11 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M10 needs its real-phone smoke test on a Windows private network ([steps](./docs/guides/phone-upload.md)) before it is marked complete. M14 and M21 are ready and can be worked in parallel (see [MILESTONES.md](./MILESTONES.md)):
+M10 still needs its real-phone smoke test on a Windows private network before it
+is marked complete. After M14 merges, the next independent milestones are:
 
-- [M14 — Detector SDK and profile schema](./docs/milestones/M14-detector-sdk-and-profiles.md): the extensible detector and profile runtime.
-- [M21 — Editor project model](./docs/milestones/M21-editor-project-model.md): the non-destructive edit list, autosave, and undo model, built on the M13 session timeline.
+- [M15 — Profile calibration](./docs/milestones/M15-profile-calibration.md): calibrate regions and export profile patches.
+- [M18 — Audio analysis and transcription](./docs/milestones/M18-audio-and-transcription.md): deterministic audio evidence and optional local transcription.
+- [M21 — Editor project model](./docs/milestones/M21-editor-project-model.md): the non-destructive edit list, autosave, and undo model.
+
+The detector example is synthetic only; GTA profiles remain unvalidated placeholders.

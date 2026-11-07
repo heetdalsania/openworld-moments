@@ -1,2 +1,2 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Reserved for a later milestone; see MILESTONES.md."""
+"""Built-in detector SDK, local profiles, versioned analysis and synthetic example (M14)."""
