@@ -26,9 +26,10 @@ Rust host ──worker://job-event, worker://resync, worker://status──▶ Re
 
   | Method | Route |
   |---|---|
-  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities`, `/v1/sessions` (query: `limit`, …), `/v1/sessions/{id}`, `/v1/sessions/{id}/overlaps`, `/v1/sessions/{id}/corrections` |
-  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry`, `/v1/sessions/recompute`, `/v1/sessions/align`, `/v1/sessions/merge`, `/v1/sessions/{id}/split`, `/v1/sessions/{id}/order`, `/v1/sessions/{id}/remove`, `/v1/sessions/{id}/confirm` |
+  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities`, `/v1/sessions` (query: `limit`, …), `/v1/sessions/{id}`, `/v1/sessions/{id}/overlaps`, `/v1/sessions/{id}/corrections`, `/v1/transcription/models`, `/v1/sessions/{id}/transcript` |
+  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry`, `/v1/sessions/recompute`, `/v1/sessions/align`, `/v1/sessions/merge`, `/v1/sessions/{id}/split`, `/v1/sessions/{id}/order`, `/v1/sessions/{id}/remove`, `/v1/sessions/{id}/confirm`, `/v1/sessions/{id}/transcribe` |
   | PUT | `/v1/sessions/{id}/overlaps/{asset_id}` |
+  | DELETE | `/v1/sessions/{id}/transcript` (derived text only, M18) |
 
   IDs must be well-formed and query strings contain only `[A-Za-z0-9_=&-]`.
   Watched folders keep their own M07 commands.
@@ -62,7 +63,7 @@ Routes are hash-based, so reloading the window returns to the same screen.
 | `#/library` (default) | `LibraryView` | Newest clips first, 60 per page. Thumbnail, name, duration, size, and badges (Original missing, HDR, No audio, Copied to library). Loading, error with retry, and empty states (with Import and a pointer to watched folders) |
 | `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
 | `#/sessions` | `SessionsView` | Candidate sessions (M11) with played duration, hidden repeated footage, state, and grouping confidence; group, find repeated footage, and merge ([session timeline](./session-timeline.md)) |
-| `#/session/<id>` | `SessionView` | The session as one continuous timeline (M13): two-element player, track with boundaries, thumbnails, waveforms, and hidden-overlap markers, reveal toggle, keyboard controls, and per-clip corrections ([session timeline](./session-timeline.md)) |
+| `#/session/<id>` | `SessionView` | The session as one continuous timeline (M13): two-element player, track with boundaries, thumbnails, waveforms, and hidden-overlap markers, reveal toggle, keyboard controls, and per-clip corrections ([session timeline](./session-timeline.md)); the `TranscriptPanel` (M18) with its privacy notice, engine/model guidance, transcribe/rebuild, two-step delete and timed lines that seek the player ([transcription](./transcription.md)) |
 | `#/calibration` | `CalibrationView` | Profile defaults, local ROI overrides, frame capture, crop and built-in preview, media-free patch import/export ([calibration](./profile-calibration.md)) |
 | `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
 | `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |

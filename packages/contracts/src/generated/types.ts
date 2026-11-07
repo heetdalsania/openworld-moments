@@ -162,6 +162,36 @@ export type GroupingReason =
   | "frame_rate_changed"
   | "gap_exceeded";
 /**
+ * Local speech-model name, e.g. 'base.en'. Never a path or URL.
+ *
+ * This interface was referenced by `Transcript`'s JSON-Schema
+ * via the `definition` "SpeechModelName".
+ */
+export type SpeechModelName = string;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs5 = number;
+/**
+ * Spoken-language code reported or requested for transcription (ISO 639-1/639-3 as whisper.cpp names them).
+ *
+ * This interface was referenced by `Transcript`'s JSON-Schema
+ * via the `definition` "SpeechLanguage".
+ */
+export type SpeechLanguage = string;
+/**
+ * Probability-like score in [0, 1].
+ */
+export type Confidence2 = number;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs6 = number;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs7 = number;
+/**
  * This interface was referenced by `WatchedFolder`'s JSON-Schema
  * via the `definition` "SourceKind".
  */
@@ -198,6 +228,9 @@ export interface ContractsBundle {
   project?: Project;
   "render-preset"?: RenderPreset;
   session?: Session;
+  "speech-models"?: SpeechModels;
+  transcript?: Transcript;
+  transcription?: TranscriptionResult;
   "watched-folder"?: WatchedFolder;
 }
 export interface AnalysisResult {
@@ -711,13 +744,25 @@ export interface TemporalConsistencyEvidence {
   score: Confidence;
 }
 /**
- * Audio energy or spectral event in a time range.
+ * Audio energy, onset, silence, or speech-activity feature in a source time range. Supporting evidence only: loudness never proves that a moment is important.
  */
 export interface AudioEvidence {
   kind: "audio";
   start_ms: TimelineMs;
   end_ms: TimelineMs;
   score: Confidence;
+  /**
+   * Which deterministic feature produced this evidence (M18).
+   */
+  feature?: "loudness" | "onset" | "impact" | "silence" | "speech_activity";
+  /**
+   * Representative level in dB relative to full scale (RMS over the feature's window).
+   */
+  level_dbfs?: number;
+  /**
+   * Always 'supporting': audio features corroborate other evidence; they are not highlights.
+   */
+  role?: "supporting";
 }
 /**
  * Transcribed speech matching a phrase.
@@ -1661,7 +1706,7 @@ export interface Profile {
   safe_zones?: SafeZones;
   extends?: Slug;
   license?: string;
-  capabilities?: "frames.gray"[];
+  capabilities?: ("frames.gray" | "audio.pcm")[];
   locales?: {
     [k: string]: LocalePack | undefined;
   };
@@ -2012,6 +2057,152 @@ export interface SessionCorrection {
     [k: string]: ScalarValue | undefined;
   } | null;
   created_at: UtcTimestamp;
+}
+/**
+ * Local transcription status (spec 10.7): engine availability, explicitly installed models, and a catalog of models the user can install by hand. Nothing downloads automatically.
+ */
+export interface SpeechModels {
+  schema_version: string;
+  engine: SpeechEngineStatus;
+  /**
+   * @maxItems 64
+   */
+  installed: InstalledSpeechModel[];
+  /**
+   * @maxItems 64
+   */
+  catalog: SpeechModelCatalogEntry[];
+}
+/**
+ * This interface was referenced by `SpeechModels`'s JSON-Schema
+ * via the `definition` "SpeechEngineStatus".
+ */
+export interface SpeechEngineStatus {
+  available: boolean;
+  version?: string;
+  /**
+   * Why the engine is unavailable, in plain language. No paths.
+   */
+  reason?: string;
+}
+/**
+ * This interface was referenced by `SpeechModels`'s JSON-Schema
+ * via the `definition` "InstalledSpeechModel".
+ */
+export interface InstalledSpeechModel {
+  name: SpeechModelName;
+  size_bytes: number;
+  sha256: Sha256;
+  /**
+   * License identifier recorded at installation; not a legal clearance check.
+   */
+  license: string;
+  installed_at: UtcTimestamp;
+}
+/**
+ * A known model the user may install manually. Listing it never downloads it.
+ *
+ * This interface was referenced by `SpeechModels`'s JSON-Schema
+ * via the `definition` "SpeechModelCatalogEntry".
+ */
+export interface SpeechModelCatalogEntry {
+  name: SpeechModelName;
+  approx_size_bytes: number;
+  languages: "en" | "multilingual";
+  license: string;
+  source_url: string;
+}
+/**
+ * A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.
+ */
+export interface Transcript {
+  schema_version: string;
+  session_id: SessionId;
+  segments: TranscriptSegment[];
+}
+/**
+ * One FTS-ready span of transcribed speech from one clip.
+ *
+ * This interface was referenced by `Transcript`'s JSON-Schema
+ * via the `definition` "TranscriptSegment".
+ */
+export interface TranscriptSegment {
+  id: number;
+  asset_id: AssetId;
+  start_ms: TimelineMs5;
+  end_ms: TimelineMs;
+  source_start_ms: TimelineMs;
+  source_end_ms: TimelineMs;
+  text: string;
+  language?: SpeechLanguage | null;
+  confidence: Confidence2;
+  /**
+   * @maxItems 1000
+   */
+  words: TranscriptWord[];
+  transcriber: Transcriber;
+}
+/**
+ * This interface was referenced by `Transcript`'s JSON-Schema
+ * via the `definition` "TranscriptWord".
+ */
+export interface TranscriptWord {
+  text: string;
+  start_ms: TimelineMs6;
+  end_ms: TimelineMs;
+  source_start_ms: TimelineMs7;
+  source_end_ms: TimelineMs;
+  confidence: Confidence;
+}
+/**
+ * What produced the text: enough to reproduce or invalidate it, with no paths.
+ *
+ * This interface was referenced by `Transcript`'s JSON-Schema
+ * via the `definition` "Transcriber".
+ */
+export interface Transcriber {
+  engine: "whisper.cpp";
+  engine_version: string;
+  engine_sha256: Sha256;
+  model: SpeechModelName;
+  model_sha256: Sha256;
+  transcriber_version: SemVer;
+  /**
+   * 'auto' or a language code.
+   */
+  requested_language?: string;
+}
+/**
+ * Result of a 'transcribe' job: one outcome per session clip. Completed clips are kept when later clips fail or the job is cancelled.
+ */
+export interface TranscriptionResult {
+  schema_version: string;
+  session_id: SessionId;
+  model: SpeechModelName;
+  outcomes: TranscriptionOutcome[];
+}
+/**
+ * This interface was referenced by `TranscriptionResult`'s JSON-Schema
+ * via the `definition` "TranscriptionOutcome".
+ */
+export interface TranscriptionOutcome {
+  asset_id: AssetId;
+  status: "computed" | "cached" | "failed" | "skipped";
+  segment_count: number;
+  language?: SpeechLanguage;
+  error?: ErrorInfo;
+}
+/**
+ * This interface was referenced by `TranscriptionResult`'s JSON-Schema
+ * via the `definition` "TranscriptionRequest".
+ */
+export interface TranscriptionRequest {
+  model: SpeechModelName;
+  /**
+   * 'auto' (default) or a spoken-language code.
+   */
+  language?: string;
+  force?: boolean;
 }
 /**
  * A user-approved folder whose completed video files are imported automatically (spec 6.1, 8.1.2, M07). The desktop host watches it and reports stable files; the worker decides whether to import. Nothing in a watched folder is ever moved, renamed, or deleted.

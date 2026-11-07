@@ -279,8 +279,9 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M15 | Complete | [#21](https://github.com/heetdalsania/openworld-moments/pull/21) | — | Arun Velkumar | Accessible upright ROI calibration from imported playback frames; sparse local overrides and base diff/reset, preprocessing and real synthetic SDK preview, safe JSON patch import/export and separate crop export; contracts 1.10, no migration. See [handoff](./docs/milestones/M15-handoff.md). |
 | M16 | Complete | [#22](https://github.com/heetdalsania/openworld-moments/pull/22) | — | Arun Velkumar | Analytic star/disc ROI estimator, temporal changes, local crop references, replay/benchmark; contracts 1.11, SDK 1.1; synthetic FFmpeg validation only, game compatibility unvalidated |
 | M17 | Complete | [#23](https://github.com/heetdalsania/openworld-moments/pull/23) | — | Arun Velkumar | Local ROI-only Tesseract banner/subtitle intervals, locale matching and line evidence/spoiler flags; contracts 1.12, SDK 1.2; synthetic validation, game compatibility unvalidated. See [handoff](./docs/milestones/M17-handoff.md). |
-| M18 | Ready | — | — | — | — |
-| M19–M20 | See dependency graph | — | — | — | — |
+| M18 | Complete | — | — | Arun Velkumar | `audio-features` 1.0.0: first-stream proxy audio (8 kHz full + 300–3400 Hz band), onset/impact (±20 ms PCM, ±30 ms via AAC), silence, speech-like activity, all `role: supporting`; optional whisper.cpp transcription with explicit local model install (no downloads), per-clip cached/cancellable/resumable `transcribe` job, words in M13 session time, privacy notice and text-only delete in the session screen; contracts 1.13, SDK 1.3.0, migration 0011 |
+| M19 | Ready | — | — | — | — |
+| M20 | See dependency graph | — | — | — | — |
 | M21 | Ready | — | — | — | — |
 | M22–M39 | See dependency graph | — | — | — | — |
 

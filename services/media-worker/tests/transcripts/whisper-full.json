@@ -1,0 +1,36 @@
+{
+  "systeminfo": "AVX = 0 | NEON = 1",
+  "model": { "type": "base", "multilingual": false, "vocab": 51864 },
+  "params": { "model": "models/ggml-base.en.bin", "language": "auto", "translate": false },
+  "result": { "language": "en" },
+  "transcription": [
+    {
+      "timestamps": { "from": "00:00:00,000", "to": "00:00:02,000" },
+      "offsets": { "from": 0, "to": 2000 },
+      "text": " Meet me at the bridge.",
+      "tokens": [
+        { "text": "[_BEG_]", "timestamps": { "from": "00:00:00,000", "to": "00:00:00,000" }, "offsets": { "from": 0, "to": 0 }, "id": 50363, "p": 0.98, "t_dtw": -1 },
+        { "text": " Meet", "offsets": { "from": 0, "to": 300 }, "id": 21167, "p": 0.95, "t_dtw": -1 },
+        { "text": " me", "offsets": { "from": 300, "to": 450 }, "id": 502, "p": 0.93, "t_dtw": -1 },
+        { "text": " at", "offsets": { "from": 450, "to": 600 }, "id": 379, "p": 0.9, "t_dtw": -1 },
+        { "text": " the", "offsets": { "from": 600, "to": 750 }, "id": 262, "p": 0.88, "t_dtw": -1 },
+        { "text": " bri", "offsets": { "from": 750, "to": 1000 }, "id": 1379, "p": 0.8, "t_dtw": -1 },
+        { "text": "dge", "offsets": { "from": 1000, "to": 1300 }, "id": 1484, "p": 0.9, "t_dtw": -1 },
+        { "text": ".", "offsets": { "from": 1300, "to": 1400 }, "id": 13, "p": 0.99, "t_dtw": -1 },
+        { "text": "[_TT_70]", "offsets": { "from": 1400, "to": 1400 }, "id": 50434, "p": 0.5, "t_dtw": -1 }
+      ]
+    },
+    {
+      "timestamps": { "from": "00:00:02,500", "to": "00:00:04,100" },
+      "offsets": { "from": 2500, "to": 4100 },
+      "text": " Go, go!",
+      "tokens": [
+        { "text": " Go", "offsets": { "from": 2500, "to": 2800 }, "id": 1514, "p": 0.97, "t_dtw": -1 },
+        { "text": ",", "offsets": { "from": 2800, "to": 2850 }, "id": 11, "p": 0.85, "t_dtw": -1 },
+        { "text": " go", "offsets": { "from": 2900, "to": 3300 }, "id": 467, "p": 0.92, "t_dtw": -1 },
+        { "text": "!", "offsets": { "from": 3300, "to": 3400 }, "id": 0, "p": 0.96, "t_dtw": -1 },
+        { "text": "<|endoftext|>", "offsets": { "from": 4100, "to": 4100 }, "id": 50256, "p": 0.99, "t_dtw": -1 }
+      ]
+    }
+  ]
+}

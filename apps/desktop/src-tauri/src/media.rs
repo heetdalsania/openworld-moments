@@ -97,6 +97,12 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("PUT", ["", "v1", "sessions", id, "overlaps", asset]) => {
             is_id(id, "ses_") && is_id(asset, "ast_") && query.is_none()
         }
+        // M18: optional local transcription. Deleting a transcript removes derived text only.
+        ("GET", ["", "v1", "transcription", "models"]) => query.is_none(),
+        ("POST", ["", "v1", "sessions", id, "transcribe"]) => is_id(id, "ses_") && query.is_none(),
+        ("GET" | "DELETE", ["", "v1", "sessions", id, "transcript"]) => {
+            is_id(id, "ses_") && query.is_none()
+        }
         _ => false,
     }
 }
@@ -303,6 +309,10 @@ mod tests {
             ("POST", &format!("/v1/sessions/{SESSION}/order")),
             ("POST", &format!("/v1/sessions/{SESSION}/split")),
             ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{ASSET}")),
+            ("GET", "/v1/transcription/models"),
+            ("POST", &format!("/v1/sessions/{SESSION}/transcribe")),
+            ("GET", &format!("/v1/sessions/{SESSION}/transcript")),
+            ("DELETE", &format!("/v1/sessions/{SESSION}/transcript")),
         ] {
             assert!(api_route_allowed(method, path), "{method} {path}");
         }
@@ -322,6 +332,18 @@ mod tests {
             ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{SESSION}")),
             ("POST", "/v1/sessions/recompute?max_gap_ms=1"),
             ("GET", "/v1/sessions/ses_bad"),
+            (
+                "DELETE",
+                &format!("/v1/sessions/{SESSION}/transcript?all=1"),
+            ),
+            ("DELETE", "/v1/sessions/ses_bad/transcript"),
+            ("POST", "/v1/transcription/models"),
+            ("GET", "/v1/transcription/models?path=/tmp"),
+            (
+                "POST",
+                &format!("/v1/sessions/{SESSION}/transcribe?model=x"),
+            ),
+            ("PUT", &format!("/v1/sessions/{SESSION}/transcript")),
         ] {
             assert!(!api_route_allowed(method, path), "{method} {path}");
         }

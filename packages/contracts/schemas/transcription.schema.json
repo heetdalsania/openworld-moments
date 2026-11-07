@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/transcription.schema.json",
+  "title": "TranscriptionResult",
+  "description": "Result of a 'transcribe' job: one outcome per session clip. Completed clips are kept when later clips fail or the job is cancelled.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "model", "outcomes"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "model": {
+      "$ref": "transcript.schema.json#/$defs/SpeechModelName"
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TranscriptionOutcome"
+      }
+    }
+  },
+  "$defs": {
+    "TranscriptionOutcome": {
+      "title": "TranscriptionOutcome",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "status", "segment_count"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "status": {
+          "enum": ["computed", "cached", "failed", "skipped"]
+        },
+        "segment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "language": {
+          "$ref": "transcript.schema.json#/$defs/SpeechLanguage"
+        },
+        "error": {
+          "$ref": "error.schema.json"
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["failed", "skipped"]
+          }
+        }
+      },
+      "then": {
+        "required": ["error"],
+        "properties": {
+          "segment_count": {
+            "const": 0
+          },
+          "error": {
+            "$ref": "error.schema.json"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "error": false
+        }
+      }
+    },
+    "TranscriptionRequest": {
+      "title": "TranscriptionRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "$ref": "transcript.schema.json#/$defs/SpeechModelName"
+        },
+        "language": {
+          "description": "'auto' (default) or a spoken-language code.",
+          "type": "string",
+          "pattern": "^(auto|[a-z]{2,3})$"
+        },
+        "force": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

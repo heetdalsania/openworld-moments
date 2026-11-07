@@ -51,6 +51,7 @@ from openworld_moments.storage import (
     WatchedFolderRepository,
     transaction,
 )
+from openworld_moments.transcripts.service import Transcriber
 from openworld_moments.watched import service as watched
 
 API_VERSION = 1
@@ -242,6 +243,14 @@ class SubmitAnalysis(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class SubmitTranscription(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    model: str
+    language: str | None = None
+    force: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
 class PreviewCalibration(BaseModel):
     model_config = ConfigDict(extra="forbid")
     base_key: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -293,6 +302,7 @@ def create_app(
     capabilities: Callable[..., dict[str, Any]] | None = None,
     derived: DerivedMedia | None = None,
     profile_catalog: ProfileCatalog | None = None,
+    transcriber: Transcriber | None = None,
 ) -> ASGIApp:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -547,6 +557,45 @@ def create_app(
         params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
         params["session_id"] = session_id
         return await submit_job("analyze", params, body.idempotency_key, request, response)
+
+    # -- transcription (M18) ---------------------------------------------------------------
+
+    def speech() -> Transcriber:
+        nonlocal transcriber
+        if transcriber is None:
+            media = derived_service()
+            transcriber = Transcriber(engine.database, media.tools, media)
+        return transcriber
+
+    def session_missing(sid: str) -> EngineError:
+        return EngineError("session.not_found", f"session {sid} not found", status=404)
+
+    @app.get("/v1/transcription/models")
+    async def transcription_models() -> dict[str, Any]:
+        return await asyncio.to_thread(speech().status)
+
+    @app.post("/v1/sessions/{session_id}/transcribe", status_code=201)
+    async def transcribe_session(
+        session_id: str, body: SubmitTranscription, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
+        params["session_id"] = session_id
+        return await submit_job("transcribe", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/sessions/{session_id}/transcript")
+    async def get_transcript(session_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(speech().transcript, session_id)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+
+    @app.delete("/v1/sessions/{session_id}/transcript")
+    async def delete_transcript(session_id: str) -> dict[str, Any]:
+        try:
+            result = await asyncio.to_thread(speech().delete, session_id)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+        return dict(result)
 
     @app.get("/v1/events")
     async def list_events(

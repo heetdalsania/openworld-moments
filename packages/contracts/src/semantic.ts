@@ -4,6 +4,9 @@ import type {
   AssetDerivedMedia,
   AssetOverlap,
   Session,
+  SpeechModels,
+  Transcript,
+  TranscriptionResult,
   Event,
   Evidence,
   ExportManifest,
@@ -280,8 +283,51 @@ function* overlap(doc: AssetOverlap): Generator<string> {
   }
 }
 
+function* transcript(doc: Transcript): Generator<string> {
+  let previous: number | undefined;
+  for (const [i, seg] of doc.segments.entries()) {
+    const path = `segments[${i}]`;
+    yield* range(`${path}.end_ms`, seg.start_ms, seg.end_ms);
+    yield* range(`${path}.source_end_ms`, seg.source_start_ms, seg.source_end_ms);
+    if (previous !== undefined && seg.start_ms < previous) {
+      yield `${path}.start_ms: segments must be ordered by session time`;
+    }
+    previous = seg.start_ms;
+    let last = seg.start_ms;
+    for (const [j, word] of seg.words.entries()) {
+      const wpath = `${path}.words[${j}]`;
+      yield* range(`${wpath}.end_ms`, word.start_ms, word.end_ms);
+      yield* range(`${wpath}.source_end_ms`, word.source_start_ms, word.source_end_ms);
+      if (word.start_ms < seg.start_ms || word.end_ms > seg.end_ms) {
+        yield `${wpath}: word lies outside its segment`;
+      }
+      if (word.start_ms < last) yield `${wpath}.start_ms: words must be ordered`;
+      last = word.start_ms;
+    }
+  }
+}
+
+function* transcription(doc: TranscriptionResult): Generator<string> {
+  const seen = new Set<string>();
+  for (const [i, outcome] of doc.outcomes.entries()) {
+    if (seen.has(outcome.asset_id)) yield `outcomes[${i}].asset_id: each clip appears once`;
+    seen.add(outcome.asset_id);
+  }
+}
+
+function* speechModels(doc: SpeechModels): Generator<string> {
+  const names = doc.installed.map((m) => m.name);
+  if (new Set(names).size !== names.length) yield "installed: model names must be unique";
+  if (!doc.engine.available && doc.engine.reason === undefined) {
+    yield "engine.reason: required when the engine is unavailable";
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  transcript,
+  transcription,
+  "speech-models": speechModels,
   overlap,
   session,
   "derived-media": derivedMedia,

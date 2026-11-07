@@ -105,6 +105,18 @@ beforeEach(() => {
   install(host, { invoke, listen });
   host.route(`GET /v1/sessions/${SES}`, () => session());
   host.route(`GET /v1/sessions/${SES}/overlaps`, () => overlaps());
+  // Transcription is optional; by default no engine is installed (M18).
+  host.route("GET /v1/transcription/models", {
+    schema_version: "1.13",
+    engine: { available: false, reason: "Install whisper.cpp to transcribe." },
+    installed: [],
+    catalog: [],
+  });
+  host.route(`GET /v1/sessions/${SES}/transcript`, {
+    schema_version: "1.13",
+    session_id: SES,
+    segments: [],
+  });
   for (const id of [A, B, C]) {
     host.route(`GET /v1/assets/${id}`, () =>
       asset({

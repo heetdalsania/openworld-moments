@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/speech-models.schema.json",
+  "title": "SpeechModels",
+  "description": "Local transcription status (spec 10.7): engine availability, explicitly installed models, and a catalog of models the user can install by hand. Nothing downloads automatically.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "engine", "installed", "catalog"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "engine": {
+      "$ref": "#/$defs/SpeechEngineStatus"
+    },
+    "installed": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/InstalledSpeechModel"
+      }
+    },
+    "catalog": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/SpeechModelCatalogEntry"
+      }
+    }
+  },
+  "$defs": {
+    "SpeechEngineStatus": {
+      "title": "SpeechEngineStatus",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available"],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Why the engine is unavailable, in plain language. No paths."
+        }
+      }
+    },
+    "InstalledSpeechModel": {
+      "title": "InstalledSpeechModel",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size_bytes", "sha256", "license", "installed_at"],
+      "properties": {
+        "name": {
+          "$ref": "transcript.schema.json#/$defs/SpeechModelName"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "License identifier recorded at installation; not a legal clearance check."
+        },
+        "installed_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
+      }
+    },
+    "SpeechModelCatalogEntry": {
+      "title": "SpeechModelCatalogEntry",
+      "description": "A known model the user may install manually. Listing it never downloads it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "approx_size_bytes", "languages", "license", "source_url"],
+      "properties": {
+        "name": {
+          "$ref": "transcript.schema.json#/$defs/SpeechModelName"
+        },
+        "approx_size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "languages": {
+          "enum": ["en", "multilingual"]
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "source_url": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^https://"
+        }
+      }
+    }
+  }
+}

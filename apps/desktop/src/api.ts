@@ -9,6 +9,8 @@ import type {
   Job,
   MediaAsset,
   Session,
+  SpeechModels,
+  Transcript,
 } from "@openworld-moments/contracts";
 
 /** A contract ErrorInfo, or a stand-in for transport failures. */
@@ -50,7 +52,11 @@ export function describeError(error: ApiError): string {
   return EXPLAIN[error.code] ?? error.message;
 }
 
-async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
+async function call<T>(
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<T> {
   try {
     return await invoke<T>("worker_api", { method, path, body: body ?? null });
   } catch (error) {
@@ -153,7 +159,42 @@ export function setOverlap(
   return call("PUT", `/v1/sessions/${id}/overlaps/${assetId}`, { overlap_ms: overlapMs });
 }
 
-export type { AssetDerivedMedia, AssetOverlap, ImportResult, Job, MediaAsset, Session };
+// -- transcription (M18) -------------------------------------------------------------
+
+/** Engine availability, explicitly installed models, and the manual-install catalog. */
+export function speechModels(): Promise<SpeechModels> {
+  return call("GET", "/v1/transcription/models");
+}
+
+export interface TranscribeOptions {
+  model: string;
+  language?: string;
+  force?: boolean;
+}
+
+export function transcribeSession(id: string, options: TranscribeOptions): Promise<Job> {
+  return call("POST", `/v1/sessions/${id}/transcribe`, options);
+}
+
+export function getTranscript(id: string): Promise<Transcript> {
+  return call("GET", `/v1/sessions/${id}/transcript`);
+}
+
+/** Deletes derived transcript text only; media is never touched. */
+export function deleteTranscript(id: string): Promise<{ deleted_segments: number }> {
+  return call("DELETE", `/v1/sessions/${id}/transcript`);
+}
+
+export type {
+  AssetDerivedMedia,
+  AssetOverlap,
+  ImportResult,
+  Job,
+  MediaAsset,
+  Session,
+  SpeechModels,
+  Transcript,
+};
 
 // -- calibration (M15) ---------------------------------------------------------------
 export interface CalibrationState {

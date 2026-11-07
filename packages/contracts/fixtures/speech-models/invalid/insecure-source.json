@@ -1,0 +1,30 @@
+{
+  "description": "Catalog sources are https links for manual installation",
+  "expect": "schema",
+  "path": "catalog[0].source_url",
+  "document": {
+    "schema_version": "1.13",
+    "engine": {
+      "available": true,
+      "version": "1.7.6"
+    },
+    "installed": [
+      {
+        "name": "base.en",
+        "size_bytes": 147964211,
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "license": "MIT",
+        "installed_at": "2026-11-07T20:00:00Z"
+      }
+    ],
+    "catalog": [
+      {
+        "name": "base.en",
+        "approx_size_bytes": 148000000,
+        "languages": "en",
+        "license": "MIT",
+        "source_url": "http://example.com/model.bin"
+      }
+    ]
+  }
+}

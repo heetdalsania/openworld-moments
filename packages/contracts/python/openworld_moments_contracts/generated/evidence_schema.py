@@ -90,7 +90,7 @@ class TemporalConsistencyEvidence(BaseModel):
 
 class AudioEvidence(BaseModel):
     """
-    Audio energy or spectral event in a time range.
+    Audio energy, onset, silence, or speech-activity feature in a source time range. Supporting evidence only: loudness never proves that a moment is important.
     """
 
     model_config = ConfigDict(
@@ -117,6 +117,24 @@ class AudioEvidence(BaseModel):
         float,
         Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
     ]
+    feature: Annotated[
+        Literal["loudness", "onset", "impact", "silence", "speech_activity"] | None,
+        Field(description="Which deterministic feature produced this evidence (M18)."),
+    ] = None
+    level_dbfs: Annotated[
+        float | None,
+        Field(
+            description="Representative level in dB relative to full scale (RMS over the feature's window).",
+            ge=-160.0,
+            le=0.0,
+        ),
+    ] = None
+    role: Annotated[
+        Literal["supporting"] | None,
+        Field(
+            description="Always 'supporting': audio features corroborate other evidence; they are not highlights."
+        ),
+    ] = None
 
 
 class TranscriptEvidence(BaseModel):

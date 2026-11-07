@@ -1,0 +1,29 @@
+{
+  "description": "An unavailable engine explains itself",
+  "expect": "semantic",
+  "message_contains": "engine.reason",
+  "document": {
+    "schema_version": "1.13",
+    "engine": {
+      "available": false
+    },
+    "installed": [
+      {
+        "name": "base.en",
+        "size_bytes": 147964211,
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "license": "MIT",
+        "installed_at": "2026-11-07T20:00:00Z"
+      }
+    ],
+    "catalog": [
+      {
+        "name": "base.en",
+        "approx_size_bytes": 148000000,
+        "languages": "en",
+        "license": "MIT",
+        "source_url": "https://huggingface.co/ggerganov/whisper.cpp"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.13",
+  "id": "generic-audio",
+  "profile_version": "1.0.0",
+  "display_name": "Audio features (loudness, impacts, silence, speech activity) — supporting evidence only",
+  "game_family": "generic-open-world",
+  "license": "Apache-2.0",
+  "frame": {
+    "aspect_ratios": ["16:9", "16:10", "21:9", "4:3", "1:1", "9:16"],
+    "min_width": 160,
+    "min_height": 90
+  },
+  "capabilities": ["audio.pcm"],
+  "regions": {},
+  "detectors": [
+    {
+      "id": "audio-features",
+      "enabled": true,
+      "min_confidence": 0.3
+    }
+  ]
+}

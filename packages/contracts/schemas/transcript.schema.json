@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/transcript.schema.json",
+  "title": "Transcript",
+  "description": "A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "session_id", "segments"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TranscriptSegment"
+      }
+    }
+  },
+  "$defs": {
+    "TranscriptSegment": {
+      "title": "TranscriptSegment",
+      "description": "One FTS-ready span of transcribed speech from one clip.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "asset_id",
+        "start_ms",
+        "end_ms",
+        "source_start_ms",
+        "source_end_ms",
+        "text",
+        "confidence",
+        "words",
+        "transcriber"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs",
+          "description": "Unique (virtual) session time, M13."
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "language": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SpeechLanguage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence",
+          "description": "Mean word probability reported by the engine; a heuristic, not a calibrated accuracy."
+        },
+        "words": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "$ref": "#/$defs/TranscriptWord"
+          }
+        },
+        "transcriber": {
+          "$ref": "#/$defs/Transcriber"
+        }
+      }
+    },
+    "TranscriptWord": {
+      "title": "TranscriptWord",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "start_ms", "end_ms", "source_start_ms", "source_end_ms", "confidence"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs",
+          "description": "Unique (virtual) session time, M13."
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs",
+          "description": "Time in the segment's source clip."
+        },
+        "source_end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        }
+      }
+    },
+    "Transcriber": {
+      "title": "Transcriber",
+      "description": "What produced the text: enough to reproduce or invalidate it, with no paths.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "engine_version",
+        "engine_sha256",
+        "model",
+        "model_sha256",
+        "transcriber_version"
+      ],
+      "properties": {
+        "engine": {
+          "const": "whisper.cpp"
+        },
+        "engine_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "engine_sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "model": {
+          "$ref": "#/$defs/SpeechModelName"
+        },
+        "model_sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "transcriber_version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        },
+        "requested_language": {
+          "description": "'auto' or a language code.",
+          "type": "string",
+          "pattern": "^(auto|[a-z]{2,3})$"
+        }
+      }
+    },
+    "SpeechModelName": {
+      "title": "SpeechModelName",
+      "description": "Local speech-model name, e.g. 'base.en'. Never a path or URL.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"
+    },
+    "SpeechLanguage": {
+      "title": "SpeechLanguage",
+      "description": "Spoken-language code reported or requested for transcription (ISO 639-1/639-3 as whisper.cpp names them).",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}$"
+    }
+  }
+}
