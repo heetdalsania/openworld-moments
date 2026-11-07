@@ -83,6 +83,10 @@ export type Evidence =
  */
 export type Region = [x: number, y: number, width: number, height: number];
 /**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs1 = number;
+/**
  * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
  */
 export type SemVer = string;
@@ -117,7 +121,7 @@ export type UtcTimestamp1 = string;
 /**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
-export type TimelineMs1 = number;
+export type TimelineMs2 = number;
 /**
  * Opaque timeline segment ID: 'seg_' + ULID.
  */
@@ -133,11 +137,11 @@ export type UtcTimestamp3 = string;
 /**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
-export type TimelineMs2 = number;
+export type TimelineMs3 = number;
 /**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
-export type TimelineMs3 = number;
+export type TimelineMs4 = number;
 /**
  * Probability-like score in [0, 1].
  */
@@ -665,6 +669,7 @@ export interface RegionTemplateEvidence {
   kind: "region_template";
   region: Region;
   score: Confidence;
+  frame_ms?: TimelineMs1;
 }
 /**
  * Color or shape rule satisfied inside a region.
@@ -1534,7 +1539,7 @@ export interface AssetOverlap {
    * Where B's time 0 falls in A (matched and weak results).
    */
   offset_ms?: number;
-  overlap_ms?: TimelineMs1;
+  overlap_ms?: TimelineMs2;
   confidence?: Confidence;
   /**
    * What the decision rests on: frame counts, votes per offset, matching frames, longest run, audio correlation, reason. Values are scalars or small arrays.
@@ -1660,6 +1665,19 @@ export interface DetectorSettings {
    * BCP 47 language tag, e.g. 'en' or 'pt-BR'.
    */
   locale?: string;
+  wanted?: WantedSettings;
+}
+/**
+ * Analytic indicator row and temporal tuning. Compatibility must be evaluated separately.
+ *
+ * This interface was referenced by `Profile`'s JSON-Schema
+ * via the `definition` "WantedSettings".
+ */
+export interface WantedSettings {
+  max_level?: number;
+  shape?: "star" | "disc";
+  max_missing_frames?: number;
+  debounce_ms?: number;
 }
 export interface SafeZones {
   /**
@@ -1836,10 +1854,10 @@ export interface Session {
 export interface SessionMember {
   asset_id: AssetId;
   order_index: number;
-  session_start_ms: TimelineMs2;
+  session_start_ms: TimelineMs3;
   duration_ms: TimelineMs;
   capture_time?: CaptureTimeEstimate;
-  overlap_with_previous_ms?: TimelineMs3;
+  overlap_with_previous_ms?: TimelineMs4;
   alignment_confidence?: Confidence1;
 }
 /**

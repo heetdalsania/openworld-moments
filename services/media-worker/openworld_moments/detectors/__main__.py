@@ -88,8 +88,37 @@ def main() -> int:
     analyze.add_argument("--profiles", type=Path, default=DEFAULT_CATALOG)
     example = sub.add_parser("demo")
     example.add_argument("--profiles", type=Path, default=DEFAULT_CATALOG)
+    wanted = sub.add_parser("wanted").add_subparsers(dest="operation", required=True)
+    replay = wanted.add_parser("replay")
+    replay.add_argument("asset_id")
+    replay.add_argument("--library", type=Path, required=True)
+    replay.add_argument("--profile", dest="profile_id", default="generic-wanted")
+    replay.add_argument("--profiles", type=Path, default=DEFAULT_CATALOG)
+    replay.add_argument("--output", type=Path, required=True)
+    replay.add_argument("--crops", action="store_true", help="Write separate local evidence crops")
+    bench = wanted.add_parser("benchmark")
+    bench.add_argument("--seconds", type=int, default=3600)
+    bench.add_argument("--repeats", type=int, default=5)
     args = parser.parse_args()
     try:
+        if args.command == "wanted":
+            from openworld_moments.detectors.wanted_replay import benchmark
+            from openworld_moments.detectors.wanted_replay import replay as run_replay
+
+            if args.operation == "benchmark":
+                result = benchmark(args.seconds, args.repeats)
+                print(json.dumps(result, sort_keys=True))
+                return 0 if result["budget_2x_met"] else 1
+            result = run_replay(
+                args.asset_id,
+                args.library,
+                args.profile_id,
+                ProfileCatalog(args.profiles),
+                args.output,
+                crops=args.crops,
+            )
+            print(json.dumps(result, sort_keys=True))
+            return 0
         catalog = ProfileCatalog(args.profiles)
         if args.command == "profiles":
             resolved = catalog.resolve(read_manifest(args.manifest))

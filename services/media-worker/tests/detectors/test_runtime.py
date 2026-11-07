@@ -454,3 +454,83 @@ def test_job_reports_partial_failure_without_losing_success(
         assert [o["status"] for o in job["result"]["outcomes"]] == ["computed", "failed"]
         assert len(client.get("/v1/events", params={"session_id": sid}).json()) == 1
         assert "private data" not in json.dumps(job)
+
+
+def test_mixed_roi_and_whole_frame_detectors_cache_and_calibration(
+    rig: tuple[Analyzer, str, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openworld_moments.detectors.calibration import Calibration
+    from openworld_moments.detectors.inputs import ROI_SAMPLER_VERSION, SAMPLER_VERSION
+    from openworld_moments.detectors.wanted import WantedState
+    from openworld_moments.detectors.wanted_fixtures import DEFAULT_REGION, fixture_frame
+
+    analyzer, sid, inputs = rig
+    inputs["versions"]["sampler"] = SAMPLER_VERSION
+    doc = manifest()
+    doc["regions"]["wanted_indicator"] = list(DEFAULT_REGION)
+    doc["detectors"].append({"id": WantedState.id, "enabled": True})
+    write_profile(analyzer.catalog.root, doc)
+    decoded: list[tuple[float, ...] | None] = []
+
+    def whole(*_: Any) -> tuple[Frame, ...]:
+        decoded.append(None)
+        return tuple(Frame(i * 500, 64, 36, bytes([255]) * 2304) for i in range(6))
+
+    def roi(_path: Any, _tool: Any, _cancel: Any, region: tuple[float, ...]) -> tuple[Frame, ...]:
+        decoded.append(region)
+        return tuple(
+            fixture_frame(level, i * 500, region=region)
+            for i, level in enumerate([0] * 3 + [2] * 3)
+        )
+
+    monkeypatch.setattr(module, "decode_frames", whole)
+    monkeypatch.setattr(module, "decode_region", roi)
+    result = run(analyzer, sid)
+    assert [r["status"] for r in result["outcomes"]] == ["computed", "computed"]
+    assert decoded == [None, DEFAULT_REGION]
+    saved = events(analyzer, sid)
+    assert {e["source"]["tool_versions"]["sampler"] for e in saved} == {
+        SAMPLER_VERSION,
+        ROI_SAMPLER_VERSION,
+    }
+    assert {e["source"]["detector_id"] for e in saved} == {BrightRegion.id, WantedState.id}
+    assert [r["status"] for r in run(analyzer, sid)["outcomes"]] == ["cached", "cached"]
+    assert decoded == [None, DEFAULT_REGION]
+    calibration = Calibration(analyzer.database, analyzer.catalog)
+    state = calibration.state(doc["id"])
+    replacement = (0.2, 0.1, 0.6, 0.2)
+    calibration.save(doc["id"], state["base_key"], {"wanted_indicator": list(replacement)})
+    assert [r["status"] for r in run(analyzer, sid)["outcomes"]] == ["computed", "computed"]
+    assert decoded[-1] == replacement
+
+
+def test_roi_decode_cancellation_and_failure_keep_other_completed_units(
+    rig: tuple[Analyzer, str, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openworld_moments.detectors.wanted import WantedState
+    from openworld_moments.detectors.wanted_fixtures import DEFAULT_REGION
+    from openworld_moments.media.process import ToolCancelled
+
+    analyzer, sid, _ = rig
+    doc = manifest()
+    doc["regions"]["wanted_indicator"] = list(DEFAULT_REGION)
+    doc["detectors"].append({"id": WantedState.id, "enabled": True})
+    write_profile(analyzer.catalog.root, doc)
+
+    def cancelled(*_: Any) -> Any:
+        raise ToolCancelled("cancelled")
+
+    monkeypatch.setattr(module, "decode_region", cancelled)
+    with pytest.raises(AnalysisCancelled):
+        run(analyzer, sid)
+    old = events(analyzer, sid)
+    assert len(old) == 1 and old[0]["source"]["detector_id"] == BrightRegion.id
+
+    def broken(*_: Any) -> Any:
+        raise AnalysisError("analysis.decode_failed", "Cannot decode ROI")
+
+    monkeypatch.setattr(module, "decode_region", broken)
+    result = run(analyzer, sid)
+    assert [r["status"] for r in result["outcomes"]] == ["cached", "failed"]
+    assert result["outcomes"][1]["error"]["code"] == "analysis.decode_failed"
+    assert events(analyzer, sid) == old

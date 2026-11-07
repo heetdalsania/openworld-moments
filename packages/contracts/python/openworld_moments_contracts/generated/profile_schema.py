@@ -36,34 +36,6 @@ class SafeZones(BaseModel):
     ]
 
 
-class DetectorSettings(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    id: Annotated[
-        str,
-        Field(
-            description="Lowercase identifier for profiles, presets, detectors, and regions.",
-            max_length=64,
-            pattern="^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
-            title="Slug",
-        ),
-    ]
-    enabled: bool
-    min_confidence: Annotated[
-        float | None,
-        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
-    ] = None
-    confirmation_frames: Annotated[int | None, Field(ge=1, le=600)] = None
-    locale: Annotated[
-        str | None,
-        Field(
-            description="BCP 47 language tag, e.g. 'en' or 'pt-BR'.",
-            pattern="^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$",
-        ),
-    ] = None
-
-
 class VocabularyAdditionalPropertyItem(RootModel[str]):
     root: Annotated[str, Field(max_length=200, min_length=1)]
 
@@ -98,6 +70,20 @@ class LocalePack(BaseModel):
     ]
 
 
+class WantedSettings(BaseModel):
+    """
+    Analytic indicator row and temporal tuning. Compatibility must be evaluated separately.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    max_level: Annotated[int | None, Field(ge=1, le=10)] = None
+    shape: Literal["star", "disc"] | None = None
+    max_missing_frames: Annotated[int | None, Field(ge=0, le=20)] = None
+    debounce_ms: Annotated[int | None, Field(ge=0, le=30000)] = None
+
+
 class ProfileFrame1(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -105,6 +91,35 @@ class ProfileFrame1(BaseModel):
     aspect_ratios: Annotated[list[AspectRatio], Field(min_length=1)]
     min_width: Annotated[int, Field(ge=1)]
     min_height: Annotated[int, Field(ge=1)]
+
+
+class DetectorSettings(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Lowercase identifier for profiles, presets, detectors, and regions.",
+            max_length=64,
+            pattern="^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+            title="Slug",
+        ),
+    ]
+    enabled: bool
+    min_confidence: Annotated[
+        float | None,
+        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
+    ] = None
+    confirmation_frames: Annotated[int | None, Field(ge=1, le=600)] = None
+    locale: Annotated[
+        str | None,
+        Field(
+            description="BCP 47 language tag, e.g. 'en' or 'pt-BR'.",
+            pattern="^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$",
+        ),
+    ] = None
+    wanted: WantedSettings | None = None
 
 
 class Profile(BaseModel):
