@@ -30,7 +30,12 @@ from openworld_moments.jobs.handlers import build_handlers
 from openworld_moments.media.process import ToolCancelled, run_tool
 from openworld_moments.media.tools import MediaTools, ToolInfo
 from openworld_moments.sessions.service import SessionService
-from openworld_moments.storage import AssetRepository, Database, EventRepository
+from openworld_moments.storage import (
+    AssetRepository,
+    Database,
+    DerivedArtifactRepository,
+    EventRepository,
+)
 from tests.worker.conftest import wait_for
 
 
@@ -128,10 +133,18 @@ def test_source_scale_brightness_compression_and_full_analyzer(
     with clip.open("rb") as stream:
         before = hashlib.file_digest(stream, "sha256").hexdigest()
     mtime = clip.stat().st_mtime_ns
-    db, sid, _ = imported(tmp_path, tools, clip)
+    db, sid, aid = imported(tmp_path, tools, clip)
     analyzer = Analyzer(db, tools, DerivedMedia(db, tools))
     result = analyzer.run({"session_id": sid, "profile_id": "generic-wanted"}, job_id=new_id("job"))
-    assert result["outcomes"][0]["status"] == "computed", result
+    if result["outcomes"][0]["status"] != "computed":
+        with contextlib.closing(db.connect()) as conn:
+            proxy = DerivedArtifactRepository(conn).get(aid, "proxy")
+        pytest.fail(
+            json.dumps(
+                {"analysis": result, "proxy_error": proxy.last_error if proxy else None},
+                indent=2,
+            )
+        )
     events = observations(db, sid)
     assert [(e["attributes"]["from"], e["attributes"]["to"]) for e in events] == [
         (0, 2),
