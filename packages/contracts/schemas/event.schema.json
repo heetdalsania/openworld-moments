@@ -19,34 +19,59 @@
     "review_state"
   ],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
-    "id": { "$ref": "common.schema.json#/$defs/EventId" },
-    "session_id": { "$ref": "common.schema.json#/$defs/SessionId" },
-    "asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/EventId"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "asset_id": {
+      "$ref": "common.schema.json#/$defs/AssetId"
+    },
     "type": {
       "description": "Namespaced dotted event type, e.g. 'openworld.wanted_level_changed'.",
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
       "maxLength": 128
     },
-    "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-    "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-    "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+    "start_ms": {
+      "$ref": "common.schema.json#/$defs/TimelineMs"
+    },
+    "end_ms": {
+      "$ref": "common.schema.json#/$defs/TimelineMs"
+    },
+    "confidence": {
+      "$ref": "common.schema.json#/$defs/Confidence"
+    },
     "attributes": {
       "description": "Event-type-specific values. Open map of scalars.",
       "type": "object",
-      "additionalProperties": { "$ref": "common.schema.json#/$defs/ScalarValue" }
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/ScalarValue"
+      }
     },
     "evidence": {
       "type": "array",
-      "items": { "$ref": "evidence.schema.json" }
+      "items": {
+        "$ref": "evidence.schema.json"
+      }
     },
     "source": {
       "description": "Who produced the event. 'detector' and 'user' are observations; 'model' is a suggestion.",
       "oneOf": [
-        { "$ref": "#/$defs/DetectorSource" },
-        { "$ref": "#/$defs/ModelSource" },
-        { "$ref": "#/$defs/UserSource" }
+        {
+          "$ref": "#/$defs/DetectorSource"
+        },
+        {
+          "$ref": "#/$defs/ModelSource"
+        },
+        {
+          "$ref": "#/$defs/UserSource"
+        }
       ]
     },
     "review_state": {
@@ -62,11 +87,34 @@
       "additionalProperties": false,
       "required": ["kind", "detector_id", "detector_version"],
       "properties": {
-        "kind": { "const": "detector" },
-        "detector_id": { "$ref": "common.schema.json#/$defs/Slug" },
-        "detector_version": { "$ref": "common.schema.json#/$defs/SemVer" },
-        "profile_id": { "$ref": "common.schema.json#/$defs/Slug" },
-        "profile_version": { "$ref": "common.schema.json#/$defs/SemVer" }
+        "kind": {
+          "const": "detector"
+        },
+        "detector_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "detector_version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        },
+        "profile_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "profile_version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        },
+        "input_key": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "tool_versions": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 32,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
       }
     },
     "ModelSource": {
@@ -76,13 +124,23 @@
       "additionalProperties": false,
       "required": ["kind", "model_id", "prompt_version", "sampled_frames_ms"],
       "properties": {
-        "kind": { "const": "model" },
-        "model_id": { "type": "string", "minLength": 1, "maxLength": 200 },
-        "prompt_version": { "$ref": "common.schema.json#/$defs/SemVer" },
+        "kind": {
+          "const": "model"
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "prompt_version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        },
         "sampled_frames_ms": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "common.schema.json#/$defs/TimelineMs" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          }
         }
       }
     },
@@ -93,7 +151,9 @@
       "additionalProperties": false,
       "required": ["kind"],
       "properties": {
-        "kind": { "const": "user" }
+        "kind": {
+          "const": "user"
+        }
       }
     }
   }

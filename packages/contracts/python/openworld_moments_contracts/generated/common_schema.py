@@ -47,6 +47,17 @@ class SessionId(RootModel[str]):
     ]
 
 
+class EventId(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Opaque event ID: 'evt_' + ULID.",
+            pattern="^evt_[0-9A-HJKMNP-TV-Z]{26}$",
+            title="EventId",
+        ),
+    ]
+
+
 class Slug(RootModel[str]):
     root: Annotated[
         str,

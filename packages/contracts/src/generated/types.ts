@@ -4,9 +4,29 @@
 // Regenerate with: pnpm contracts:generate
 
 /**
+ * Opaque session ID: 'ses_' + ULID.
+ */
+export type SessionId = string;
+/**
+ * Lowercase identifier for profiles, presets, detectors, and regions.
+ */
+export type Slug = string;
+/**
  * Opaque media asset ID: 'ast_' + ULID.
  */
 export type AssetId = string;
+/**
+ * Opaque event ID: 'evt_' + ULID.
+ */
+export type EventId = string;
+/**
+ * Primitive value allowed in open attribute maps.
+ */
+export type ScalarValue = string | number | boolean | null;
+/**
+ * Opaque request/log correlation ID: 'cor_' + ULID.
+ */
+export type CorrelationId = string;
 /**
  * 'auto': a proxy only when the policy finds a reason. 'always': a proxy for every asset.
  *
@@ -32,14 +52,6 @@ export type Sha2561 = string;
  */
 export type UtcTimestamp = string;
 /**
- * Primitive value allowed in open attribute maps.
- */
-export type ScalarValue = string | number | boolean | null;
-/**
- * Opaque request/log correlation ID: 'cor_' + ULID.
- */
-export type CorrelationId = string;
-/**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
 export type TimelineMs = number;
@@ -48,14 +60,6 @@ export type TimelineMs = number;
  * via the `definition` "DerivedOutcome".
  */
 export type DerivedOutcome = "generated" | "cached" | "not_needed" | "not_applicable";
-/**
- * Opaque event ID: 'evt_' + ULID.
- */
-export type EventId = string;
-/**
- * Opaque session ID: 'ses_' + ULID.
- */
-export type SessionId = string;
 /**
  * Probability-like score in [0, 1].
  */
@@ -78,10 +82,6 @@ export type Evidence =
  * @maxItems 4
  */
 export type Region = [x: number, y: number, width: number, height: number];
-/**
- * Lowercase identifier for profiles, presets, detectors, and regions.
- */
-export type Slug = string;
 /**
  * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
  */
@@ -177,8 +177,9 @@ export type Patterns = string[];
 export type UtcTimestamp4 = string;
 
 export interface ContractsBundle {
+  analysis?: AnalysisResult;
   "derived-media"?: AssetDerivedMedia;
-  error?: ErrorInfo1;
+  error?: ErrorInfo;
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
@@ -193,6 +194,60 @@ export interface ContractsBundle {
   "render-preset"?: RenderPreset;
   session?: Session;
   "watched-folder"?: WatchedFolder;
+}
+export interface AnalysisResult {
+  schema_version: string;
+  session_id: SessionId;
+  profile_id: Slug;
+  outcomes: DetectorOutcome[];
+}
+/**
+ * This interface was referenced by `AnalysisResult`'s JSON-Schema
+ * via the `definition` "DetectorOutcome".
+ */
+export interface DetectorOutcome {
+  asset_id: AssetId;
+  detector_id: Slug;
+  status: "computed" | "cached" | "failed" | "skipped";
+  event_ids: EventId[];
+  error?: ErrorInfo;
+}
+/**
+ * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
+ */
+export interface ErrorInfo {
+  /**
+   * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
+   */
+  code: string;
+  /**
+   * Human-readable explanation. Must not contain media contents or transcripts.
+   */
+  message: string;
+  retryable: boolean;
+  /**
+   * Extra machine-readable context. Values are scalars only.
+   */
+  details?: {
+    [k: string]: ScalarValue | undefined;
+  };
+  /**
+   * Last lines of a tool's stderr (e.g. FFmpeg), already redacted of user paths.
+   */
+  stderr_tail?: string;
+  correlation_id?: CorrelationId;
+}
+/**
+ * This interface was referenced by `AnalysisResult`'s JSON-Schema
+ * via the `definition` "AnalysisRequest".
+ */
+export interface AnalysisRequest {
+  profile_id: Slug;
+  /**
+   * BCP 47 language tag, e.g. 'en' or 'pt-BR'.
+   */
+  locale?: string;
+  force?: boolean;
 }
 /**
  * Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under library/derived/<asset-id>/; 'path' is relative to the library folder. Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.
@@ -394,7 +449,7 @@ export interface DerivedArtifact {
   sha256?: Sha2561;
   created_at?: UtcTimestamp;
   recipe?: Recipe;
-  last_error?: ErrorInfo;
+  last_error?: ErrorInfo1;
   proxy?: ProxyInfo;
   filmstrip?: FilmstripInfo;
   waveform?: WaveformInfo;
@@ -456,9 +511,9 @@ export interface ToneMap {
   lut_sha256: Sha256;
 }
 /**
- * The latest failed attempt. A failed regeneration keeps the previous artifact.
+ * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
  */
-export interface ErrorInfo {
+export interface ErrorInfo1 {
   /**
    * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
    */
@@ -575,31 +630,6 @@ export interface DerivedCleanupResult {
   skipped_links: number;
 }
 /**
- * Machine-readable error shared by the worker API, jobs, and the desktop host. Embedded in other documents, so it has no schema_version of its own.
- */
-export interface ErrorInfo1 {
-  /**
-   * Stable dotted snake_case code, e.g. 'media.probe_failed'. Never localized.
-   */
-  code: string;
-  /**
-   * Human-readable explanation. Must not contain media contents or transcripts.
-   */
-  message: string;
-  retryable: boolean;
-  /**
-   * Extra machine-readable context. Values are scalars only.
-   */
-  details?: {
-    [k: string]: ScalarValue | undefined;
-  };
-  /**
-   * Last lines of a tool's stderr (e.g. FFmpeg), already redacted of user paths.
-   */
-  stderr_tail?: string;
-  correlation_id?: CorrelationId;
-}
-/**
  * A time-ranged observation or suggestion about gameplay. Observations come from deterministic detectors or the user; suggestions come from models and stay suggestions until reviewed (spec 8.4.1, 8.4.6).
  */
 export interface Event {
@@ -700,6 +730,10 @@ export interface DetectorSource {
   detector_version: SemVer;
   profile_id?: Slug;
   profile_version?: SemVer;
+  input_key?: Sha256;
+  tool_versions?: {
+    [k: string]: string | undefined;
+  };
 }
 /**
  * Model suggestion. Must reference the sampled frames it is based on.
@@ -979,7 +1013,7 @@ export interface ImportItem {
   relative_path?: string;
   outcome: "imported" | "existing" | "relinked" | "skipped" | "failed";
   asset_id?: AssetId;
-  error?: ErrorInfo1;
+  error?: ErrorInfo;
   /**
    * Other assets that look like the same content (perceptual duplicate candidates, 1.4). Reported for review only; nothing is merged.
    *
@@ -1309,7 +1343,7 @@ export interface Job {
     total: number;
   };
   message?: string;
-  error?: ErrorInfo1;
+  error?: ErrorInfo;
   correlation_id?: CorrelationId;
   created_at: UtcTimestamp;
   started_at?: UtcTimestamp;
@@ -1578,6 +1612,12 @@ export interface Profile {
   };
   detectors: DetectorSettings[];
   safe_zones?: SafeZones;
+  extends?: Slug;
+  license?: string;
+  capabilities?: "frames.gray"[];
+  locales?: {
+    [k: string]: LocalePack | undefined;
+  };
 }
 export interface ProfileFrame {
   /**
@@ -1606,6 +1646,20 @@ export interface SafeZones {
    * Region names that vertical layouts must keep visible. Each must be defined in 'regions' (checked semantically).
    */
   preserve: Slug[];
+}
+/**
+ * This interface was referenced by `Profile`'s JSON-Schema
+ * via the `definition` "LocalePack".
+ */
+export interface LocalePack {
+  version: SemVer;
+  license: string;
+  vocabulary: {
+    /**
+     * @maxItems 256
+     */
+    [k: string]: string[] | undefined;
+  };
 }
 /**
  * Non-destructive edit decision list (spec 11.1). References source assets by ID; never stores rendered media.
@@ -2012,7 +2066,7 @@ export interface WatchedFile {
   attempts: number;
   job_id?: JobId;
   asset_id?: AssetId;
-  error?: ErrorInfo1;
+  error?: ErrorInfo;
   retry_at?: UtcTimestamp;
   updated_at: UtcTimestamp;
 }
@@ -2028,5 +2082,5 @@ export interface ScanReport {
    * True when a full reconciliation scan finished (sets last_scan_at).
    */
   scanned?: boolean;
-  error?: ErrorInfo1;
+  error?: ErrorInfo;
 }

@@ -2,6 +2,7 @@
 // Single entry point for reading contract documents: version → schema → semantics.
 // Mirrors validate.py.
 import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
+import analysis from "../schemas/analysis.schema.json" with { type: "json" };
 import common from "../schemas/common.schema.json" with { type: "json" };
 import derivedMedia from "../schemas/derived-media.schema.json" with { type: "json" };
 import error from "../schemas/error.schema.json" with { type: "json" };
@@ -21,6 +22,7 @@ import session from "../schemas/session.schema.json" with { type: "json" };
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
+  AnalysisResult,
   AssetDerivedMedia,
   AssetFingerprints,
   AssetOverlap,
@@ -42,6 +44,7 @@ import { checkVersion } from "./versioning.ts";
 
 /** Top-level contracts and their TypeScript types. */
 export interface ContractTypes {
+  analysis: AnalysisResult;
   "derived-media": AssetDerivedMedia;
   error: ErrorInfo;
   event: Event;
@@ -62,6 +65,7 @@ export type ContractName = keyof ContractTypes;
 
 /** Top-level contracts: name -> [schema, carries schema_version]. */
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
+  analysis: [analysis, true],
   "derived-media": [derivedMedia, true],
   error: [error, false],
   event: [event, true],

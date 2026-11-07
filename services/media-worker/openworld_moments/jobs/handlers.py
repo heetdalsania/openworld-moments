@@ -15,7 +15,9 @@
 * ``align`` (M12): find repeated footage between adjacent session clips,
   ``openworld_moments.alignment``.
 
-Later product handlers (analyze, transcribe, ...) arrive in their milestones.
+* ``analyze`` (M14): isolated, cached built-in detector runs over derived media.
+
+Later product handlers (transcribe, ...) arrive in their milestones.
 """
 
 from __future__ import annotations
@@ -27,6 +29,9 @@ from typing import Any
 
 from openworld_moments.alignment.service import AlignCancelled, Aligner
 from openworld_moments.derived.service import DerivedCancelled, DerivedFailure, DerivedMedia
+from openworld_moments.detectors.profiles import SLUG
+from openworld_moments.detectors.sdk import AnalysisCancelled, AnalysisError
+from openworld_moments.detectors.service import Analyzer
 from openworld_moments.fingerprints.service import (
     FingerprintCancelled,
     Fingerprinter,
@@ -354,6 +359,52 @@ def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def analyze_handler(analyzer: Analyzer) -> JobHandler:
+    def validate(params: Mapping[str, Any]) -> dict[str, Any]:
+        _reject_unknown(params, {"session_id", "profile_id", "locale", "force"})
+        sid = params.get("session_id")
+        pid = params.get("profile_id")
+        if not isinstance(sid, str) or not _SESSION_ID.fullmatch(sid):
+            raise ValueError("session_id: expected a session ID")
+        if not isinstance(pid, str) or not SLUG.fullmatch(pid):
+            raise ValueError("profile_id: expected a profile slug")
+        if not isinstance(params.get("force", False), bool):
+            raise ValueError("force: expected a boolean")
+        locale = params.get("locale")
+        if locale is not None and (
+            not isinstance(locale, str)
+            or not re.fullmatch(r"[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?", locale)
+        ):
+            raise ValueError("locale: expected a language tag")
+        try:
+            analyzer.profile(pid)
+        except AnalysisError as exc:
+            raise ValueError(exc.message) from exc
+        return dict(params)
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            result = analyzer.run(
+                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except AnalysisCancelled as exc:
+            raise Cancelled from exc
+        except AnalysisError as exc:
+            raise JobFailure(exc.code, exc.message) from exc
+        # A partial failure keeps successful detector events and the detailed result,
+        # but must not make the durable job look wholly successful.
+        if any(o["status"] == "failed" for o in result["outcomes"]):
+            raise JobFailure(
+                "analysis.partial_failure",
+                "Some detectors failed; successful results are kept.",
+                retryable=True,
+                result=result,
+            )
+        return result
+
+    return JobHandler("analyze", run, validate, "analyzing", True, 3)
+
+
 def _job_failure(exc: ImportFailure) -> JobFailure:
     return JobFailure(
         exc.code,
@@ -422,10 +473,13 @@ def build_handlers(
         handlers.update(import_handlers(importer))
         fingerprint = fingerprint_handler(importer.fingerprinter)
         handlers[fingerprint.kind] = fingerprint
-        proxy = derived_handler(derived or DerivedMedia(database, tools))
+        media = derived or DerivedMedia(database, tools)
+        proxy = derived_handler(media)
         handlers[proxy.kind] = proxy
         grouper = group_handler(SessionService(database))
         handlers[grouper.kind] = grouper
         aligner = align_handler(Aligner(database, importer.fingerprinter))
         handlers[aligner.kind] = aligner
+        analysis = analyze_handler(Analyzer(database, tools, media))
+        handlers[analysis.kind] = analysis
     return handlers

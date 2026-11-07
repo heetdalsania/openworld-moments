@@ -13,6 +13,8 @@ open it in the same pull request as the change it justifies.
 
 Other architecture notes:
 
+- [Detector runtime](./detectors.md): trusted built-in SDK, immutable derived samples, profile inheritance/compatibility, provenance, caching, failure isolation and CLI.
+
 - [Storage](./storage.md): what lives in SQLite vs on disk, delete policies, migrations, backups.
 - [Worker lifecycle and jobs](./worker.md): process lifecycle, API, job handlers, cancellation, retry rules.
 - [Media probing](./media.md): FFmpeg discovery and minimum version, `doctor`, the probe job, normalized metadata, error codes, fixtures.
