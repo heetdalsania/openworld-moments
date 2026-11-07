@@ -1,0 +1,351 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/evaluation-report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "algorithm",
+    "manifest_sha256",
+    "observations_sha256",
+    "dataset_id",
+    "split",
+    "provenance",
+    "profile",
+    "detectors",
+    "tolerance_ms",
+    "metrics",
+    "clips",
+    "compatibility"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "algorithm": {
+      "const": "owm-eval-1"
+    },
+    "manifest_sha256": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
+    "observations_sha256": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
+    "dataset_id": {
+      "$ref": "common.schema.json#/$defs/Slug"
+    },
+    "split": {
+      "const": "holdout"
+    },
+    "provenance": {
+      "enum": ["synthetic", "user-owned", "licensed"]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        }
+      },
+      "title": "EvaluationProfile"
+    },
+    "detectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Slug"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/SemVer"
+          }
+        },
+        "title": "EvaluationDetector"
+      },
+      "maxItems": 32,
+      "minItems": 1
+    },
+    "tolerance_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "true_positives",
+        "false_positives",
+        "false_negatives",
+        "precision",
+        "recall",
+        "f1",
+        "false_positives_per_hour",
+        "median_timestamp_error_ms",
+        "duration_ms",
+        "processing_ms",
+        "realtime_factor"
+      ],
+      "properties": {
+        "true_positives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "false_positives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "false_negatives": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "precision": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "recall": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "f1": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "false_positives_per_hour": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1000000000000.0
+        },
+        "median_timestamp_error_ms": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1000000000000.0
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "processing_ms": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000000000000.0
+        },
+        "realtime_factor": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1000000000000.0
+        }
+      },
+      "title": "EvaluationMetrics"
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256", "metrics"],
+        "properties": {
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/Sha256"
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "true_positives",
+              "false_positives",
+              "false_negatives",
+              "precision",
+              "recall",
+              "f1",
+              "false_positives_per_hour",
+              "median_timestamp_error_ms",
+              "duration_ms",
+              "processing_ms",
+              "realtime_factor"
+            ],
+            "properties": {
+              "true_positives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "false_positives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "false_negatives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "precision": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "recall": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "f1": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "false_positives_per_hour": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "median_timestamp_error_ms": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "duration_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "processing_ms": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "realtime_factor": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "title": "EvaluationMetrics"
+          }
+        },
+        "title": "EvaluationClipReport"
+      },
+      "maxItems": 100,
+      "minItems": 1
+    },
+    "compatibility": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["width", "height", "locale", "hud_scale", "compression", "metrics", "status"],
+        "properties": {
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "locale": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"
+          },
+          "hud_scale": {
+            "type": "number",
+            "minimum": 0.25,
+            "maximum": 4
+          },
+          "compression": {
+            "enum": ["lossless", "light", "heavy", "unspecified"]
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "true_positives",
+              "false_positives",
+              "false_negatives",
+              "precision",
+              "recall",
+              "f1",
+              "false_positives_per_hour",
+              "median_timestamp_error_ms",
+              "duration_ms",
+              "processing_ms",
+              "realtime_factor"
+            ],
+            "properties": {
+              "true_positives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "false_positives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "false_negatives": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "precision": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "recall": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "f1": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1
+              },
+              "false_positives_per_hour": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "median_timestamp_error_ms": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "duration_ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "processing_ms": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              },
+              "realtime_factor": {
+                "type": ["number", "null"],
+                "minimum": 0,
+                "maximum": 1000000000000.0
+              }
+            },
+            "title": "EvaluationMetrics"
+          },
+          "status": {
+            "enum": ["synthetic-only", "unvalidated"]
+          }
+        },
+        "title": "EvaluationCompatibility"
+      },
+      "maxItems": 100,
+      "minItems": 1
+    }
+  },
+  "title": "EvaluationReport"
+}

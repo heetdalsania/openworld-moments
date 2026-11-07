@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.14",
+  "manifest_sha256": "cd0f1415f24a64f027ddc74adf1ae9d830b7867a821f39a61f93493133ddb5dc",
+  "profile": {
+    "id": "generic-open-world",
+    "version": "1.0.0"
+  },
+  "detectors": [
+    {
+      "id": "synthetic-bright-region",
+      "version": "1.0.0"
+    }
+  ],
+  "clips": [
+    {
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "processing_ms": 1000,
+      "events": [
+        {
+          "type": "openworld.test",
+          "start_ms": 1100,
+          "end_ms": 2100
+        },
+        {
+          "type": "openworld.test",
+          "start_ms": 10000,
+          "end_ms": 11000
+        }
+      ]
+    }
+  ]
+}

@@ -61,6 +61,10 @@ export type TimelineMs = number;
  */
 export type DerivedOutcome = "generated" | "cached" | "not_needed" | "not_applicable";
 /**
+ * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
+ */
+export type SemVer = string;
+/**
  * Probability-like score in [0, 1].
  */
 export type Confidence = number;
@@ -86,10 +90,6 @@ export type Region = [x: number, y: number, width: number, height: number];
  * Position on a media or session timeline in integer milliseconds from its start.
  */
 export type TimelineMs1 = number;
-/**
- * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
- */
-export type SemVer = string;
 /**
  * Opaque project ID: 'prj_' + ULID.
  */
@@ -214,6 +214,10 @@ export interface ContractsBundle {
   analysis?: AnalysisResult;
   "derived-media"?: AssetDerivedMedia;
   error?: ErrorInfo;
+  "evaluation-observations"?: EvaluationObservations;
+  "evaluation-report"?: EvaluationReport;
+  evaluation?: EvaluationManifest;
+  "event-review"?: EventReview;
   event?: Event;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
@@ -667,6 +671,415 @@ export interface DerivedCleanupResult {
   freed_bytes: number;
   skipped_links: number;
 }
+export interface EvaluationObservations {
+  schema_version: string;
+  manifest_sha256: Sha256;
+  profile: EvaluationProfile;
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  detectors: [EvaluationDetector, ...EvaluationDetector[]];
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  clips: [EvaluationObservedClip, ...EvaluationObservedClip[]];
+}
+export interface EvaluationProfile {
+  id: Slug;
+  version: SemVer;
+}
+export interface EvaluationDetector {
+  id: Slug;
+  version: SemVer;
+}
+export interface EvaluationObservedClip {
+  sha256: Sha256;
+  processing_ms: number;
+  /**
+   * @minItems 0
+   * @maxItems 500
+   */
+  events: EvaluationInterval[];
+}
+export interface EvaluationInterval {
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+}
+export interface EvaluationReport {
+  schema_version: string;
+  algorithm: "owm-eval-1";
+  manifest_sha256: Sha256;
+  observations_sha256: Sha256;
+  dataset_id: Slug;
+  split: "holdout";
+  provenance: "synthetic" | "user-owned" | "licensed";
+  profile: EvaluationProfile1;
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  detectors: [EvaluationDetector1, ...EvaluationDetector1[]];
+  tolerance_ms: number;
+  metrics: EvaluationMetrics;
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  clips: [EvaluationClipReport, ...EvaluationClipReport[]];
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  compatibility: [EvaluationCompatibility, ...EvaluationCompatibility[]];
+}
+export interface EvaluationProfile1 {
+  id: Slug;
+  version: SemVer;
+}
+export interface EvaluationDetector1 {
+  id: Slug;
+  version: SemVer;
+}
+export interface EvaluationMetrics {
+  true_positives: number;
+  false_positives: number;
+  false_negatives: number;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  false_positives_per_hour: number | null;
+  median_timestamp_error_ms: number | null;
+  duration_ms: number;
+  processing_ms: number;
+  realtime_factor: number | null;
+}
+export interface EvaluationClipReport {
+  sha256: Sha256;
+  metrics: EvaluationMetrics1;
+}
+export interface EvaluationMetrics1 {
+  true_positives: number;
+  false_positives: number;
+  false_negatives: number;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  false_positives_per_hour: number | null;
+  median_timestamp_error_ms: number | null;
+  duration_ms: number;
+  processing_ms: number;
+  realtime_factor: number | null;
+}
+export interface EvaluationCompatibility {
+  width: number;
+  height: number;
+  locale: string;
+  hud_scale: number;
+  compression: "lossless" | "light" | "heavy" | "unspecified";
+  metrics: EvaluationMetrics2;
+  status: "synthetic-only" | "unvalidated";
+}
+export interface EvaluationMetrics2 {
+  true_positives: number;
+  false_positives: number;
+  false_negatives: number;
+  precision: number | null;
+  recall: number | null;
+  f1: number | null;
+  false_positives_per_hour: number | null;
+  median_timestamp_error_ms: number | null;
+  duration_ms: number;
+  processing_ms: number;
+  realtime_factor: number | null;
+}
+export interface EvaluationManifest {
+  schema_version: string;
+  dataset_id: Slug;
+  split: "holdout";
+  provenance: "synthetic" | "user-owned" | "licensed";
+  profile: EvaluationProfile2;
+  tolerance_ms: number;
+  /**
+   * @minItems 1
+   * @maxItems 100
+   */
+  clips: [EvaluationClip, ...EvaluationClip[]];
+}
+export interface EvaluationProfile2 {
+  id: Slug;
+  version: SemVer;
+}
+export interface EvaluationClip {
+  sha256: Sha256;
+  duration_ms: number;
+  width: number;
+  height: number;
+  locale: string;
+  hud_scale: number;
+  compression: "lossless" | "light" | "heavy" | "unspecified";
+  /**
+   * @minItems 0
+   * @maxItems 500
+   */
+  annotations: EvaluationInterval1[];
+}
+export interface EvaluationInterval1 {
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+}
+export interface EventReview {
+  schema_version: string;
+  session_id: SessionId;
+  layout_key: Sha256;
+  duration_ms: TimelineMs;
+  offset: number;
+  total: number;
+  /**
+   * @minItems 0
+   * @maxItems 100
+   */
+  items: EventReviewItem[];
+}
+export interface EventReviewItem {
+  original: Event;
+  effective: Event;
+  revision: number;
+  status: "current" | "superseded" | "stale" | "legacy";
+  /**
+   * @minItems 0
+   * @maxItems 20
+   */
+  history:
+    | []
+    | [EventDecision]
+    | [EventDecision, EventDecision]
+    | [EventDecision, EventDecision, EventDecision]
+    | [EventDecision, EventDecision, EventDecision, EventDecision]
+    | [EventDecision, EventDecision, EventDecision, EventDecision, EventDecision]
+    | [EventDecision, EventDecision, EventDecision, EventDecision, EventDecision, EventDecision]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ]
+    | [
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision,
+        EventDecision
+      ];
+  history_truncated: boolean;
+}
 /**
  * A time-ranged observation or suggestion about gameplay. Observations come from deterministic detectors or the user; suggestions come from models and stay suggestions until reviewed (spec 8.4.1, 8.4.6).
  */
@@ -823,6 +1236,14 @@ export interface ModelSource {
  */
 export interface UserSource {
   kind: "user";
+}
+export interface EventDecision {
+  revision: number;
+  state: "unreviewed" | "confirmed" | "corrected" | "rejected";
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  created_at: UtcTimestamp;
 }
 /**
  * Reproducibility record written next to an export (spec 8.9.3). Contains no footage, transcripts, or user paths.

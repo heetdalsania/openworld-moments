@@ -180,7 +180,6 @@ Its rules:
 - **Out of scope for M13:**
   - playback speed and A/V offset controls, which the editor milestones (M21, M22)
     own;
-  - event markers (M19);
   - rendering (M24).
 
 ## Tests
@@ -192,3 +191,5 @@ Its rules:
 | `SessionView.test.tsx` | The screen through the fake host: playback across a boundary, the keyboard over the full timeline, reveal, reorder, overrides, split/remove/confirm, error states, and an app-level seek/play/reorder flow |
 | `SessionsView.test.tsx` | The list, empty state, jobs, merge, and errors |
 | `src-tauri/tests/session_e2e.rs` | The real worker and FFmpeg, using only routes the UI may call. Three clips are imported (two cut from one master, repeating 5 s), grouped, and aligned; the overlap is found at about 5000 ms. Reorder and the overrides are checked against the layout contract, and source files are confirmed unchanged. |
+
+M19 adds [event review markers and evidence](./event-review.md), including unique-time mapping while repeated footage is revealed.

@@ -97,6 +97,14 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("PUT", ["", "v1", "sessions", id, "overlaps", asset]) => {
             is_id(id, "ses_") && is_id(asset, "ast_") && query.is_none()
         }
+        // M19: local event inspection and append-only decisions.
+        ("GET", ["", "v1", "sessions", id, "review"]) => is_id(id, "ses_"),
+        ("POST", ["", "v1", "sessions", id, "review" | "analyze"]) => {
+            is_id(id, "ses_") && query.is_none()
+        }
+        ("POST", ["", "v1", "sessions", id, "review", event]) => {
+            is_id(id, "ses_") && is_id(event, "evt_") && query.is_none()
+        }
         // M18: optional local transcription. Deleting a transcript removes derived text only.
         ("GET", ["", "v1", "transcription", "models"]) => query.is_none(),
         ("POST", ["", "v1", "sessions", id, "transcribe"]) => is_id(id, "ses_") && query.is_none(),
@@ -309,6 +317,16 @@ mod tests {
             ("POST", &format!("/v1/sessions/{SESSION}/order")),
             ("POST", &format!("/v1/sessions/{SESSION}/split")),
             ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{ASSET}")),
+            (
+                "GET",
+                &format!("/v1/sessions/{SESSION}/review?offset=0&limit=50"),
+            ),
+            ("POST", &format!("/v1/sessions/{SESSION}/review")),
+            (
+                "POST",
+                &format!("/v1/sessions/{SESSION}/review/evt_01JCBQ00000000000000000003"),
+            ),
+            ("POST", &format!("/v1/sessions/{SESSION}/analyze")),
             ("GET", "/v1/transcription/models"),
             ("POST", &format!("/v1/sessions/{SESSION}/transcribe")),
             ("GET", &format!("/v1/sessions/{SESSION}/transcript")),
@@ -318,6 +336,17 @@ mod tests {
         }
         for (method, path) in [
             ("POST", "/v1/shutdown"),
+            (
+                "GET",
+                &format!("/v1/sessions/{SESSION}/review?path=/private"),
+            ),
+            ("POST", &format!("/v1/sessions/{SESSION}/review/evt_bad")),
+            ("POST", &format!("/v1/sessions/{SESSION}/review?limit=50")),
+            ("DELETE", &format!("/v1/sessions/{SESSION}/review")),
+            (
+                "PUT",
+                &format!("/v1/sessions/{SESSION}/review/evt_01JCBQ00000000000000000003"),
+            ),
             ("POST", "/v1/derived/cleanup"),
             ("GET", &format!("/v1/assets/{ASSET}/media/original")),
             ("DELETE", &format!("/v1/assets/{ASSET}")),

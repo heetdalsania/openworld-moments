@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  EvaluationManifest,
+  EvaluationObservations,
+  EventReview,
   AssetDerivedMedia,
   AssetOverlap,
   Session,
@@ -323,8 +326,79 @@ function* speechModels(doc: SpeechModels): Generator<string> {
   }
 }
 
+function* evaluation(doc: EvaluationManifest | EvaluationObservations): Generator<string> {
+  const hashes = doc.clips.map((c) => c.sha256);
+  if (new Set(hashes).size !== hashes.length) yield "clips: media hashes must be unique";
+  for (const [i, clip] of doc.clips.entries()) {
+    const events = "annotations" in clip ? clip.annotations : clip.events;
+    for (const [j, event] of events.entries()) {
+      if (
+        event.end_ms < event.start_ms ||
+        ("duration_ms" in clip && event.end_ms > clip.duration_ms)
+      )
+        yield `clips[${i}].intervals[${j}]: invalid clip interval`;
+    }
+  }
+  if ("detectors" in doc && new Set(doc.detectors.map((d) => d.id)).size !== doc.detectors.length)
+    yield "detectors: IDs must be unique";
+}
+
+function* eventReview(doc: EventReview): Generator<string> {
+  if (doc.offset + doc.items.length > Math.max(doc.total, doc.offset))
+    yield "items: page exceeds total";
+  if (new Set(doc.items.map((i) => i.original.id)).size !== doc.items.length)
+    yield "items: event IDs must be unique";
+  for (const [i, item] of doc.items.entries()) {
+    const a = item.original,
+      b = item.effective;
+    for (const [name, e] of [
+      ["original", a],
+      ["effective", b],
+    ] as const)
+      for (const issue of event(e)) yield `items[${i}].${name}.${issue}`;
+    const keys = [
+      "id",
+      "session_id",
+      "asset_id",
+      "confidence",
+      "evidence",
+      "source",
+      "attributes",
+    ] as const;
+    // Validated JSON maps may have different insertion order in different runtimes.
+    const stable = (v: unknown): string =>
+      JSON.stringify(
+        v && typeof v === "object"
+          ? Array.isArray(v)
+            ? v.map((x) => stable(x))
+            : Object.fromEntries(
+                Object.entries(v)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([k, x]) => [k, stable(x)]),
+              )
+          : v,
+      );
+    if (a.session_id !== doc.session_id || keys.some((k) => stable(a[k]) !== stable(b[k])))
+      yield `items[${i}]: immutable observation fields differ`;
+    if (item.status === "current" && b.end_ms > doc.duration_ms)
+      yield `items[${i}].effective.end_ms: outside current session`;
+    const revisions = item.history.map((d) => d.revision);
+    if (
+      revisions.length &&
+      (revisions.some((r, j) => j > 0 && r <= (revisions[j - 1] ?? 0)) ||
+        revisions.at(-1) !== item.revision)
+    )
+      yield `items[${i}].history: revisions must ascend to current revision`;
+    for (const [j, d] of item.history.entries())
+      yield* range(`items[${i}].history[${j}].end_ms`, d.start_ms, d.end_ms);
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  evaluation,
+  "evaluation-observations": evaluation,
+  "event-review": eventReview,
   transcript,
   transcription,
   "speech-models": speechModels,

@@ -1,0 +1,78 @@
+{
+  "description": "invalid-precision",
+  "expect": "schema",
+  "document": {
+    "algorithm": "owm-eval-1",
+    "clips": [
+      {
+        "metrics": {
+          "duration_ms": 3600000,
+          "f1": 0.5,
+          "false_negatives": 1,
+          "false_positives": 1,
+          "false_positives_per_hour": 1,
+          "median_timestamp_error_ms": 100,
+          "precision": 0.5,
+          "processing_ms": 1000,
+          "realtime_factor": 3600,
+          "recall": 0.5,
+          "true_positives": 1
+        },
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "compatibility": [
+      {
+        "compression": "heavy",
+        "height": 720,
+        "hud_scale": 1,
+        "locale": "en",
+        "metrics": {
+          "duration_ms": 3600000,
+          "f1": 0.5,
+          "false_negatives": 1,
+          "false_positives": 1,
+          "false_positives_per_hour": 1,
+          "median_timestamp_error_ms": 100,
+          "precision": 0.5,
+          "processing_ms": 1000,
+          "realtime_factor": 3600,
+          "recall": 0.5,
+          "true_positives": 1
+        },
+        "status": "synthetic-only",
+        "width": 1280
+      }
+    ],
+    "dataset_id": "test-holdout",
+    "detectors": [
+      {
+        "id": "synthetic-bright-region",
+        "version": "1.0.0"
+      }
+    ],
+    "manifest_sha256": "cd0f1415f24a64f027ddc74adf1ae9d830b7867a821f39a61f93493133ddb5dc",
+    "metrics": {
+      "duration_ms": 3600000,
+      "f1": 0.5,
+      "false_negatives": 1,
+      "false_positives": 1,
+      "false_positives_per_hour": 1,
+      "median_timestamp_error_ms": 100,
+      "precision": 1.1,
+      "processing_ms": 1000,
+      "realtime_factor": 3600,
+      "recall": 0.5,
+      "true_positives": 1
+    },
+    "observations_sha256": "4b06f76372c5def404e234c1cd5c18e8f6f7e28021692877af1db8b82bd74a61",
+    "profile": {
+      "id": "generic-open-world",
+      "version": "1.0.0"
+    },
+    "provenance": "synthetic",
+    "schema_version": "1.14",
+    "split": "holdout",
+    "tolerance_ms": 100
+  }
+}

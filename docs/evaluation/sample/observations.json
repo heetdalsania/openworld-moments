@@ -1,0 +1,26 @@
+{
+  "clips": [
+    {
+      "events": [
+        { "end_ms": 3000, "start_ms": 1000, "type": "synthetic.bright_region" },
+        { "end_ms": 6500, "start_ms": 4500, "type": "synthetic.bright_region" }
+      ],
+      "processing_ms": 1161.968667,
+      "sha256": "686c3516651c2ecc4953d7eede3861eb55872e6586aee99a2638e74efabe17b1"
+    },
+    {
+      "events": [{ "end_ms": 4000, "start_ms": 2000, "type": "synthetic.bright_region" }],
+      "processing_ms": 997.324875,
+      "sha256": "f8ac07734e5b067f1887988c3067c4b4000236af55bf8d206002c928e4847422"
+    },
+    {
+      "events": [],
+      "processing_ms": 926.652542,
+      "sha256": "b043d20b060411d0c8b1bca167fc521629b1d2b5afad50394109be019ddee0bb"
+    }
+  ],
+  "detectors": [{ "id": "synthetic-bright-region", "version": "1.0.0" }],
+  "manifest_sha256": "d429ef79b0b4720dce161caa199dfc12f587d1bacdc79ffb03edc4f657cace2e",
+  "profile": { "id": "generic-open-world", "version": "1.0.0" },
+  "schema_version": "1.14"
+}

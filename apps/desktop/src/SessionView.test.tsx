@@ -97,6 +97,9 @@ const playing = new WeakSet<HTMLMediaElement>();
 let failPlay = false;
 
 beforeEach(() => {
+  vi.stubGlobal("crypto", {
+    subtle: { digest: vi.fn(async () => new Uint8Array(32).fill(170).buffer) },
+  });
   order = [A, B, C];
   overlapB = 600;
   overlapSource = "auto";
@@ -105,6 +108,16 @@ beforeEach(() => {
   install(host, { invoke, listen });
   host.route(`GET /v1/sessions/${SES}`, () => session());
   host.route(`GET /v1/sessions/${SES}/overlaps`, () => overlaps());
+  host.route("GET /v1/profiles", []);
+  host.route(`GET /v1/sessions/${SES}/review*`, () => ({
+    schema_version: "1.14",
+    session_id: SES,
+    layout_key: "a".repeat(64),
+    duration_ms: 5000,
+    offset: 0,
+    total: 0,
+    items: [],
+  }));
   // Transcription is optional; by default no engine is installed (M18).
   host.route("GET /v1/transcription/models", {
     schema_version: "1.13",

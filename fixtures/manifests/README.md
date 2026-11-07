@@ -9,3 +9,5 @@ See [fixture policy](../README.md).
 - [text-v1.json](./text-v1.json): M17 original phrases, explicit Hershey rendering,
   scale/compression/contrast/outline/multiline cases, expected temporal intervals
   and negative/failure coverage. No gameplay or model files are bundled.
+
+- [evaluation-holdout-v1.json](./evaluation-holdout-v1.json): M19 independent temporal annotations by media hash, with [frozen observations and reports](../../docs/evaluation/README.md). Generated media and the private file map stay local.

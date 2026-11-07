@@ -18,6 +18,10 @@ from openworld_moments_contracts.generated import (
     analysis_schema,
     derived_media_schema,
     error_schema,
+    evaluation_observations_schema,
+    evaluation_report_schema,
+    evaluation_schema,
+    event_review_schema,
     event_schema,
     export_manifest_schema,
     fingerprint_schema,
@@ -41,6 +45,10 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "evaluation": (evaluation_schema.EvaluationManifest, True),
+    "evaluation-observations": (evaluation_observations_schema.EvaluationObservations, True),
+    "evaluation-report": (evaluation_report_schema.EvaluationReport, True),
+    "event-review": (event_review_schema.EventReview, True),
     "analysis": (analysis_schema.AnalysisResult, True),
     "derived-media": (derived_media_schema.AssetDerivedMedia, True),
     "error": (error_schema.ErrorInfo, False),

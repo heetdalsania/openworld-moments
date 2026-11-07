@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/evaluation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "split",
+    "provenance",
+    "profile",
+    "tolerance_ms",
+    "clips"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "dataset_id": {
+      "$ref": "common.schema.json#/$defs/Slug"
+    },
+    "split": {
+      "const": "holdout"
+    },
+    "provenance": {
+      "enum": ["synthetic", "user-owned", "licensed"]
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        }
+      },
+      "title": "EvaluationProfile"
+    },
+    "tolerance_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sha256",
+          "duration_ms",
+          "width",
+          "height",
+          "locale",
+          "hud_scale",
+          "compression",
+          "annotations"
+        ],
+        "properties": {
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/Sha256"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "locale": {
+            "type": "string",
+            "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"
+          },
+          "hud_scale": {
+            "type": "number",
+            "minimum": 0.25,
+            "maximum": 4
+          },
+          "compression": {
+            "enum": ["lossless", "light", "heavy", "unspecified"]
+          },
+          "annotations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "start_ms", "end_ms"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+                  "maxLength": 128
+                },
+                "start_ms": {
+                  "$ref": "common.schema.json#/$defs/TimelineMs"
+                },
+                "end_ms": {
+                  "$ref": "common.schema.json#/$defs/TimelineMs"
+                }
+              },
+              "title": "EvaluationInterval"
+            },
+            "maxItems": 500,
+            "minItems": 0
+          }
+        },
+        "title": "EvaluationClip"
+      },
+      "maxItems": 100,
+      "minItems": 1
+    }
+  },
+  "title": "EvaluationManifest"
+}

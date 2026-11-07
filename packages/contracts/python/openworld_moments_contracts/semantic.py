@@ -279,7 +279,61 @@ def _speech_models(doc: Document) -> Iterable[str]:
         yield "engine.reason: required when the engine is unavailable"
 
 
+def _evaluation(doc: Document) -> Iterable[str]:
+    hashes = [c["sha256"] for c in doc["clips"]]
+    if len(hashes) != len(set(hashes)):
+        yield "clips: media hashes must be unique"
+    for i, clip in enumerate(doc["clips"]):
+        for j, event in enumerate(clip.get("annotations", clip.get("events", []))):
+            if event["end_ms"] < event["start_ms"] or event["end_ms"] > clip.get(
+                "duration_ms", float("inf")
+            ):
+                yield f"clips[{i}].intervals[{j}]: invalid clip interval"
+    if "detectors" in doc:
+        ids = [d["id"] for d in doc["detectors"]]
+        if len(ids) != len(set(ids)):
+            yield "detectors: IDs must be unique"
+
+
+def _event_review(doc: Document) -> Iterable[str]:
+    if doc["offset"] + len(doc["items"]) > max(doc["total"], doc["offset"]):
+        yield "items: page exceeds total"
+    ids = [i["original"]["id"] for i in doc["items"]]
+    if len(ids) != len(set(ids)):
+        yield "items: event IDs must be unique"
+    for i, item in enumerate(doc["items"]):
+        a, b = item["original"], item["effective"]
+        for name, event in (("original", a), ("effective", b)):
+            for issue in _event(event):
+                yield f"items[{i}].{name}.{issue}"
+        if a["session_id"] != doc["session_id"] or any(
+            a.get(k) != b.get(k)
+            for k in (
+                "id",
+                "session_id",
+                "asset_id",
+                "confidence",
+                "evidence",
+                "source",
+                "attributes",
+            )
+        ):
+            yield f"items[{i}]: immutable observation fields differ"
+        if item["status"] == "current" and b["end_ms"] > doc["duration_ms"]:
+            yield f"items[{i}].effective.end_ms: outside current session"
+        revisions = [d["revision"] for d in item["history"]]
+        if revisions and (revisions != sorted(set(revisions)) or revisions[-1] != item["revision"]):
+            yield f"items[{i}].history: revisions must ascend to current revision"
+        for j, decision in enumerate(item["history"]):
+            yield from _range(
+                f"items[{i}].history[{j}].end_ms", decision["start_ms"], decision["end_ms"]
+            )
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "evaluation": _evaluation,
+    "evaluation-observations": _evaluation,
+    "event-review": _event_review,
     "transcript": _transcript,
     "transcription": _transcription,
     "speech-models": _speech_models,

@@ -41,6 +41,12 @@ from openworld_moments.detectors.profiles import ProfileCatalog, ProfileError
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
+from openworld_moments.review.service import (
+    EventReviewService,
+    ManualEvent,
+    ReviewChange,
+    ReviewError,
+)
 from openworld_moments.sessions.service import SessionError, SessionService
 from openworld_moments.storage import (
     AssetRepository,
@@ -596,6 +602,36 @@ def create_app(
         except NotFoundError as exc:
             raise session_missing(session_id) from exc
         return dict(result)
+
+    review = EventReviewService(engine.database)
+
+    @app.exception_handler(ReviewError)
+    async def review_error(request: Request, exc: ReviewError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, retryable=False, correlation_id=cid(request)),
+            status_code=exc.status,
+        )
+
+    @app.get("/v1/sessions/{session_id}/review")
+    async def review_events(session_id: str, offset: int = 0, limit: int = 50) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(review.page, session_id, offset, limit)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+
+    @app.post("/v1/sessions/{session_id}/review", status_code=201)
+    async def manual_event(session_id: str, body: ManualEvent) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(review.manual, session_id, body)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+
+    @app.post("/v1/sessions/{session_id}/review/{event_id}")
+    async def review_event(session_id: str, event_id: str, body: ReviewChange) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(review.change, session_id, event_id, body)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
 
     @app.get("/v1/events")
     async def list_events(

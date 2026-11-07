@@ -1,0 +1,60 @@
+{
+  "description": "duplicate-hash",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.14",
+    "dataset_id": "test-holdout",
+    "split": "holdout",
+    "provenance": "synthetic",
+    "profile": {
+      "id": "generic-open-world",
+      "version": "1.0.0"
+    },
+    "tolerance_ms": 100,
+    "clips": [
+      {
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "duration_ms": 3600000,
+        "width": 1280,
+        "height": 720,
+        "locale": "en",
+        "hud_scale": 1,
+        "compression": "heavy",
+        "annotations": [
+          {
+            "type": "openworld.test",
+            "start_ms": 1000,
+            "end_ms": 2000
+          },
+          {
+            "type": "openworld.test",
+            "start_ms": 5000,
+            "end_ms": 6000
+          }
+        ]
+      },
+      {
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "duration_ms": 3600000,
+        "width": 1280,
+        "height": 720,
+        "locale": "en",
+        "hud_scale": 1,
+        "compression": "heavy",
+        "annotations": [
+          {
+            "type": "openworld.test",
+            "start_ms": 1000,
+            "end_ms": 2000
+          },
+          {
+            "type": "openworld.test",
+            "start_ms": 5000,
+            "end_ms": 6000
+          }
+        ]
+      }
+    ]
+  },
+  "message_contains": "clips:"
+}

@@ -1,0 +1,43 @@
+{
+  "clips": [
+    {
+      "annotations": [
+        { "end_ms": 3000, "start_ms": 1000, "type": "synthetic.bright_region" },
+        { "end_ms": 6500, "start_ms": 4500, "type": "synthetic.bright_region" }
+      ],
+      "compression": "light",
+      "duration_ms": 8000,
+      "height": 180,
+      "hud_scale": 1,
+      "locale": "en",
+      "sha256": "686c3516651c2ecc4953d7eede3861eb55872e6586aee99a2638e74efabe17b1",
+      "width": 320
+    },
+    {
+      "annotations": [{ "end_ms": 4000, "start_ms": 2000, "type": "synthetic.bright_region" }],
+      "compression": "heavy",
+      "duration_ms": 6000,
+      "height": 180,
+      "hud_scale": 1,
+      "locale": "en",
+      "sha256": "f8ac07734e5b067f1887988c3067c4b4000236af55bf8d206002c928e4847422",
+      "width": 320
+    },
+    {
+      "annotations": [],
+      "compression": "heavy",
+      "duration_ms": 5000,
+      "height": 180,
+      "hud_scale": 1,
+      "locale": "en",
+      "sha256": "b043d20b060411d0c8b1bca167fc521629b1d2b5afad50394109be019ddee0bb",
+      "width": 320
+    }
+  ],
+  "dataset_id": "synthetic-temporal-holdout-v1",
+  "profile": { "id": "generic-open-world", "version": "1.0.0" },
+  "provenance": "synthetic",
+  "schema_version": "1.14",
+  "split": "holdout",
+  "tolerance_ms": 0
+}

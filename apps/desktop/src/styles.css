@@ -899,3 +899,62 @@ button.link {
   cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
+
+.event-marker-track {
+  position: relative;
+  height: 2.5rem;
+  background: #192139;
+  margin: 1rem 0.7rem;
+  border-radius: 0.4rem;
+}
+.event-marker {
+  position: absolute;
+  top: 0.15rem;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.3rem;
+  min-width: 1.5rem;
+  color: #c5d3ff;
+}
+.event-marker.confirmed,
+.event-marker.corrected {
+  color: #94e8b5;
+}
+.event-marker.rejected {
+  color: #ffb5ba;
+}
+.evidence-inspector pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 20rem;
+  overflow: auto;
+}
+.event-review form {
+  display: grid;
+  gap: 0.7rem;
+  max-width: 38rem;
+}
+.event-review form label {
+  display: grid;
+  gap: 0.25rem;
+}
+.event-review .warning {
+  border-left: 0.25rem solid #e4b65b;
+  padding: 0.7rem;
+}
+
+.event-provenance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem 1rem;
+}
+.event-provenance div {
+  min-width: 0;
+}
+.event-provenance dt {
+  color: #a7b4d4;
+  font-size: 0.85rem;
+}
+.event-provenance dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

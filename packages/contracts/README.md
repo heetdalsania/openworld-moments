@@ -78,3 +78,5 @@ fixture suites check this.
    `semantic.py` and `semantic.ts`.
 4. `pnpm contracts:generate`, then `pnpm check`.
 5. Add a `CHANGELOG.md` entry.
+
+M19 adds review and evaluation contracts at schema version 1.14; see [event review](../../docs/architecture/event-review.md) and [local evaluation](../../docs/evaluation/README.md).

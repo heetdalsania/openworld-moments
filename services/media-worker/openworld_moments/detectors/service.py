@@ -496,6 +496,16 @@ class Analyzer:
         key: str,
         docs: list[dict[str, Any]],
     ) -> None:
+        from openworld_moments.review.service import layout_info, snapshot
+
+        # Preserve pre-M19 output before its first replacement. Its old layout
+        # is unproven, so history remains inspectable with a legacy/stale flag.
+        for row in conn.execute(
+            "SELECT id FROM events WHERE session_id=? AND asset_id=? AND detector_id=?",
+            (sid, aid, detector),
+        ).fetchall():
+            snapshot(conn, normalize(EventRepository(conn).get(row[0])), None)
+        layout_key = layout_info(conn, sid)[0]
         # Replace only this producer's unreviewed records. Reviewed/user events survive.
         conn.execute(
             "DELETE FROM events WHERE session_id=? AND asset_id=? AND detector_id=? "
@@ -504,6 +514,7 @@ class Analyzer:
         )
         for doc in docs:
             EventRepository(conn).add(load("event", doc))  # type: ignore[arg-type]
+            snapshot(conn, doc, layout_key)
         conn.execute(
             "INSERT INTO detector_runs VALUES (?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(session_id,asset_id,detector_id) DO UPDATE SET "

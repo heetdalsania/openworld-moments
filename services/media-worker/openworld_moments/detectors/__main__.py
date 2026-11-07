@@ -154,8 +154,15 @@ def main() -> int:
         if name == "install":
             command.add_argument("file", type=Path, help="A local whisper.cpp ggml model file")
             command.add_argument("--license", required=True, help="The model's license, e.g. MIT")
+    from openworld_moments.evaluation.cli import arguments as eval_arguments
+
+    eval_arguments(sub)
     args = parser.parse_args()
     try:
+        if args.command == "eval":
+            from openworld_moments.evaluation.cli import command as evaluate_command
+
+            return evaluate_command(args)
         if args.command in ("audio", "speech", "models"):
             return speech_command(args)
         if args.command == "text":

@@ -98,6 +98,12 @@ export function upsertJob(job: Job): void {
   const previous = state.jobs.find((j) => j.id === job.id);
   const others = state.jobs.filter((j) => j.id !== job.id);
   set({ jobs: sorted([job, ...others]) });
+  if (
+    job.kind === "analyze" &&
+    previous?.state !== job.state &&
+    ["ready", "failed", "cancelled"].includes(job.state)
+  )
+    invalidate("sessions:");
   const finished = previous?.state !== job.state && job.state === "ready";
   if (
     finished &&
