@@ -115,6 +115,10 @@ export type DurationMs = number;
  */
 export type UtcTimestamp1 = string;
 /**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs1 = number;
+/**
  * Opaque timeline segment ID: 'seg_' + ULID.
  */
 export type SegmentId = string;
@@ -129,7 +133,15 @@ export type UtcTimestamp3 = string;
 /**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
-export type TimelineMs1 = number;
+export type TimelineMs2 = number;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs3 = number;
+/**
+ * Probability-like score in [0, 1].
+ */
+export type Confidence1 = number;
 /**
  * This interface was referenced by `Session`'s JSON-Schema
  * via the `definition` "GroupingReason".
@@ -175,6 +187,7 @@ export interface ContractsBundle {
   "job-event"?: JobEvent;
   job?: Job;
   "media-asset"?: MediaAsset;
+  overlap?: AssetOverlap;
   profile?: Profile;
   project?: Project;
   "render-preset"?: RenderPreset;
@@ -1257,7 +1270,8 @@ export interface Job {
     | "relink"
     | "check_sources"
     | "fingerprint"
-    | "group";
+    | "group"
+    | "align";
   state:
     | "queued"
     | "probing"
@@ -1276,7 +1290,7 @@ export interface Job {
    */
   params?: {};
   /**
-   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs); 'proxy': DerivedMediaResult (derived-media.schema.json#/$defs); 'group': GroupResult (session.schema.json#/$defs). Must not contain secrets.
+   * Handler output (JSON object), set when the job reaches 'ready' (and on a failed 'import', so per-file errors stay visible). 'probe': MediaProbe (media-asset.schema.json#/$defs/MediaProbe); 'import': ImportResult (import.schema.json); 'relink': RelinkResult; 'check_sources': SourceCheckResult (import.schema.json#/$defs); 'fingerprint': FingerprintResult (fingerprint.schema.json#/$defs); 'proxy': DerivedMediaResult (derived-media.schema.json#/$defs); 'group': GroupResult (session.schema.json#/$defs); 'align': AlignResult (overlap.schema.json#/$defs). Must not contain secrets.
    */
   result?: {};
   /**
@@ -1463,6 +1477,88 @@ export interface MediaProbe {
 }
 export interface ProbeTool {
   ffprobe_version: string;
+}
+/**
+ * Alignment of clip B after clip A in a session (spec 8.2.3, M12): whether B's start repeats A's end, where B starts inside A ('offset_ms'), how long the repeat is ('overlap_ms'), with confidence and evidence. 'applied' is what the session timeline uses: a user override, else a 'matched' result of the current algorithm version, else nothing. Low-confidence, ambiguous, stale, or missing results never shorten a clip.
+ */
+export interface AssetOverlap {
+  schema_version: string;
+  asset_a: AssetId;
+  asset_b: AssetId;
+  algorithm: "owm-overlap";
+  version: number;
+  /**
+   * 'matched': overlap found and confident enough to apply. 'weak': found but below the apply threshold. 'ambiguous': the footage repeats at several offsets (menus, static scenes). 'no_match': no continuous match. 'insufficient': too few usable frames or no fingerprints. 'pending': not computed yet.
+   */
+  status: "matched" | "weak" | "ambiguous" | "no_match" | "insufficient" | "pending";
+  /**
+   * Computed by the current algorithm version. A stale result is never applied.
+   */
+  current: boolean;
+  /**
+   * Where B's time 0 falls in A (matched and weak results).
+   */
+  offset_ms?: number;
+  overlap_ms?: TimelineMs1;
+  confidence?: Confidence;
+  /**
+   * What the decision rests on: frame counts, votes per offset, matching frames, longest run, audio correlation, reason. Values are scalars or small arrays.
+   */
+  evidence: {};
+  computed_at?: UtcTimestamp;
+  /**
+   * The user's overlap for this pair (0 means 'no overlap'). Always applied; recomputation never changes it.
+   */
+  override?: {
+    overlap_ms: TimelineMs;
+    set_at: UtcTimestamp;
+  };
+  applied: {
+    overlap_ms: TimelineMs;
+    source: "user" | "auto" | "none";
+    confidence?: Confidence;
+  };
+}
+/**
+ * Params of an 'align' job: the sessions to align (default: all) and whether to recompute current results.
+ *
+ * This interface was referenced by `AssetOverlap`'s JSON-Schema
+ * via the `definition` "AlignRequest".
+ */
+export interface AlignRequest {
+  /**
+   * @minItems 1
+   * @maxItems 10000
+   */
+  session_ids?: [SessionId, ...SessionId[]];
+  force?: boolean;
+}
+/**
+ * Result of an 'align' job. Status counts cover computed and cached pairs.
+ *
+ * This interface was referenced by `AssetOverlap`'s JSON-Schema
+ * via the `definition` "AlignResult".
+ */
+export interface AlignResult {
+  pairs_considered: number;
+  computed: number;
+  cached: number;
+  fingerprints_computed: number;
+  sessions_updated: number;
+  matched: number;
+  weak: number;
+  ambiguous: number;
+  no_match: number;
+  insufficient: number;
+}
+/**
+ * Set the overlap between a clip and the clip before it (0 = no overlap), or clear the override with null.
+ *
+ * This interface was referenced by `AssetOverlap`'s JSON-Schema
+ * via the `definition` "OverlapOverride".
+ */
+export interface OverlapOverride {
+  overlap_ms: TimelineMs | null;
 }
 /**
  * Game/resolution/HUD/locale profile (spec 8.4.5). Holds normalized regions and detector settings only, never game assets. May be authored as YAML; it is validated as JSON.
@@ -1666,9 +1762,11 @@ export interface Session {
 export interface SessionMember {
   asset_id: AssetId;
   order_index: number;
-  session_start_ms: TimelineMs1;
+  session_start_ms: TimelineMs2;
   duration_ms: TimelineMs;
   capture_time?: CaptureTimeEstimate;
+  overlap_with_previous_ms?: TimelineMs3;
+  alignment_confidence?: Confidence1;
 }
 /**
  * How an automatic session was formed. Null on corrected sessions: their membership is the user's decision (see the correction log).
@@ -1786,7 +1884,7 @@ export interface RemoveRequest {
  */
 export interface SessionCorrection {
   id: number;
-  kind: "merge" | "split" | "reorder" | "remove" | "confirm";
+  kind: "merge" | "split" | "reorder" | "remove" | "confirm" | "overlap";
   session_ids: SessionId[];
   asset_ids: AssetId[];
   detail?: {

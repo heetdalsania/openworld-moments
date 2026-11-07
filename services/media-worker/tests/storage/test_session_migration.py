@@ -44,3 +44,24 @@ def test_upgrade_from_v7_backfills_container_times(tmp_path: Path) -> None:
             "INSERT INTO jobs (id, kind, state, created_at) VALUES "
             "('job_01JCBQ00000000000000000GRP', 'group', 'queued', '2026-11-21T09:00:00Z')"
         )
+
+
+def test_upgrade_to_v9_keeps_corrections_and_allows_overlaps(tmp_path: Path) -> None:
+    path = tmp_path / "database.sqlite3"
+    old = Database(path, migrations=bundled_migrations()[:8])
+    old.migrate()
+    with closing(old.connect()) as conn:
+        conn.executescript((FIXTURES / "data_v0008.sql").read_text("utf-8"))
+        corrections = conn.execute("SELECT count(*) FROM session_corrections").fetchone()[0]
+    Database(path).migrate()
+    with closing(Database(path).connect()) as conn:
+        assert conn.execute("SELECT count(*) FROM session_corrections").fetchone()[0] == corrections
+        conn.execute(
+            "INSERT INTO session_corrections (kind, session_ids_json, asset_ids_json, created_at) "
+            "VALUES ('overlap', '[]', '[]', '2026-11-21T09:00:00Z')"
+        )
+        conn.execute(
+            "INSERT INTO jobs (id, kind, state, created_at) VALUES "
+            "('job_01JCBQ00000000000000000ALN', 'align', 'queued', '2026-11-21T09:00:00Z')"
+        )
+        assert conn.execute("SELECT count(*) FROM asset_overlaps").fetchone()[0] == 0

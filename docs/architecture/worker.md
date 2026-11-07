@@ -91,6 +91,9 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/sessions/{id}` | `Session` |
 | GET | `/v1/sessions/{id}/corrections` | `SessionCorrection[]` |
 | POST | `/v1/sessions/recompute` | `{max_gap_ms?, idempotency_key?}` → `Job` (kind `group`) |
+| POST | `/v1/sessions/align` | `{session_ids?, force?, idempotency_key?}` → `Job` (kind `align`); see [overlap](./overlap.md) |
+| GET | `/v1/sessions/{id}/overlaps` | `AssetOverlap[]` for each adjacent pair |
+| PUT | `/v1/sessions/{id}/overlaps/{asset_id}` | `{overlap_ms}` (0 = no overlap, null = clear) → `Session` |
 | POST | `/v1/sessions/merge` | `{session_ids}` → merged `Session` (corrected) |
 | POST | `/v1/sessions/{id}/split` | `{after_asset_id}` → `[Session, Session]` |
 | POST | `/v1/sessions/{id}/order` | `{asset_ids}` → `Session` |

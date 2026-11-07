@@ -30,11 +30,13 @@ from typing import Any
 
 from openworld_moments_contracts import load, normalize
 
+from openworld_moments.alignment.overlap import ALIGN_ALGORITHM, ALIGN_VERSION
 from openworld_moments.ids import new_id
 from openworld_moments.sessions import capture, grouping
 from openworld_moments.storage import (
     Database,
     NotFoundError,
+    OverlapRepository,
     Session,
     SessionAsset,
     SessionRepository,
@@ -278,7 +280,7 @@ class SessionService:
         for sid, group_ in plans:
             group_notes = [n for a in group_.assets for n in notes.get(a.id, ())]
             evidence = grouping.evidence(group_, settings, group_notes)
-            links = self._links(sid or "", group_.assets, chronological=True)
+            links = self._links(conn, sid or "", group_.assets, chronological=True)
             started, ended = _span(group_.assets)
             if sid is None:
                 session = Session(
@@ -293,7 +295,7 @@ class SessionService:
                     updated_at=utc_now(),
                 )
                 sessions.add(session)
-                sessions.replace_assets(session.id, self._links(session.id, group_.assets))
+                sessions.replace_assets(session.id, self._links(conn, session.id, group_.assets))
                 counts["sessions_created"] += 1
                 continue
             current = sessions.get(sid)
@@ -318,15 +320,27 @@ class SessionService:
 
     @staticmethod
     def _links(
-        session_id: str, assets: Sequence[grouping.AssetFacts], *, chronological: bool = True
+        conn: sqlite3.Connection,
+        session_id: str,
+        assets: Sequence[grouping.AssetFacts],
+        *,
+        chronological: bool = True,
     ) -> list[SessionAsset]:
-        starts = grouping.offsets(list(assets), chronological=chronological)
+        """Membership rows with positions, applying known overlaps (M12) between
+        adjacent clips, so grouping and alignment always lay a session out the same way."""
+        pairs = [(assets[i - 1].id, assets[i].id) for i in range(1, len(assets))]
+        overlaps = OverlapRepository(conn).effective(
+            pairs, algorithm=ALIGN_ALGORITHM, version=ALIGN_VERSION
+        )
+        placed = grouping.layout(list(assets), chronological=chronological, overlaps=overlaps)
         return [
             SessionAsset(
                 session_id=session_id,
                 asset_id=a.id,
                 order_index=i,
-                session_start_ms=starts[i],
+                session_start_ms=placed[i].start_ms,
+                overlap_with_previous_ms=placed[i].overlap_with_previous_ms,
+                alignment_confidence=placed[i].alignment_confidence,
             )
             for i, a in enumerate(assets)
         ]
@@ -361,7 +375,8 @@ class SessionService:
         else:
             sessions.update(session)
         sessions.replace_assets(
-            session.id, self._links(session.id, members, chronological=chronological)
+            session.id,
+            self._links(sessions.conn, session.id, members, chronological=chronological),
         )
 
     def _correct(
@@ -503,6 +518,21 @@ class SessionService:
 
         return self._correct(run)
 
+    def relayout(self, conn: sqlite3.Connection, session_id: str) -> bool:
+        """Recompute positions and overlaps of a session's members in their current
+        order (after alignment results or overrides changed). Returns whether rows
+        changed. Membership and order are never changed here."""
+        sessions = SessionRepository(conn)
+        facts = self._facts_by_id(conn)
+        members = self._members(sessions, facts, session_id)
+        links = self._links(conn, session_id, members, chronological=_is_chronological(members))
+        if links == sessions.assets(session_id):
+            return False
+        sessions.replace_assets(session_id, links)
+        session = sessions.get(session_id)
+        sessions.update(session.model_copy(update={"updated_at": utc_now()}))
+        return True
+
     def confirm(self, session_id: str) -> dict[str, Any]:
         def run(conn: sqlite3.Connection, sessions: SessionRepository) -> list[str]:
             session = self._get(sessions, session_id)
@@ -537,6 +567,10 @@ class SessionService:
                 "session_start_ms": link.session_start_ms,
                 "duration_ms": row["duration_ms"],
             }
+            if link.overlap_with_previous_ms:
+                member["overlap_with_previous_ms"] = link.overlap_with_previous_ms
+            if link.alignment_confidence is not None:
+                member["alignment_confidence"] = link.alignment_confidence
             if row["captured_at"]:
                 member["capture_time"] = {
                     "captured_at": row["captured_at"],

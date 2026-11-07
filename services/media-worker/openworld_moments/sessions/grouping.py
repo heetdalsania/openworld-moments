@@ -22,10 +22,11 @@ Bump :data:`GROUPING_VERSION` whenever a rule changes.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from fractions import Fraction
-from typing import Any
+from typing import Any, Protocol
 
 from openworld_moments.sessions.capture import parse_utc
 
@@ -196,24 +197,60 @@ def source_key(source_kind: str, source_folder: str | None) -> str:
     return f"{source_kind}|{source_folder}"
 
 
-def offsets(assets: list[AssetFacts], *, chronological: bool = True) -> list[int]:
-    """Each asset's start within the session (ms, non-decreasing). Chronological
-    sessions use capture times; a hand-ordered session places clips end to end."""
-    out: list[int] = []
+class Overlap(Protocol):
+    """An overlap a timeline applies between adjacent clips (M12)."""
+
+    @property
+    def overlap_ms(self) -> int: ...
+
+    @property
+    def confidence(self) -> float | None: ...
+
+
+@dataclass(frozen=True)
+class Placement:
+    start_ms: int
+    overlap_with_previous_ms: int = 0
+    alignment_confidence: float | None = None
+
+
+def layout(
+    assets: list[AssetFacts],
+    *,
+    chronological: bool = True,
+    overlaps: Mapping[tuple[str, str], Overlap] | None = None,
+) -> list[Placement]:
+    """Where each asset starts within the session (ms, never decreasing).
+
+    When an overlap applies to an adjacent pair (M12: B repeats the end of A), B
+    starts ``overlap`` before A ends. Otherwise chronological sessions use capture
+    times and hand-ordered ones place clips end to end. An overlap of 0 (the user
+    said "no overlap") falls back to that default placement.
+    """
+    out: list[Placement] = []
     if not assets:
         return out
-    if chronological:
-        origin = assets[0].start.timestamp() * 1000
-        previous = 0
-        for asset in assets:
-            value = max(previous, round(asset.start.timestamp() * 1000 - origin))
-            out.append(value)
-            previous = value
-        return out
-    position = 0
-    for asset in assets:
-        out.append(position)
-        position += max(0, asset.duration_ms)
+    overlaps = overlaps or {}
+    origin = assets[0].start.timestamp() * 1000
+    for i, asset in enumerate(assets):
+        if i == 0:
+            out.append(Placement(0))
+            continue
+        previous, before = assets[i - 1], out[-1]
+        known = overlaps.get((previous.id, asset.id))
+        if known is not None and known.overlap_ms > 0:
+            start = before.start_ms + max(0, previous.duration_ms - known.overlap_ms)
+        elif chronological:
+            start = max(before.start_ms, round(asset.start.timestamp() * 1000 - origin))
+        else:
+            start = before.start_ms + max(0, previous.duration_ms)
+        out.append(
+            Placement(
+                start,
+                known.overlap_ms if known is not None else 0,
+                known.confidence if known is not None else None,
+            )
+        )
     return out
 
 

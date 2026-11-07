@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/overlap.schema.json",
+  "title": "AssetOverlap",
+  "description": "Alignment of clip B after clip A in a session (spec 8.2.3, M12): whether B's start repeats A's end, where B starts inside A ('offset_ms'), how long the repeat is ('overlap_ms'), with confidence and evidence. 'applied' is what the session timeline uses: a user override, else a 'matched' result of the current algorithm version, else nothing. Low-confidence, ambiguous, stale, or missing results never shorten a clip.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "asset_a",
+    "asset_b",
+    "algorithm",
+    "version",
+    "status",
+    "current",
+    "evidence",
+    "applied"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "asset_a": { "$ref": "common.schema.json#/$defs/AssetId" },
+    "asset_b": { "$ref": "common.schema.json#/$defs/AssetId" },
+    "algorithm": { "type": "string", "enum": ["owm-overlap"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": {
+      "description": "'matched': overlap found and confident enough to apply. 'weak': found but below the apply threshold. 'ambiguous': the footage repeats at several offsets (menus, static scenes). 'no_match': no continuous match. 'insufficient': too few usable frames or no fingerprints. 'pending': not computed yet.",
+      "type": "string",
+      "enum": ["matched", "weak", "ambiguous", "no_match", "insufficient", "pending"]
+    },
+    "current": {
+      "description": "Computed by the current algorithm version. A stale result is never applied.",
+      "type": "boolean"
+    },
+    "offset_ms": {
+      "description": "Where B's time 0 falls in A (matched and weak results).",
+      "type": "integer"
+    },
+    "overlap_ms": {
+      "description": "Duration of A's end that B repeats.",
+      "$ref": "common.schema.json#/$defs/TimelineMs"
+    },
+    "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+    "evidence": {
+      "description": "What the decision rests on: frame counts, votes per offset, matching frames, longest run, audio correlation, reason. Values are scalars or small arrays.",
+      "type": "object"
+    },
+    "computed_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
+    "override": {
+      "description": "The user's overlap for this pair (0 means 'no overlap'). Always applied; recomputation never changes it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overlap_ms", "set_at"],
+      "properties": {
+        "overlap_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "set_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    },
+    "applied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overlap_ms", "source"],
+      "properties": {
+        "overlap_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
+        "source": { "type": "string", "enum": ["user", "auto", "none"] },
+        "confidence": { "$ref": "common.schema.json#/$defs/Confidence" }
+      }
+    }
+  },
+  "$defs": {
+    "AlignRequest": {
+      "title": "AlignRequest",
+      "description": "Params of an 'align' job: the sessions to align (default: all) and whether to recompute current results.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "session_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/SessionId" }
+        },
+        "force": { "type": "boolean" }
+      }
+    },
+    "AlignResult": {
+      "title": "AlignResult",
+      "description": "Result of an 'align' job. Status counts cover computed and cached pairs.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pairs_considered",
+        "computed",
+        "cached",
+        "fingerprints_computed",
+        "sessions_updated",
+        "matched",
+        "weak",
+        "ambiguous",
+        "no_match",
+        "insufficient"
+      ],
+      "properties": {
+        "pairs_considered": { "type": "integer", "minimum": 0 },
+        "computed": { "type": "integer", "minimum": 0 },
+        "cached": { "type": "integer", "minimum": 0 },
+        "fingerprints_computed": { "type": "integer", "minimum": 0 },
+        "sessions_updated": { "type": "integer", "minimum": 0 },
+        "matched": { "type": "integer", "minimum": 0 },
+        "weak": { "type": "integer", "minimum": 0 },
+        "ambiguous": { "type": "integer", "minimum": 0 },
+        "no_match": { "type": "integer", "minimum": 0 },
+        "insufficient": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "OverlapOverride": {
+      "title": "OverlapOverride",
+      "description": "Set the overlap between a clip and the clip before it (0 = no overlap), or clear the override with null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overlap_ms"],
+      "properties": {
+        "overlap_ms": {
+          "oneOf": [{ "$ref": "common.schema.json#/$defs/TimelineMs" }, { "type": "null" }]
+        }
+      }
+    }
+  }
+}

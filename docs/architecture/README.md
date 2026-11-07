@@ -18,6 +18,7 @@ Other architecture notes:
 - [Media probing](./media.md): FFmpeg discovery and minimum version, `doctor`, the probe job, normalized metadata, error codes, fixtures.
 - [Fingerprints and duplicates](./fingerprints.md): exact, fast, perceptual, and audio fingerprints, versioning, duplicate candidates, backfill.
 - [Watched folders](./watched-folders.md): host watcher and stabilization, worker decisions, reconciliation, offline backoff, cloud placeholders, Xbox onboarding.
+- [Overlap alignment](./overlap.md): finding repeated footage between adjacent clips (windows, sampling, thresholds, confidence), the shared timeline layout, overrides, performance, adversarial cases.
 - [Sessions](./sessions.md): capture-time estimation (filename patterns, confidence), metadata grouping rules and the 15-minute default gap, idempotent recompute, and durable manual corrections.
 - [Import from phone](./phone-upload.md): the separate LAN upload gateway, network model, 256-bit expiring token, limits and checks, filename rules, import handoff and staging cleanup. User guide: [Send clips from your phone](../guides/phone-upload.md).
 - [Desktop library and jobs UI](./desktop-ui.md): routes and components, the allow-listed `worker_api` bridge, the `owm-media` playback protocol, job center behavior, keyboard access, tests, player limitations.
