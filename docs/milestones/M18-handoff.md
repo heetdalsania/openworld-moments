@@ -179,6 +179,7 @@
     transcripts once M22 lands. M26 adds the FTS5 index over `transcript_segments`.
   - **Packaging:** M29/M34 bundle or qualify whisper.cpp and add a model manager UI.
   - **Still Ready:** M21.
+- Pull request: [#24](https://github.com/heetdalsania/openworld-moments/pull/24)
 - Screenshots, reports, or artifacts:
   - [Audio features](../detectors/audio.md), [transcription](../architecture/transcription.md),
     [ADR-0006](../architecture/adr/0006-local-transcription.md),
