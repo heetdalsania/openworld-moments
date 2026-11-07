@@ -7,6 +7,7 @@ import { ImportPanel } from "./ImportPanel";
 import { JobCenter } from "./JobCenter";
 import { isActive, useJobFeed, useJobs } from "./jobs";
 import { LibraryView } from "./LibraryView";
+import { PhoneImport } from "./PhoneImport";
 import { type Route, routeHref, useRoute } from "./route";
 import { WatchedFolders } from "./WatchedFolders";
 import type { WatchedFolderView } from "./watched";
@@ -158,6 +159,13 @@ export function App() {
           <button type="button" className="primary" onClick={openImport} disabled={!ready}>
             Import
           </button>
+          <a
+            className="button"
+            href={routeHref({ view: "phone" })}
+            aria-current={route.view === "phone" ? "page" : undefined}
+          >
+            Import from phone
+          </a>
           <button
             type="button"
             aria-expanded={jobsOpen}
@@ -182,6 +190,15 @@ export function App() {
             ))}
           {route.view === "asset" && ready && <AssetView key={route.id} id={route.id} />}
           {route.view === "settings" && <SettingsView workerReady={ready} />}
+          {route.view === "phone" &&
+            (ready ? (
+              <PhoneImport />
+            ) : (
+              <section className="view">
+                <h1>Import from phone</h1>
+                <p role="status">Available once the media worker is running.</p>
+              </section>
+            ))}
         </main>
         {jobsOpen && (
           <div id="job-center">

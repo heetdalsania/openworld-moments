@@ -507,3 +507,69 @@ main {
 .import-summary ul {
   padding-left: 1rem;
 }
+
+/* -- M10: import from phone ------------------------------------------------------ */
+
+a.button {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+a.button[aria-current="page"] {
+  border-color: var(--accent);
+}
+
+.phone-setup select {
+  display: block;
+  margin: 0.3rem 0;
+  font: inherit;
+  padding: 0.3rem;
+}
+
+.phone-active {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  margin: 1rem 0;
+}
+
+.qr {
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.url {
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+
+.phone-uploads {
+  list-style: none;
+  padding: 0;
+}
+
+.phone-uploads li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.phone-uploads .file {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.status-rejected,
+.status-import_failed,
+.status-interrupted {
+  color: var(--warn);
+}

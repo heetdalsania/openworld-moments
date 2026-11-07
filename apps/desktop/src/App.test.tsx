@@ -146,6 +146,8 @@ describe("keyboard-only walkthrough", () => {
     await user.tab();
     expect(document.activeElement?.textContent).toBe("Import");
     await user.tab();
+    expect(document.activeElement?.textContent).toBe("Import from phone");
+    await user.tab();
     expect(document.activeElement?.textContent).toMatch(/^Background jobs/);
     await user.tab();
     expect(document.activeElement?.textContent).toBe("Refresh");
@@ -153,6 +155,7 @@ describe("keyboard-only walkthrough", () => {
     expect(document.activeElement?.textContent).toContain("Heist finale.mp4"); // the clip card
 
     // Open Import from the keyboard; focus moves into the dialog.
+    await user.tab({ shift: true });
     await user.tab({ shift: true });
     await user.tab({ shift: true });
     await user.tab({ shift: true });

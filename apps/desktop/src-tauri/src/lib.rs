@@ -3,12 +3,14 @@
 //!
 //! Opens the UI, supervises the Python media worker (M03), and watches
 //! user-approved folders for new captures (M07). The UI reaches the worker through
-//! allow-listed routes and plays media over the `owm-media://` protocol (M09).
+//! allow-listed routes and plays media over the `owm-media://` protocol (M09). Phone
+//! uploads arrive through a temporary, separate LAN gateway process (M10).
 
 use serde::Serialize;
 
 mod host;
 pub mod media;
+pub mod phone;
 pub mod watch;
 pub mod worker;
 
@@ -55,6 +57,10 @@ pub fn run() {
             host::worker_cancel_job,
             host::worker_list_jobs,
             host::worker_api,
+            host::phone_interfaces,
+            host::phone_status,
+            host::phone_start,
+            host::phone_stop,
             host::watched_folders_list,
             host::watched_folder_add,
             host::watched_folder_update,

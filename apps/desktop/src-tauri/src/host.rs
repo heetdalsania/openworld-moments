@@ -7,6 +7,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, State};
 
+use crate::phone::{PhoneConfig, PhoneGateway};
 use crate::watch::{WatchConfig, WatchService, WorkerSink};
 use crate::worker::{SeqCheck, Supervisor, SupervisorConfig, WorkerCommand, WorkerStatus};
 
@@ -17,6 +18,10 @@ pub type Watcher = Option<WatchService<WorkerSink>>;
 pub const STATUS_EVENT: &str = "worker://status";
 pub const JOB_EVENT: &str = "worker://job-event";
 pub const RESYNC_EVENT: &str = "worker://resync";
+pub const PHONE_EVENT: &str = "phone://status";
+
+/// The phone import session manager, present when a worker is configured.
+pub type Phone = Option<PhoneGateway>;
 
 /// Where the worker comes from. `OWM_WORKER_PYTHON` overrides; debug builds fall
 /// back to the repository's virtualenv. Packaged builds bundle a worker in M29.
@@ -46,9 +51,28 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::E
     let Some(command) = worker_command() else {
         app.manage(None::<Supervisor>);
         app.manage(None::<WatchService<WorkerSink>> as Watcher);
+        app.manage(None::<PhoneGateway> as Phone);
         return Ok(());
     };
     let library = app.path().app_data_dir()?.join("library");
+    // No phone session runs yet: leftovers are from a crash.
+    let phone_staging = library.join("staging").join("phone");
+    crate::phone::clean_staging(&phone_staging);
+    let phone = PhoneGateway::new(PhoneConfig {
+        command: command.clone(),
+        staging_root: phone_staging,
+        session_seconds: crate::phone::SESSION_SECONDS,
+        allow_loopback: false,
+    });
+    app.manage(Some(phone.clone()) as Phone);
+    let handle = app.clone();
+    let mut phone_changes = phone.subscribe();
+    tauri::async_runtime::spawn(async move {
+        while phone_changes.changed().await.is_ok() {
+            let status = phone_changes.borrow_and_update().clone();
+            let _ = handle.emit(PHONE_EVENT, &status);
+        }
+    });
     let supervisor = Supervisor::new(SupervisorConfig::new(command, library));
     app.manage(Some(supervisor.clone()));
 
@@ -110,6 +134,11 @@ async fn relay_events<R: Runtime>(app: AppHandle<R>, supervisor: Supervisor) {
 }
 
 pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+    if let RunEvent::Exit = event
+        && let Some(phone) = app.try_state::<Phone>().and_then(|p| p.inner().clone())
+    {
+        tauri::async_runtime::block_on(phone.stop());
+    }
     if let RunEvent::Exit = event
         && let Some(watcher) = app.try_state::<Watcher>().and_then(|w| w.inner().clone())
     {
@@ -243,6 +272,45 @@ pub fn media_protocol<R: Runtime>(
 #[tauri::command]
 pub async fn worker_list_jobs(state: State<'_, Option<Supervisor>>) -> Result<Value, Value> {
     supervisor(&state)?.list_jobs().await.map_err(to_ui_error)
+}
+
+// -- import from phone (M10) ---------------------------------------------------------
+
+fn phone(state: &State<'_, Phone>) -> Result<PhoneGateway, Value> {
+    state.inner().clone().ok_or_else(unavailable)
+}
+
+/// Private network addresses a phone session may listen on.
+#[tauri::command]
+pub fn phone_interfaces() -> Vec<crate::phone::NetInterface> {
+    crate::phone::private_interfaces()
+}
+
+#[tauri::command]
+pub fn phone_status(state: State<'_, Phone>) -> Result<crate::phone::PhoneStatus, Value> {
+    Ok(phone(&state)?.status())
+}
+
+/// Open the temporary upload page on `address` (0 = any free port).
+#[tauri::command]
+pub async fn phone_start(
+    state: State<'_, Phone>,
+    worker: State<'_, Option<Supervisor>>,
+    address: String,
+    port: Option<u16>,
+) -> Result<crate::phone::PhoneStatus, Value> {
+    let gateway = phone(&state)?;
+    gateway
+        .start(worker.inner().clone(), &address, port.unwrap_or(0))
+        .await
+}
+
+/// Close the upload page now. Imports of files already received continue.
+#[tauri::command]
+pub async fn phone_stop(state: State<'_, Phone>) -> Result<crate::phone::PhoneStatus, Value> {
+    let gateway = phone(&state)?;
+    gateway.stop().await;
+    Ok(gateway.status())
 }
 
 // -- watched folders (M07) -----------------------------------------------------------
