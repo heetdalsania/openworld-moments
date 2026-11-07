@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/session.schema.json",
+  "title": "Session",
+  "description": "A candidate play session (spec 8.2, M11): assets grouped by source, format, and capture-time gaps, in order, with the evidence for each join. 'review_state' says who owns it: 'unreviewed' sessions are rebuilt by the 'group' job; 'corrected' (changed by the user) and 'confirmed' sessions are never touched by automatic grouping.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "title", "review_state", "assets", "created_at"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "started_at": {
+      "description": "Estimated start of the first clip.",
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "ended_at": {
+      "description": "Estimated end of the latest-ending clip; not before started_at (checked semantically).",
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "grouping_confidence": {
+      "description": "How sure the grouping is: the weakest join, or for one clip how sure its start time is. Null on corrected sessions. See docs/architecture/sessions.md.",
+      "oneOf": [{ "$ref": "common.schema.json#/$defs/Confidence" }, { "type": "null" }]
+    },
+    "review_state": {
+      "type": "string",
+      "enum": ["unreviewed", "confirmed", "corrected"]
+    },
+    "assets": {
+      "description": "Members in session order: order_index is 0, 1, 2, … and session_start_ms never decreases (checked semantically).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/SessionMember"
+      }
+    },
+    "grouping": {
+      "oneOf": [{ "$ref": "#/$defs/SessionGrouping" }, { "type": "null" }]
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    }
+  },
+  "$defs": {
+    "SessionMember": {
+      "title": "SessionMember",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "order_index", "session_start_ms", "duration_ms"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "order_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "session_start_ms": {
+          "description": "Where the clip starts within the session: from capture times for a chronological session, end to end for a hand-ordered one.",
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "duration_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "capture_time": {
+          "$ref": "media-asset.schema.json#/$defs/CaptureTimeEstimate"
+        }
+      }
+    },
+    "GroupingReason": {
+      "title": "GroupingReason",
+      "type": "string",
+      "enum": [
+        "same_source",
+        "compatible_format",
+        "gap_within_limit",
+        "overlapping",
+        "time_unknown",
+        "import_order",
+        "codec_changed",
+        "resolution_changed",
+        "frame_rate_changed",
+        "gap_exceeded"
+      ]
+    },
+    "GroupingLink": {
+      "title": "GroupingLink",
+      "description": "Why to_asset_id continues from_asset_id (adjacent members). gap_ms is negative when the clips overlap.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from_asset_id", "to_asset_id", "gap_ms", "confidence", "reasons"],
+      "properties": {
+        "from_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
+        "to_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
+        "gap_ms": { "type": "integer" },
+        "confidence": { "$ref": "common.schema.json#/$defs/Confidence" },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/GroupingReason" }
+        }
+      }
+    },
+    "SessionGrouping": {
+      "title": "SessionGrouping",
+      "description": "How an automatic session was formed. Null on corrected sessions: their membership is the user's decision (see the correction log).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "version", "settings", "links"],
+      "properties": {
+        "algorithm": { "type": "string", "enum": ["owm-metadata-gap"] },
+        "version": { "type": "integer", "minimum": 1 },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max_gap_ms"],
+          "properties": {
+            "max_gap_ms": { "type": "integer", "minimum": 60000, "maximum": 86400000 }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GroupingLink" }
+        },
+        "split_before": {
+          "description": "Why the first clip did not join the previous clip from the same source.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/GroupingReason" }
+        },
+        "notes": {
+          "description": "Capture-time caveats of the members (time-zone mismatch, copy times, …).",
+          "type": "array",
+          "maxItems": 50,
+          "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+        }
+      }
+    },
+    "GroupRequest": {
+      "title": "GroupRequest",
+      "description": "Params of a 'group' job. max_gap_ms defaults to the 'sessions.max_gap_ms' setting, else 15 minutes.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_gap_ms": { "type": "integer", "minimum": 60000, "maximum": 86400000 }
+      }
+    },
+    "GroupResult": {
+      "title": "GroupResult",
+      "description": "Result of a 'group' job. A second run over unchanged assets creates, updates, and removes nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "considered_assets",
+        "locked_assets",
+        "capture_times_updated",
+        "sessions_created",
+        "sessions_updated",
+        "sessions_unchanged",
+        "sessions_removed"
+      ],
+      "properties": {
+        "considered_assets": { "type": "integer", "minimum": 0 },
+        "locked_assets": {
+          "description": "Assets in corrected or confirmed sessions, left as they are.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "capture_times_updated": { "type": "integer", "minimum": 0 },
+        "sessions_created": { "type": "integer", "minimum": 0 },
+        "sessions_updated": { "type": "integer", "minimum": 0 },
+        "sessions_unchanged": { "type": "integer", "minimum": 0 },
+        "sessions_removed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "MergeRequest": {
+      "title": "MergeRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_ids"],
+      "properties": {
+        "session_ids": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/SessionId" }
+        }
+      }
+    },
+    "SplitRequest": {
+      "title": "SplitRequest",
+      "description": "Split after this member: it and the clips before it stay; the rest form a new session.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["after_asset_id"],
+      "properties": {
+        "after_asset_id": { "$ref": "common.schema.json#/$defs/AssetId" }
+      }
+    },
+    "ReorderRequest": {
+      "title": "ReorderRequest",
+      "description": "Every member exactly once, in the new order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_ids"],
+      "properties": {
+        "asset_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/AssetId" }
+        }
+      }
+    },
+    "RemoveRequest": {
+      "title": "RemoveRequest",
+      "description": "Mark a member as unrelated: it moves to a session of its own that automatic grouping never changes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id"],
+      "properties": {
+        "asset_id": { "$ref": "common.schema.json#/$defs/AssetId" }
+      }
+    },
+    "SessionCorrection": {
+      "title": "SessionCorrection",
+      "description": "One entry of the correction log.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "session_ids", "asset_ids", "created_at"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "kind": { "type": "string", "enum": ["merge", "split", "reorder", "remove", "confirm"] },
+        "session_ids": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/SessionId" }
+        },
+        "asset_ids": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/AssetId" }
+        },
+        "detail": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": { "$ref": "common.schema.json#/$defs/ScalarValue" }
+            },
+            { "type": "null" }
+          ]
+        },
+        "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" }
+      }
+    }
+  }
+}

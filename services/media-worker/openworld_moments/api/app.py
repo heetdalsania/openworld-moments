@@ -38,6 +38,7 @@ from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
+from openworld_moments.sessions.service import SessionError, SessionService
 from openworld_moments.storage import (
     AssetRepository,
     ConflictError,
@@ -190,6 +191,34 @@ class SubmitDerived(BaseModel):
     proxy_policy: str = "auto"
     force: bool = False
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitGroup(BaseModel):
+    """GroupRequest plus an optional idempotency key."""
+
+    model_config = ConfigDict(extra="forbid")
+    max_gap_ms: int | None = None
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class MergeSessions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session_ids: list[str] = Field(min_length=2, max_length=50)
+
+
+class SplitSession(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    after_asset_id: str
+
+
+class ReorderSession(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_ids: list[str] = Field(min_length=1, max_length=10_000)
+
+
+class RemoveFromSession(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_id: str
 
 
 class SubmitBackfill(BaseModel):
@@ -428,6 +457,78 @@ def create_app(
     async def cleanup_derived() -> dict[str, Any]:
         service = derived_service()
         return await asyncio.to_thread(service.cleanup)
+
+    # -- sessions (M11) -----------------------------------------------------------------
+
+    session_service = SessionService(engine.database)
+
+    @app.exception_handler(SessionError)
+    async def session_error(request: Request, exc: SessionError) -> JSONResponse:
+        body = error_body(exc.code, exc.message, retryable=False, correlation_id=cid(request))
+        return JSONResponse(body, status_code=exc.status)
+
+    @app.get("/v1/sessions")
+    async def list_sessions(limit: int = 200, offset: int = 0) -> list[dict[str, Any]]:
+        bounded = max(1, min(limit, 1000))
+        docs: list[dict[str, Any]] = await asyncio.to_thread(
+            with_conn,
+            lambda conn: session_service.list_docs(conn, limit=bounded, offset=max(0, offset)),
+        )
+        return docs
+
+    @app.post("/v1/sessions/recompute", status_code=201)
+    async def recompute_sessions(
+        body: SubmitGroup, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        if body.max_gap_ms is not None:
+            params["max_gap_ms"] = body.max_gap_ms
+        return await submit_job("group", params, body.idempotency_key, request, response)
+
+    @app.post("/v1/sessions/merge")
+    async def merge_sessions(body: MergeSessions) -> dict[str, Any]:
+        doc: dict[str, Any] = await asyncio.to_thread(session_service.merge, body.session_ids)
+        return doc
+
+    @app.get("/v1/sessions/{session_id}")
+    async def get_session(session_id: str) -> dict[str, Any]:
+        doc: dict[str, Any] = await asyncio.to_thread(
+            with_conn, lambda conn: session_service.doc(conn, session_id)
+        )
+        return doc
+
+    @app.get("/v1/sessions/{session_id}/corrections")
+    async def session_corrections(session_id: str) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = await asyncio.to_thread(
+            with_conn, lambda conn: session_service.corrections(conn, session_id)
+        )
+        return rows
+
+    @app.post("/v1/sessions/{session_id}/split")
+    async def split_session(session_id: str, body: SplitSession) -> list[dict[str, Any]]:
+        docs: list[dict[str, Any]] = await asyncio.to_thread(
+            session_service.split, session_id, body.after_asset_id
+        )
+        return docs
+
+    @app.post("/v1/sessions/{session_id}/order")
+    async def reorder_session(session_id: str, body: ReorderSession) -> dict[str, Any]:
+        doc: dict[str, Any] = await asyncio.to_thread(
+            session_service.reorder, session_id, body.asset_ids
+        )
+        return doc
+
+    @app.post("/v1/sessions/{session_id}/remove")
+    async def remove_from_session(session_id: str, body: RemoveFromSession) -> list[dict[str, Any]]:
+        docs: list[dict[str, Any]] = await asyncio.to_thread(
+            session_service.remove, session_id, body.asset_id
+        )
+        return docs
+
+    @app.post("/v1/sessions/{session_id}/confirm")
+    async def confirm_session(session_id: str) -> dict[str, Any]:
+        doc: dict[str, Any] = await asyncio.to_thread(session_service.confirm, session_id)
+        return doc
 
     @app.get("/v1/duplicates")
     async def list_duplicates(

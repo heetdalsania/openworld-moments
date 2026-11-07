@@ -2,6 +2,21 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.7 — 2026-11-07 (M11)
+
+Additive; every 1.6 document is valid 1.7.
+
+- `session` (new): `Session`, a candidate play session with ordered members
+  (`SessionMember`: order, start within the session, duration, capture-time
+  estimate), review state, confidence, and `SessionGrouping` evidence
+  (algorithm, version, max gap, per-join `GroupingLink` with gap, confidence,
+  and reasons; split reasons; capture-time notes). `$defs` also cover
+  `GroupRequest` / `GroupResult` (the `group` job), the correction requests, and
+  `SessionCorrection` (the log). Semantic rules: order indexes run 0..n-1,
+  starts never decrease, no duplicate members, `ended_at` not before
+  `started_at`, links join adjacent members.
+- `job`: new kind `group`.
+
 ## 1.6 — 2026-11-06 (M08)
 
 Additive; every 1.5 document is valid 1.6.

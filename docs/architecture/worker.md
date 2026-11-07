@@ -87,6 +87,15 @@ that created them, and every event and log line for that job carries it.
 | GET | `/v1/assets/{id}/derived` | `AssetDerivedMedia`: proxy decision and artifact states; see [derived media](./derived-media.md) |
 | POST | `/v1/assets/{id}/derived` | `{artifacts?, proxy_policy?, force?, idempotency_key?}` → `Job` (kind `proxy`) |
 | GET | `/v1/assets/{id}/media/{original\|proxy\|thumbnail\|waveform}?index=n` | **Host only** (not reachable from the UI): `{path, content_type, size_bytes}` of a checked file for the `owm-media` protocol; `media.source_missing`, `derived.not_ready`, `media.unknown_variant` (404). See [desktop UI](./desktop-ui.md) |
+| GET | `/v1/sessions?limit&offset` | `Session[]`, newest first; see [sessions](./sessions.md) |
+| GET | `/v1/sessions/{id}` | `Session` |
+| GET | `/v1/sessions/{id}/corrections` | `SessionCorrection[]` |
+| POST | `/v1/sessions/recompute` | `{max_gap_ms?, idempotency_key?}` → `Job` (kind `group`) |
+| POST | `/v1/sessions/merge` | `{session_ids}` → merged `Session` (corrected) |
+| POST | `/v1/sessions/{id}/split` | `{after_asset_id}` → `[Session, Session]` |
+| POST | `/v1/sessions/{id}/order` | `{asset_ids}` → `Session` |
+| POST | `/v1/sessions/{id}/remove` | `{asset_id}` → `[Session, Session]` (the clip alone, never regrouped) |
+| POST | `/v1/sessions/{id}/confirm` | `Session` (confirmed, locked) |
 | POST | `/v1/derived/cleanup` | `DerivedCleanupResult` (removes only unreferenced files in `derived/`) |
 | GET / POST | `/v1/watched-folders` | `WatchedFolder[]` / create; see [watched folders](./watched-folders.md) |
 | GET / PATCH / DELETE | `/v1/watched-folders/{id}` | Read, change, stop watching (files untouched) |
@@ -99,7 +108,7 @@ Errors always use contract `ErrorInfo` (`code`, `message`, `retryable`,
 `correlation_id`): `request.invalid` / `job.invalid_params` / `job.unknown_kind`
 / `job.invalid_idempotency_key` (422), `job.not_found` / `request.not_found` /
 `import.not_found` / `asset.not_found` / `duplicate.not_found` /
-`watch.folder_not_found` (404), `watch.*` (see [watched folders](./watched-folders.md#error-codes)), `derived.*` job errors (see [derived media](./derived-media.md#error-codes)), `job.not_cancellable` /
+`watch.folder_not_found` (404), `watch.*` (see [watched folders](./watched-folders.md#error-codes)), `derived.*` job errors (see [derived media](./derived-media.md#error-codes)), `session.not_found` (404) / `session.invalid_request` (422) / `session.in_use` (409), `job.not_cancellable` /
 `job.not_retryable` / `job.max_attempts` / `job.idempotency_conflict` (409),
 `worker.stopping` (503).
 

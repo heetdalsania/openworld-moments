@@ -16,6 +16,7 @@ import mediaAsset from "../schemas/media-asset.schema.json" with { type: "json" 
 import profile from "../schemas/profile.schema.json" with { type: "json" };
 import project from "../schemas/project.schema.json" with { type: "json" };
 import renderPreset from "../schemas/render-preset.schema.json" with { type: "json" };
+import session from "../schemas/session.schema.json" with { type: "json" };
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
 import { ContractError } from "./errors.ts";
 import type {
@@ -31,6 +32,7 @@ import type {
   Profile,
   Project,
   RenderPreset,
+  Session,
   WatchedFolder,
 } from "./generated/types.ts";
 import { semanticIssues } from "./semantic.ts";
@@ -50,6 +52,7 @@ export interface ContractTypes {
   profile: Profile;
   project: Project;
   "render-preset": RenderPreset;
+  session: Session;
   "watched-folder": WatchedFolder;
 }
 export type ContractName = keyof ContractTypes;
@@ -68,6 +71,7 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   profile: [profile, true],
   project: [project, true],
   "render-preset": [renderPreset, true],
+  session: [session, true],
   "watched-folder": [watchedFolder, true],
 };
 

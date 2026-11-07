@@ -2,6 +2,7 @@
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
   AssetDerivedMedia,
+  Session,
   Event,
   Evidence,
   ExportManifest,
@@ -226,8 +227,32 @@ function* derivedArtifact(art: Record<string, unknown>, i: number): Generator<st
   }
 }
 
+function* session(doc: Session): Generator<string> {
+  const members = doc.assets;
+  if (members.some((m, i) => m.order_index !== i)) {
+    yield "assets: order_index must be 0, 1, 2, … in order";
+  }
+  if (
+    members.some((m, i) => i > 0 && m.session_start_ms < (members[i - 1]?.session_start_ms ?? 0))
+  ) {
+    yield "assets: session_start_ms must not decrease";
+  }
+  const ids = members.map((m) => m.asset_id);
+  if (new Set(ids).size !== ids.length) yield "assets: an asset appears twice";
+  if (doc.started_at && doc.ended_at && Date.parse(doc.ended_at) < Date.parse(doc.started_at)) {
+    yield "ended_at: before started_at";
+  }
+  const pairs = new Set(ids.slice(1).map((id, i) => `${ids[i] ?? ""}>${id}`));
+  for (const [i, link] of (doc.grouping?.links ?? []).entries()) {
+    if (!pairs.has(`${link.from_asset_id}>${link.to_asset_id}`)) {
+      yield `grouping.links[${i}]: must join adjacent members`;
+    }
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  session,
   "derived-media": derivedMedia,
   event,
   job,

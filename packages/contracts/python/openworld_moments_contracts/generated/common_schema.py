@@ -36,6 +36,17 @@ class AssetId(RootModel[str]):
     ]
 
 
+class SessionId(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Opaque session ID: 'ses_' + ULID.",
+            pattern="^ses_[0-9A-HJKMNP-TV-Z]{26}$",
+            title="SessionId",
+        ),
+    ]
+
+
 class Slug(RootModel[str]):
     root: Annotated[
         str,
@@ -69,6 +80,13 @@ class Rational(BaseModel):
     )
     num: Annotated[int, Field(ge=1)]
     den: Annotated[int, Field(ge=1)]
+
+
+class Confidence(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(description="Probability-like score in [0, 1].", ge=0.0, le=1.0, title="Confidence"),
+    ]
 
 
 class RegionItem(RootModel[float]):

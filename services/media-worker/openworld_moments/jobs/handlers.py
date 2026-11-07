@@ -10,6 +10,8 @@
 * ``fingerprint`` (M06): restartable fingerprint backfill.
 * ``proxy`` (M08): one asset's derived playback media (proxy, filmstrip,
   waveform), ``openworld_moments.derived``.
+* ``group`` (M11): rebuild unreviewed sessions from capture times and metadata,
+  ``openworld_moments.sessions``.
 
 Later product handlers (analyze, transcribe, ...) arrive in their milestones.
 """
@@ -38,6 +40,7 @@ from openworld_moments.media.probe import (
     probe_file,
 )
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.sessions.service import GroupCancelled, SessionService
 from openworld_moments.storage import Database
 
 MAX_STEPS = 10_000
@@ -278,6 +281,31 @@ def derived_handler(derived: DerivedMedia) -> JobHandler:
     return JobHandler("proxy", run, validate_derived, "proxying", True, 3)
 
 
+MIN_GAP_MS, MAX_GAP_MS = 60_000, 86_400_000
+
+
+def validate_group(params: Mapping[str, Any]) -> dict[str, Any]:
+    """GroupRequest (contract session.schema.json#/$defs/GroupRequest)."""
+    _reject_unknown(params, {"max_gap_ms"})
+    clean: dict[str, Any] = {}
+    gap = _int_param(params, "max_gap_ms", None, MIN_GAP_MS, MAX_GAP_MS)
+    if gap is not None:
+        clean["max_gap_ms"] = gap
+    return clean
+
+
+def group_handler(service: SessionService) -> JobHandler:
+    """The ``group`` job. Recomputation is idempotent, so a requeue is safe."""
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return service.recompute(ctx.params, cancel=ctx.cancel_event, progress=ctx.progress)
+        except GroupCancelled as exc:
+            raise Cancelled from exc
+
+    return JobHandler("group", run, validate_group, "grouping", True, 3)
+
+
 def validate_check_sources(params: Mapping[str, Any]) -> dict[str, Any]:
     _reject_unknown(params, set())
     return {}
@@ -353,4 +381,6 @@ def build_handlers(
         handlers[fingerprint.kind] = fingerprint
         proxy = derived_handler(derived or DerivedMedia(database, tools))
         handlers[proxy.kind] = proxy
+        grouper = group_handler(SessionService(database))
+        handlers[grouper.kind] = grouper
     return handlers
