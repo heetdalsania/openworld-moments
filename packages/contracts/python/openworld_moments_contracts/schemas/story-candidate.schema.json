@@ -1,0 +1,377 @@
+{
+  "title": "StoryCandidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "session_id",
+    "generator",
+    "input_key",
+    "layout_key",
+    "preset",
+    "options",
+    "start_ms",
+    "end_ms",
+    "source_events",
+    "source_ranges",
+    "beats",
+    "alternatives",
+    "score",
+    "score_components",
+    "metrics",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/ProjectId"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "generator": {
+      "title": "StoryGenerator",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {
+          "const": "owm-story"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+      }
+    },
+    "input_key": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "layout_key": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "preset": {
+      "enum": ["moment", "short", "extended_short", "highlight"]
+    },
+    "options": {
+      "title": "StoryOptions",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_roll_ms",
+        "post_roll_ms",
+        "merge_gap_ms",
+        "avoid_spoilers",
+        "allow_unreviewed"
+      ],
+      "properties": {
+        "pre_roll_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "post_roll_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60000
+        },
+        "merge_gap_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30000
+        },
+        "avoid_spoilers": {
+          "type": "boolean"
+        },
+        "allow_unreviewed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "start_ms": {
+      "$ref": "common.schema.json#/$defs/TimelineMs"
+    },
+    "end_ms": {
+      "$ref": "common.schema.json#/$defs/TimelineMs"
+    },
+    "source_events": {
+      "type": "array",
+      "maxItems": 5000,
+      "minItems": 1,
+      "items": {
+        "title": "StorySourceEvent",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_id",
+          "revision",
+          "type",
+          "start_ms",
+          "end_ms",
+          "review_state",
+          "confidence"
+        ],
+        "properties": {
+          "event_id": {
+            "$ref": "common.schema.json#/$defs/EventId"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+          },
+          "start_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "end_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "review_state": {
+            "enum": ["unreviewed", "confirmed", "corrected", "rejected"]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "source_ranges": {
+      "type": "array",
+      "maxItems": 1000,
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/StorySourceRange"
+      }
+    },
+    "beats": {
+      "type": "array",
+      "maxItems": 5000,
+      "minItems": 1,
+      "items": {
+        "title": "StoryBeat",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "start_ms", "end_ms", "event_ids", "basis"],
+        "properties": {
+          "kind": {
+            "enum": ["setup", "incident", "escalation", "payoff", "reaction"]
+          },
+          "start_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "end_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "event_ids": {
+            "type": "array",
+            "maxItems": 5000,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "common.schema.json#/$defs/EventId"
+            }
+          },
+          "basis": {
+            "enum": ["context", "event", "audio", "transcript"]
+          }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 0,
+      "items": {
+        "title": "StoryAlternative",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "start_ms", "end_ms", "source_ranges", "speech_truncated"],
+        "properties": {
+          "kind": {
+            "enum": ["short", "long"]
+          },
+          "start_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "end_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "source_ranges": {
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/StorySourceRange"
+            }
+          },
+          "speech_truncated": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "score": {
+      "type": "number",
+      "minimum": -1,
+      "maximum": 1
+    },
+    "score_components": {
+      "title": "StoryScoreComponents",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_confidence",
+        "setup_coverage",
+        "payoff_coverage",
+        "reaction_evidence",
+        "continuity_score",
+        "duplicate_penalty",
+        "dead_air_penalty",
+        "truncation_penalty",
+        "spoiler_risk_penalty",
+        "rejection_penalty",
+        "missing_payoff_penalty"
+      ],
+      "properties": {
+        "event_confidence": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "setup_coverage": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "payoff_coverage": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "reaction_evidence": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "continuity_score": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "duplicate_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "dead_air_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "truncation_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "spoiler_risk_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "rejection_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "missing_payoff_penalty": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        }
+      }
+    },
+    "metrics": {
+      "title": "StoryCoverage",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["setup_coverage", "payoff_coverage", "speech_truncations", "duplicate_ms"],
+      "properties": {
+        "setup_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "payoff_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "speech_truncations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "duplicate_ms": {
+          "const": 0
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 8,
+      "items": {
+        "enum": [
+          "missing_payoff",
+          "duration_pressure",
+          "speech_truncated",
+          "below_minimum",
+          "unreviewed_seed"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "StorySourceRange": {
+      "title": "StorySourceRange",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "asset_id",
+        "source_in_ms",
+        "source_out_ms",
+        "session_start_ms",
+        "session_end_ms"
+      ],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "source_in_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_out_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "session_start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "session_end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/story-candidate.schema.json"
+}

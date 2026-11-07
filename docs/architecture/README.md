@@ -36,3 +36,5 @@ Other architecture notes:
 
 - [Event review](./event-review.md): immutable snapshots, audited corrections, timeline markers and explicit reconciliation.
 - [Local evaluation](../evaluation/README.md): holdout annotations, metrics, replay CLI and report privacy.
+
+- [Story engine](./stories.md): deterministic narrative windows, speech boundaries, score components, candidate decisions and project handoff.

@@ -36,6 +36,8 @@ from openworld_moments_contracts.generated import (
     render_preset_schema,
     session_schema,
     speech_models_schema,
+    story_candidate_schema,
+    story_candidates_schema,
     transcript_schema,
     transcription_schema,
     watched_folder_schema,
@@ -45,6 +47,8 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "story-candidate": (story_candidate_schema.StoryCandidate, True),
+    "story-candidates": (story_candidates_schema.StoryCandidates, True),
     "evaluation": (evaluation_schema.EvaluationManifest, True),
     "evaluation-observations": (evaluation_observations_schema.EvaluationObservations, True),
     "evaluation-report": (evaluation_report_schema.EvaluationReport, True),

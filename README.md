@@ -35,10 +35,10 @@ Completed milestones:
 | M16 — Wanted-state detector | Calibrated analytic star/disc rows, conservative temporal changes with local crop references and explainable scores, replay traces and benchmark; synthetic validation only, game compatibility unvalidated ([wanted detector](./docs/detectors/wanted.md)) |
 | M17 — Banner and subtitle detectors | Local region-only Tesseract OCR, versioned locale vocabulary, confirmed banner/subtitle intervals with line evidence and mission spoiler-risk metadata; synthetic validation, optional engine/data and explicit unavailable results ([text detectors](./docs/detectors/text.md)) |
 | M18 — Audio analysis and transcription | Deterministic audio features from the playback copy's first audio stream (onsets/impacts, silence, speech-like activity), always labelled supporting evidence; optional local whisper.cpp transcription with explicitly installed models, word timings in session time, per-clip cached and cancellable jobs, a privacy notice and text-only deletion in the session screen ([audio](./docs/detectors/audio.md), [transcription](./docs/architecture/transcription.md), [guide](./docs/guides/transcription.md)) |
-
 | M19 — Event review and evaluation | Timeline event markers, evidence/provenance inspector, immutable observations with separate audited corrections and manual events; reproducible local holdout metrics and privacy-minimized JSON/Markdown compatibility reports ([review](./docs/architecture/event-review.md), [evaluation](./docs/evaluation/README.md)) |
+| M20 — Story engine | Deterministic event-to-story windows with source ranges, narrative beats, speech-aware boundaries, duration presets, decomposed scores and alternatives; audited accept/reject/regeneration, local CLI/API and synthetic coverage report ([engine](./docs/architecture/stories.md), [guide](./docs/stories/README.md)) |
 
-You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story creation and editing arrive in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
+You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story candidates can be generated and reviewed through the local CLI/API, with visual editing arriving in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
 - [Complete product and engineering specification](./OPENWORLD_MOMENTS_BUILD_SPEC.md)
 - [Milestone index and dependency graph](./MILESTONES.md)
@@ -356,14 +356,13 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M10 still needs its real-phone smoke test on a Windows private network before it
-is marked complete. M19 delivers event review and reproducible local evaluation.
-The next milestone is M20; M21 remains independently ready:
+M20 delivers the deterministic story engine through the local CLI/API, including
+candidate review and non-destructive project handoff. The next milestone is
+[M21 — Editor project model](./docs/milestones/M21-editor-project-model.md), then
+M22 supplies the focused editing UI. Manual projects remain independent of
+successful automatic detection.
 
-- [M20 — Story engine](./docs/milestones/M20-story-engine.md): explainable setup-to-payoff suggestions from reviewed evidence.
-- [M21 — Editor project model](./docs/milestones/M21-editor-project-model.md): the non-destructive edit list, autosave and undo model.
-
-Detector quality is measured only on synthetic/local fixtures. GTA profiles remain
-unvalidated, and M18 speech recognition still uses a test double in automated
-validation. See the [M19 handoff](./docs/milestones/M19-handoff.md),
-[event review](./docs/architecture/event-review.md) and [sample evaluation](./docs/evaluation/sample/report.md).
+M10 still needs its real-phone smoke test on a Windows private network. Detector
+quality remains synthetic/local; GTA profiles are unvalidated and M18 real
+whisper.cpp recognition is unmeasured. See the [M20 handoff](./docs/milestones/M20-handoff.md),
+[story algorithm](./docs/architecture/stories.md) and [synthetic coverage report](./docs/stories/sample/report.md).

@@ -233,6 +233,8 @@ export interface ContractsBundle {
   "render-preset"?: RenderPreset;
   session?: Session;
   "speech-models"?: SpeechModels;
+  "story-candidate"?: StoryCandidate;
+  "story-candidates"?: StoryCandidates;
   transcript?: Transcript;
   transcription?: TranscriptionResult;
   "watched-folder"?: WatchedFolder;
@@ -1791,7 +1793,8 @@ export interface Job {
     | "check_sources"
     | "fingerprint"
     | "group"
-    | "align";
+    | "align"
+    | "story";
   state:
     | "queued"
     | "probing"
@@ -2532,6 +2535,409 @@ export interface SpeechModelCatalogEntry {
   languages: "en" | "multilingual";
   license: string;
   source_url: string;
+}
+export interface StoryCandidate {
+  schema_version: string;
+  id: ProjectId;
+  session_id: SessionId;
+  generator: StoryGenerator;
+  input_key: string;
+  layout_key: string;
+  preset: "moment" | "short" | "extended_short" | "highlight";
+  options: StoryOptions;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  /**
+   * @minItems 1
+   * @maxItems 5000
+   */
+  source_events: [StorySourceEvent, ...StorySourceEvent[]];
+  /**
+   * @minItems 1
+   * @maxItems 1000
+   */
+  source_ranges: [StorySourceRange, ...StorySourceRange[]];
+  /**
+   * @minItems 1
+   * @maxItems 5000
+   */
+  beats: [StoryBeat, ...StoryBeat[]];
+  /**
+   * @minItems 0
+   * @maxItems 2
+   */
+  alternatives: [] | [StoryAlternative] | [StoryAlternative, StoryAlternative];
+  score: number;
+  score_components: StoryScoreComponents;
+  metrics: StoryCoverage;
+  /**
+   * @maxItems 8
+   */
+  warnings:
+    | []
+    | [
+        | "missing_payoff"
+        | "duration_pressure"
+        | "speech_truncated"
+        | "below_minimum"
+        | "unreviewed_seed"
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ]
+    | [
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        ),
+        (
+          | "missing_payoff"
+          | "duration_pressure"
+          | "speech_truncated"
+          | "below_minimum"
+          | "unreviewed_seed"
+        )
+      ];
+}
+export interface StoryGenerator {
+  id: "owm-story";
+  version: string;
+}
+export interface StoryOptions {
+  pre_roll_ms: number;
+  post_roll_ms: number;
+  merge_gap_ms: number;
+  avoid_spoilers: boolean;
+  allow_unreviewed: boolean;
+}
+export interface StorySourceEvent {
+  event_id: EventId;
+  revision: number;
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  review_state: "unreviewed" | "confirmed" | "corrected" | "rejected";
+  confidence: number;
+}
+/**
+ * This interface was referenced by `StoryCandidate`'s JSON-Schema
+ * via the `definition` "StorySourceRange".
+ */
+export interface StorySourceRange {
+  asset_id: AssetId;
+  source_in_ms: TimelineMs;
+  source_out_ms: TimelineMs;
+  session_start_ms: TimelineMs;
+  session_end_ms: TimelineMs;
+}
+export interface StoryBeat {
+  kind: "setup" | "incident" | "escalation" | "payoff" | "reaction";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  /**
+   * @maxItems 5000
+   */
+  event_ids: EventId[];
+  basis: "context" | "event" | "audio" | "transcript";
+}
+export interface StoryAlternative {
+  kind: "short" | "long";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  /**
+   * @minItems 1
+   * @maxItems 1000
+   */
+  source_ranges: [StorySourceRange, ...StorySourceRange[]];
+  speech_truncated: boolean;
+}
+export interface StoryScoreComponents {
+  event_confidence: number;
+  setup_coverage: number;
+  payoff_coverage: number;
+  reaction_evidence: number;
+  continuity_score: number;
+  duplicate_penalty: number;
+  dead_air_penalty: number;
+  truncation_penalty: number;
+  spoiler_risk_penalty: number;
+  rejection_penalty: number;
+  missing_payoff_penalty: number;
+}
+export interface StoryCoverage {
+  setup_coverage: number;
+  payoff_coverage: number;
+  speech_truncations: number;
+  duplicate_ms: 0;
+}
+export interface StoryCandidates {
+  schema_version: string;
+  session_id: SessionId;
+  generator: StoryGenerator1;
+  input_key: string;
+  layout_key: string;
+  duration_ms: TimelineMs;
+  offset: number;
+  total: number;
+  /**
+   * @minItems 0
+   * @maxItems 100
+   */
+  items: StoryCandidateReview[];
+}
+export interface StoryGenerator1 {
+  id: "owm-story";
+  version: string;
+}
+export interface StoryCandidateReview {
+  candidate: StoryCandidate;
+  revision: number;
+  review_state: "suggested" | "accepted" | "rejected";
+  current: boolean;
+  project_id?: ProjectId;
 }
 /**
  * A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.

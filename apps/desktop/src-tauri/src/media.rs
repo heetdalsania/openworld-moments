@@ -98,8 +98,8 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
             is_id(id, "ses_") && is_id(asset, "ast_") && query.is_none()
         }
         // M19: local event inspection and append-only decisions.
-        ("GET", ["", "v1", "sessions", id, "review"]) => is_id(id, "ses_"),
-        ("POST", ["", "v1", "sessions", id, "review" | "analyze"]) => {
+        ("GET", ["", "v1", "sessions", id, "review" | "stories"]) => is_id(id, "ses_"),
+        ("POST", ["", "v1", "sessions", id, "review" | "analyze" | "stories"]) => {
             is_id(id, "ses_") && query.is_none()
         }
         ("POST", ["", "v1", "sessions", id, "review", event]) => {
@@ -107,6 +107,9 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         }
         // M18: optional local transcription. Deleting a transcript removes derived text only.
         ("GET", ["", "v1", "transcription", "models"]) => query.is_none(),
+        ("POST", ["", "v1", "sessions", id, "stories", candidate, "decision"]) => {
+            is_id(id, "ses_") && is_id(candidate, "prj_") && query.is_none()
+        }
         ("POST", ["", "v1", "sessions", id, "transcribe"]) => is_id(id, "ses_") && query.is_none(),
         ("GET" | "DELETE", ["", "v1", "sessions", id, "transcript"]) => {
             is_id(id, "ses_") && query.is_none()
@@ -327,6 +330,15 @@ mod tests {
                 &format!("/v1/sessions/{SESSION}/review/evt_01JCBQ00000000000000000003"),
             ),
             ("POST", &format!("/v1/sessions/{SESSION}/analyze")),
+            ("POST", &format!("/v1/sessions/{SESSION}/stories")),
+            (
+                "GET",
+                &format!("/v1/sessions/{SESSION}/stories?preset=short&include_history=true"),
+            ),
+            (
+                "POST",
+                &format!("/v1/sessions/{SESSION}/stories/prj_01JCBQ00000000000000000003/decision"),
+            ),
             ("GET", "/v1/transcription/models"),
             ("POST", &format!("/v1/sessions/{SESSION}/transcribe")),
             ("GET", &format!("/v1/sessions/{SESSION}/transcript")),
@@ -341,6 +353,19 @@ mod tests {
                 &format!("/v1/sessions/{SESSION}/review?path=/private"),
             ),
             ("POST", &format!("/v1/sessions/{SESSION}/review/evt_bad")),
+            (
+                "POST",
+                &format!("/v1/sessions/{SESSION}/stories?force=true"),
+            ),
+            (
+                "POST",
+                &format!("/v1/sessions/{SESSION}/stories/prj_bad/decision"),
+            ),
+            ("DELETE", &format!("/v1/sessions/{SESSION}/stories")),
+            (
+                "GET",
+                &format!("/v1/sessions/{SESSION}/stories/prj_01JCBQ00000000000000000003/decision"),
+            ),
             ("POST", &format!("/v1/sessions/{SESSION}/review?limit=50")),
             ("DELETE", &format!("/v1/sessions/{SESSION}/review")),
             (

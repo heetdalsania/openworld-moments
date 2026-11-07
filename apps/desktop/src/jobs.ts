@@ -33,6 +33,7 @@ const LABELS: Record<string, string> = {
   group: "Group sessions",
   align: "Find repeated footage",
   analyze: "Analyze session",
+  story: "Suggest stories",
   transcribe: "Transcribe speech",
   diagnostic: "Diagnostic",
 };

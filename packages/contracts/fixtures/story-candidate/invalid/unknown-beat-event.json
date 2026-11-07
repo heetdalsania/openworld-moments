@@ -1,0 +1,114 @@
+{
+  "description": "unknown-beat-event",
+  "expect": "semantic",
+  "document": {
+    "id": "prj_0V3CSV49PWX8VMCX80Y66BE207",
+    "schema_version": "1.15",
+    "session_id": "ses_01JCBQ00000000000000000001",
+    "generator": {
+      "id": "owm-story",
+      "version": "1.0.0"
+    },
+    "input_key": "93ea6364dbda9d8e89df2959f58200e7afd84145b065b1836f5861c5728bd617",
+    "layout_key": "ac911e4a8f2b48c071ce0fbb434c039c48e60e8d96dff768f69daa740af0c3bb",
+    "preset": "short",
+    "options": {
+      "pre_roll_ms": 10000,
+      "post_roll_ms": 8000,
+      "merge_gap_ms": 10000,
+      "avoid_spoilers": false,
+      "allow_unreviewed": true
+    },
+    "start_ms": 7500,
+    "end_ms": 32500,
+    "source_events": [
+      {
+        "event_id": "evt_53Z66E8SAMXWDYBAKYGW13ZPNW",
+        "revision": 0,
+        "type": "openworld.mission_completed",
+        "start_ms": 20000,
+        "end_ms": 22000,
+        "review_state": "confirmed",
+        "confidence": 0.95
+      }
+    ],
+    "source_ranges": [
+      {
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "source_in_ms": 7500,
+        "source_out_ms": 32500,
+        "session_start_ms": 7500,
+        "session_end_ms": 32500
+      }
+    ],
+    "beats": [
+      {
+        "kind": "setup",
+        "start_ms": 7500,
+        "end_ms": 20000,
+        "event_ids": ["evt_01JCBQ00000000000000000009"],
+        "basis": "context"
+      },
+      {
+        "kind": "payoff",
+        "start_ms": 20000,
+        "end_ms": 22000,
+        "event_ids": ["evt_53Z66E8SAMXWDYBAKYGW13ZPNW"],
+        "basis": "event"
+      }
+    ],
+    "alternatives": [
+      {
+        "kind": "short",
+        "start_ms": 8000,
+        "end_ms": 33000,
+        "source_ranges": [
+          {
+            "asset_id": "ast_01JCBQ00000000000000000001",
+            "source_in_ms": 8000,
+            "source_out_ms": 33000,
+            "session_start_ms": 8000,
+            "session_end_ms": 33000
+          }
+        ],
+        "speech_truncated": false
+      },
+      {
+        "kind": "long",
+        "start_ms": 5000,
+        "end_ms": 34000,
+        "source_ranges": [
+          {
+            "asset_id": "ast_01JCBQ00000000000000000001",
+            "source_in_ms": 5000,
+            "source_out_ms": 34000,
+            "session_start_ms": 5000,
+            "session_end_ms": 34000
+          }
+        ],
+        "speech_truncated": false
+      }
+    ],
+    "score": 0.8875,
+    "score_components": {
+      "event_confidence": 0.2375,
+      "setup_coverage": 0.15,
+      "payoff_coverage": 0.2,
+      "reaction_evidence": 0,
+      "continuity_score": 0.3,
+      "duplicate_penalty": 0,
+      "dead_air_penalty": -0.0,
+      "truncation_penalty": 0,
+      "spoiler_risk_penalty": 0,
+      "rejection_penalty": 0,
+      "missing_payoff_penalty": 0
+    },
+    "metrics": {
+      "setup_coverage": 1.0,
+      "payoff_coverage": 1,
+      "speech_truncations": 0,
+      "duplicate_ms": 0
+    },
+    "warnings": []
+  }
+}

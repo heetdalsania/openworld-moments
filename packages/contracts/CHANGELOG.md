@@ -2,6 +2,16 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.15 — 2026-11-07 (M20)
+
+Additive: `story-candidate` (versioned deterministic windows, source-event revisions,
+source ranges, beats, alternatives, decomposed scores, coverage and warnings),
+`story-candidates` (paged review/freshness projection), and the `story` job kind.
+Shared TS/Python checks cover gap-free nonduplicated ranges, exact score sums and
+weight bounds, event references, preset maxima and current-page identity.
+Migration 0013 stores immutable candidates, append-only decisions and generation
+cache markers; explicit acceptance uses the existing Project/Story contract.
+
 ## 1.14 — 2026-11-07 (M19)
 
 Additive: `event-review` (original/effective observations, status and bounded recent

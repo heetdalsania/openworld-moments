@@ -50,7 +50,8 @@ from openworld_moments.media.probe import (
 )
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
-from openworld_moments.storage import Database
+from openworld_moments.storage import Database, NotFoundError
+from openworld_moments.stories.service import StoryCancelled, StoryError, StoryRequest, StoryService
 from openworld_moments.transcripts.service import Transcriber
 from openworld_moments.transcripts.whisper import TranscriptionCancelled, TranscriptionError
 
@@ -452,6 +453,39 @@ def transcribe_handler(transcriber: Transcriber) -> JobHandler:
     return JobHandler("transcribe", run, validate, "transcribing", True, 3)
 
 
+def story_handler(service: StoryService) -> JobHandler:
+    def validate(params: Mapping[str, Any]) -> dict[str, Any]:
+        sid = params.get("session_id")
+        if not isinstance(sid, str) or not _SESSION_ID.fullmatch(sid):
+            raise ValueError("session_id: expected a session ID")
+        try:
+            request = StoryRequest.model_validate(
+                {k: v for k, v in params.items() if k != "session_id"}
+            )
+        except ValueError as exc:
+            raise ValueError("Choose valid story preset and boundary settings.") from exc
+        return {"session_id": sid, **request.model_dump(exclude_none=True)}
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return service.generate(
+                ctx.params["session_id"],
+                StoryRequest.model_validate(
+                    {k: v for k, v in ctx.params.items() if k != "session_id"}
+                ),
+                cancel=ctx.cancel_event,
+                progress=ctx.progress,
+            )
+        except StoryCancelled as exc:
+            raise Cancelled from exc
+        except StoryError as exc:
+            raise JobFailure(exc.code, exc.message, retryable=exc.status == 409) from exc
+        except NotFoundError as exc:
+            raise JobFailure("story.session_missing", "That session no longer exists.") from exc
+
+    return JobHandler("story", run, validate, "analyzing", True, 3)
+
+
 def _job_failure(exc: ImportFailure) -> JobFailure:
     return JobFailure(
         exc.code,
@@ -532,4 +566,6 @@ def build_handlers(
         handlers[analysis.kind] = analysis
         speech = transcribe_handler(transcriber or Transcriber(database, tools, media))
         handlers[speech.kind] = speech
+        story = story_handler(StoryService(database))
+        handlers[story.kind] = story
     return handlers
