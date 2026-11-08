@@ -124,7 +124,9 @@ def test_user_text_and_paths_never_enter_the_argument_array() -> None:
     # Paths keep the platform's own separators (backslashes on Windows).
     assert f"file:{hostile}" in real and f"file:{unicode}" in real
     assert real[-1] == f"file:{output}"
-    assert sum(HOSTILE in a for a in real) == 1
+    # HOSTILE contains separators that Windows normalizes, so count a separator-free part.
+    assert real.count(f"file:{hostile}") == 1
+    assert sum("rm -rf" in a for a in real) == 1 and sum("`id`" in a for a in real) == 1
     record(plan)  # the stored plan satisfies the contract
 
 
