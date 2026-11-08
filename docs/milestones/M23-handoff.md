@@ -91,5 +91,6 @@
   synthetic video and M18 fake recognition only). Temporary media/library/model
   were removed after capture. Golden text files are committed under
   `apps/desktop/src/testing/`; no footage, real models, libraries, databases,
-  generated media, secrets or build outputs are committed. Hosted links added
-  before handoff.
+  generated media, secrets or build outputs are committed. [PR #29](https://github.com/heetdalsania/openworld-moments/pull/29) and
+  [its CI checks](https://github.com/heetdalsania/openworld-moments/pull/29/checks)
+  record hosted validation on the final head before merge.
