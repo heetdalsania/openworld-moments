@@ -19,6 +19,7 @@ import os
 import shutil
 import sqlite3
 import threading
+import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -53,6 +54,31 @@ STAGING = Path("staging") / "renders"
 RENDERS = Path("renders")
 #: Free space kept in reserve beyond the estimated output size.
 DISK_RESERVE = 64 * 1024 * 1024
+#: How long to keep retrying removal of a staging folder that is still in use.
+REMOVE_RETRY_S = 5.0
+
+
+def remove_tree(path: Path, retry_s: float = REMOVE_RETRY_S) -> bool:
+    """Delete an owned folder, retrying while files in it are still locked.
+
+    On Windows a just-killed FFmpeg, or an antivirus scan of the file it wrote, can
+    keep a handle open for a moment after the process exits, and deleting then fails.
+    Returns whether the folder is gone; leftovers are removed at worker startup.
+    """
+    deadline = time.monotonic() + retry_s
+    while True:
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            if time.monotonic() >= deadline:
+                return not path.exists()
+            time.sleep(0.1)
+        else:
+            return True
+
+
 STORED_COLUMNS = frozenset(
     {
         "status",
@@ -371,7 +397,7 @@ class Renderer:
                     "render.disk_full",
                     "There is not enough free space in the library folder for this render.",
                 )
-            shutil.rmtree(staging, ignore_errors=True)
+            remove_tree(staging)
             staging.mkdir(parents=True)
             (staging / "graph.txt").write_text(plan["command"]["filter_complex"], "utf-8")
             for f in facts.values():
@@ -465,7 +491,7 @@ class Renderer:
             )
             raise RenderFailed(error, self.get(job_id)) from exc
         finally:
-            shutil.rmtree(staging, ignore_errors=True)
+            remove_tree(staging)
 
     def _finish(
         self,

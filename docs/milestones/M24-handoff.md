@@ -123,6 +123,10 @@
     size, yuv420p and fps; no rotation metadata; only container brand/encoder tags;
     decodes at start, middle and end; black samples (luma < 20) flagged when the
     source is not dark (luma ≥ 40).
+  - **Staging cleanup:** removal of a staging folder retries for up to 5 s, because on
+    Windows a just-killed FFmpeg or an antivirus scan can hold a file briefly after
+    the process exits (first seen on Windows CI). Anything still left is removed at
+    worker startup.
   - **Free-space preflight:** a conservative estimate plus a 64 MiB reserve; stderr
     and errno 28 also map to disk full.
 - Known limitations:
