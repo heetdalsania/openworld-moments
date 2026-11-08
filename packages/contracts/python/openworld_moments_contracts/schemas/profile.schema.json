@@ -115,6 +115,15 @@
       "additionalProperties": {
         "$ref": "#/$defs/LocalePack"
       }
+    },
+    "subject_hints": {
+      "description": "Optional named static subject regions for conservative framing suggestions. Not tracked objects.",
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/Slug"
+      }
     }
   },
   "$defs": {

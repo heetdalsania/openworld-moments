@@ -3,6 +3,9 @@
 // that passed a real test encode. A hardware failure offers the CPU encoder as an
 // explicit choice; text that cannot be drawn yet must be left out explicitly.
 import { useState } from "react";
+import { useLayoutProfile } from "./LayoutPanel";
+import { compatibleProfile, FIT, layoutWarnings } from "./verticalLayout";
+import type { ProjectMedia } from "./projectMedia";
 import {
   describeError,
   type Job,
@@ -110,11 +113,13 @@ export function ExportPanel({
   document,
   flush,
   workerReady,
+  media,
 }: {
   projectId: string;
   document: EditorProject;
-  flush: () => Promise<void>;
+  flush: () => Promise<void> | Promise<number>;
   workerReady: boolean;
+  media?: Record<string, ProjectMedia>;
 }) {
   const presets = useQuery("render:presets", renderPresets);
   const encoders = useQuery("render:encoders", renderEncoders);
@@ -125,20 +130,51 @@ export function ExportPanel({
   const [encoderId, setEncoderId] = useState("libx264");
   const [omitText, setOmitText] = useState(false);
   const preset = presetId ?? presets.data?.[0]?.id ?? "";
+  const selectedPreset = presets.data?.find((p) => p.id === preset);
+  const vertical = Boolean(selectedPreset && selectedPreset.height > selectedPreset.width);
+  const loadedProfile = useLayoutProfile(document);
+  const layoutWarningsForProject = vertical
+    ? (document.project.tracks[0]?.segments ?? []).flatMap((cut, i) => {
+        const v = media?.[cut.asset_id]?.asset?.video;
+        const [w, h]: [number, number] = v
+          ? v.rotation === 90 || v.rotation === 270
+            ? [v.height, v.width]
+            : [v.width, v.height]
+          : [1920, 1080];
+        return layoutWarnings(
+          cut.vertical_crop ?? FIT,
+          w,
+          h,
+          compatibleProfile(loadedProfile.profile, w, h),
+          document.project.overlays.filter(
+            (o) =>
+              o.kind === "blur" &&
+              o.start_ms < cut.timeline_start_ms + cut.source_out_ms - cut.source_in_ms &&
+              o.end_ms > cut.timeline_start_ms,
+          ),
+        ).map((w) => `Cut ${i + 1}: ${w}`);
+      })
+    : [];
+  const reviewSignature = JSON.stringify([document, preset, loadedProfile.profile]);
+  const [reviewed, setReviewed] = useState("");
+  const reviewLayout = reviewed === reviewSignature;
   const encoder = encoders.data?.encoders.find((e) => e.id === encoderId);
   const text = textNeedingOmission(document);
   const start = useAction(async (encoderChoice: string) => {
     // Render exactly what is saved: write pending edits first.
-    await flush();
+    const revision = await flush();
     upsertJob(
       await renderProject(projectId, {
         preset_id: preset,
+        ...(typeof revision === "number" ? { expected_revision: revision } : {}),
         encoder: encoderChoice,
         ...(text.length ? { omit_text: omitText } : {}),
+        ...(vertical ? { review_layout: reviewLayout } : {}),
       }),
     );
   });
-  const blocked = !workerReady || !preset || (text.length > 0 && !omitText);
+  const blocked =
+    !workerReady || !preset || (text.length > 0 && !omitText) || (vertical && !reviewLayout);
 
   return (
     <section className="panel export" aria-labelledby="export-heading">
@@ -183,6 +219,29 @@ export function ExportPanel({
           Render
         </button>
       </div>
+      {vertical && (
+        <div className="notice-box">
+          <p>
+            Vertical output uses the saved vertical variant on each cut. Review every cut, protected
+            HUD regions and privacy blurs before exporting.
+          </p>
+          {layoutWarningsForProject.length > 0 && (
+            <ul aria-label="Vertical export warnings">
+              {layoutWarningsForProject.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          )}
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={reviewLayout}
+              onChange={(e) => setReviewed(e.target.checked ? reviewSignature : "")}
+            />
+            I reviewed the current vertical layout and any removed or obscured regions
+          </label>
+        </div>
+      )}
       {encoder?.quality_note && <p className="muted">{encoder.quality_note}</p>}
       {encoders.data?.encoders
         .filter((e) => !e.available && e.kind === "hardware")

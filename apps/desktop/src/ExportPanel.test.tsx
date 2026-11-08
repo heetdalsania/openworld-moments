@@ -286,3 +286,29 @@ describe("export panel", () => {
     expect(await screen.findByText(/checks passed/)).toBeTruthy();
   });
 });
+
+it("requires explicit vertical review and invalidates it when the document changes", async () => {
+  host.route("GET /v1/render/presets", () => [
+    { ...preset("vertical-1080x1920-30", "Vertical"), width: 1080, height: 1920 },
+  ]);
+  const user = userEvent.setup(),
+    d = project(),
+    flush = vi.fn(() => Promise.resolve());
+  const view = render(<ExportPanel projectId={PID} document={d} flush={flush} workerReady />);
+  await screen.findByRole("option", { name: "Vertical" });
+  const button = screen.getByRole("button", { name: "Render" });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  await user.click(
+    screen.getByRole("checkbox", { name: /I reviewed the current vertical layout/ }),
+  );
+  expect((button as HTMLButtonElement).disabled).toBe(false);
+  view.rerender(
+    <ExportPanel
+      projectId={PID}
+      document={{ ...d, project: { ...d.project, title: "Changed" } }}
+      flush={flush}
+      workerReady
+    />,
+  );
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+});

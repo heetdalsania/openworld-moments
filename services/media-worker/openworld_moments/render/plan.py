@@ -19,8 +19,9 @@ from typing import Any
 
 from openworld_moments.derived.tonemap import ToneMapSettings
 from openworld_moments.render.encoders import EncoderSpec, video_args
+from openworld_moments.render.layout import FIT, fit_rect, pixels, position_expression, warnings
 
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "1.1.0"
 AUDIO_RATE = 48000
 #: One FFmpeg input per segment piece; bounded for argv length (Windows: 32 767 chars).
 MAX_PIECES = 120
@@ -59,6 +60,8 @@ class SourceFacts:
     audio: bool
     fps: tuple[int, int] | None
     tone_map: ToneMapSettings | None
+    width: int = 1920
+    height: int = 1080
 
 
 def _seconds(ms: int) -> str:
@@ -90,6 +93,8 @@ def build_plan(
     *,
     ffmpeg_version: str,
     omit_text: bool = False,
+    layout_profile: dict[str, Any] | None = None,
+    review_layout: bool = False,
 ) -> dict[str, Any]:
     project = document["project"]
     segments = project["tracks"][0]["segments"] if project["tracks"] else []
@@ -129,9 +134,34 @@ def build_plan(
     if preset["fps"] == "source" and first.fps is None:
         notes.append("The first clip's frame rate is unknown; rendering at 30 fps.")
 
+    vertical = preset["height"] > preset["width"]
     pieces: list[dict[str, Any]] = []
     for segment in segments:
         crop = segment["crop"]
+        if vertical:
+            source = facts[segment["asset_id"]]
+            layout = segment.get("vertical_crop", FIT)
+            blurs = [
+                o
+                for o in project.get("overlays", [])
+                if o["kind"] == "blur"
+                and o["start_ms"]
+                < segment["timeline_start_ms"] + segment["source_out_ms"] - segment["source_in_ms"]
+                and o["end_ms"] > segment["timeline_start_ms"]
+            ]
+            notes.extend(warnings(layout, source.width, source.height, layout_profile, blurs))
+            pieces.append(
+                {
+                    "source": index[segment["asset_id"]],
+                    "in_ms": segment["source_in_ms"],
+                    "out_ms": segment["source_out_ms"],
+                    "timeline_start_ms": segment["timeline_start_ms"],
+                    "crop": {"mode": "fit"},
+                    "vertical_crop": layout,
+                    "source_size": [source.width, source.height],
+                }
+            )
+            continue
         start, length = (
             segment["timeline_start_ms"],
             segment["source_out_ms"] - segment["source_in_ms"],
@@ -156,7 +186,24 @@ def build_plan(
                 }
             )
     if any(p["crop"]["mode"] == "safe" for p in pieces):
-        notes.append("HUD-aware 'safe' layouts arrive in M25; those clips render as 'fit'.")
+        notes.append(
+            "Legacy safe mode renders as fit. Use the M25 vertical variant for HUD-aware layouts."
+        )
+
+    notes = list(dict.fromkeys(notes))
+    if vertical and notes and not review_layout:
+        # Text/HDR notes do not require HUD review; only layout warnings do.
+        layout_notes = [
+            n
+            for n in notes
+            if n.startswith(("Protected region", "No compatible", "The profile declares"))
+        ]
+        if layout_notes:
+            raise RenderError(
+                "render.layout_review_required",
+                "Review vertical layout warnings before rendering.",
+                details={"warnings": layout_notes},
+            )
 
     # Exact cumulative frame and sample counts: no drift across pieces.
     merged: list[dict[str, Any]] = []
@@ -194,6 +241,13 @@ def build_plan(
     used = [facts[aid] for aid in order]
     if any(f.tone_map for f in used):
         notes.append("HDR clips are tone-mapped to standard range (BT.709).")
+    if len(notes) > 19:
+        count = len(notes) - 19
+        notes = [
+            *notes[:19],
+            f"{count} further notices: review all cuts and protected regions in the editor.",
+        ]
+
     plan: dict[str, Any] = {
         "plan_version": 1,
         "preset": preset,
@@ -227,6 +281,8 @@ def build_plan(
         "notes": notes,
         "tools": {"ffmpeg": ffmpeg_version, "render_engine": ENGINE_VERSION},
     }
+    if vertical and layout_profile:
+        plan["layout_profile"] = layout_profile
     if encoder.quality_note:
         plan["encoder"]["quality_note"] = encoder.quality_note
     argv, graph = compile_plan(plan, used, encoder)
@@ -300,8 +356,40 @@ def compile_plan(
         ]
         video_input = count
         count += 1
-        chain = ",".join(_video_chain(piece, source, width, height, fps))
-        graph.append(f"[{video_input}:v:0]{chain}[v{k}]")
+        if "vertical_crop" in piece:
+            layout = piece["vertical_crop"]
+            sw, sh = piece["source_size"]
+            region = layout["keyframes"][0]["region"] if layout["keyframes"] else [0, 0, 1, 1]
+            _, _, cw, ch = pixels(region, sw, sh) if layout["strategy"] != "fit" else [0, 0, sw, sh]
+            ox, oy, fw, fh = fit_rect(cw, ch, width, height)
+            # Reuse the HDR conversion and frame normalization from the horizontal pipeline.
+            steps = _video_chain(piece, source, width, height, fps)
+            split_at = steps.index("setpts=PTS-STARTPTS") + 1
+            prefix, tail = steps[:split_at], steps[-6:]
+            graph.append(f"[{video_input}:v:0]" + ",".join(prefix) + f"[upright{k}]")
+            current = f"upright{k}"
+            if layout["strategy"] != "fit":
+                x = position_expression(layout, 0, sw)
+                y = position_expression(layout, 1, sh)
+                graph.append(f"[{current}]crop=w={cw}:h={ch}:x='{x}':y='{y}':exact=1[cropped{k}]")
+                current = f"cropped{k}"
+            if layout["background"] == "blur":
+                graph.append(
+                    f"[{current}]split=2[fg{k}][bg{k}];"
+                    f"[bg{k}]scale={width}:{height}:force_original_aspect_ratio=increase,"
+                    f"crop={width}:{height},boxblur=20:2[bgb{k}];"
+                    f"[fg{k}]scale={fw}:{fh}:flags=bicubic[fgs{k}];"
+                    f"[bgb{k}][fgs{k}]overlay={ox}:{oy}[laid{k}]"
+                )
+            else:
+                graph.append(
+                    f"[{current}]scale={fw}:{fh}:flags=bicubic,"
+                    f"pad={width}:{height}:{ox}:{oy}:color=black[laid{k}]"
+                )
+            graph.append(f"[laid{k}]" + ",".join(tail) + f"[v{k}]")
+        else:
+            chain = ",".join(_video_chain(piece, source, width, height, fps))
+            graph.append(f"[{video_input}:v:0]{chain}[v{k}]")
         labels.append(f"[v{k}]")
         if with_audio:
             samples = piece["samples"]

@@ -358,6 +358,8 @@ export interface RenderOptions {
   preset_id: string;
   encoder?: string;
   omit_text?: boolean;
+  review_layout?: boolean;
+  expected_revision?: number;
 }
 
 export const renderPresets = (): Promise<RenderPreset[]> => call("GET", "/v1/render/presets");

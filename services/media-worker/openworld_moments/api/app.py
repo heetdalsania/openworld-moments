@@ -265,6 +265,8 @@ class SubmitRender(BaseModel):
     preset_id: str
     encoder: str | None = None
     omit_text: bool = False
+    review_layout: bool = False
+    expected_revision: int | None = Field(default=None, ge=0, le=9007199254740991)
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
@@ -593,7 +595,9 @@ def create_app(
     def renders() -> Renderer:
         nonlocal renderer
         if renderer is None:
-            renderer = Renderer(engine.database, derived.tools if derived else MediaTools())
+            renderer = Renderer(
+                engine.database, derived.tools if derived else MediaTools(), calibration=calibration
+            )
         return renderer
 
     @app.get("/v1/render/presets")

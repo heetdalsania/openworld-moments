@@ -218,3 +218,10 @@ class Profile(BaseModel):
         | None,
         Field(max_length=64),
     ] = None
+    subject_hints: Annotated[
+        list[common_schema.Slug] | None,
+        Field(
+            description="Optional named static subject regions for conservative framing suggestions. Not tracked objects.",
+            max_length=100,
+        ),
+    ] = None

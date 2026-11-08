@@ -1,7 +1,7 @@
-# Render engine (M24)
+# Render engine (M24–M25)
 
 The render engine compiles a saved editor project revision (M21) into a safe FFmpeg
-argument array, renders a horizontal H.264/AAC MP4, validates it, and only then
+argument array, renders a horizontal or vertical H.264/AAC MP4, validates it, and only then
 marks it complete.
 
 Code: `services/media-worker/openworld_moments/render/`:
@@ -154,7 +154,8 @@ metacharacters, and asserts none of them appears in the command.
   and HEVC.
 - **CPU encoder:** H.264 High, `-preset medium`, CRF or bitrate (bitrate mode sets
   `maxrate` and `bufsize = 2×`), yuv420p.
-- **Not shipped yet:** vertical and Discord-size presets come with M25/M27.
+- M25 adds `vertical-1080x1920-30` and `vertical-source-fps` (1080×1920).
+- **Not shipped yet:** Discord-size presets remain M27.
 
 ## Hardware encoders
 
@@ -277,9 +278,9 @@ Every golden is exact to the millisecond here. The contract budget is 100 ms.
 
 ## Limits
 
-- **Output:** horizontal H.264/AAC MP4 only.
+- **Output:** horizontal and M25 vertical H.264/AAC MP4.
 - **Not in M24:**
-  - vertical and HUD-aware layouts (M25);
+  - M25 now supplies vertical and HUD-aware layouts through independent variants;
   - text drawing (a hook here);
   - OTIO and sidecar export (M27);
   - HDR-preserving output (HDR is tone-mapped to SDR);
@@ -290,3 +291,9 @@ Every golden is exact to the millisecond here. The contract budget is 100 ms.
 - **Long timelines:** pieces are limited to 120.
 - **Getting the file out:** a render stays in the library (`renders/…`). Saving a copy
   elsewhere and opening the folder from the app are follow-ups (M27).
+
+## M25 vertical extension
+
+See [vertical layouts](./vertical-layouts.md) for independent per-cut framing,
+new presets, smoothstep graph expressions, review/revision refusal, and foreground
+black-frame validation. The horizontal pipeline above retains its existing behavior.

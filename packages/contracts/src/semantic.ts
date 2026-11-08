@@ -103,7 +103,7 @@ function* profile(doc: Profile): Generator<string> {
   for (const [name, r] of Object.entries(doc.regions)) {
     if (r) yield* region(`regions.${name}`, r);
   }
-  for (const name of doc.safe_zones?.preserve ?? []) {
+  for (const name of [...(doc.safe_zones?.preserve ?? []), ...(doc.subject_hints ?? [])]) {
     if (!(name in doc.regions)) yield `safe_zones.preserve: '${name}' is not defined in regions`;
   }
 }
@@ -114,6 +114,25 @@ function* project(doc: Project): Generator<string> {
     for (const [s, seg] of track.segments.entries()) {
       const path = `tracks[${t}].segments[${s}]`;
       yield* range(`${path}.source_out_ms`, seg.source_in_ms, seg.source_out_ms, true);
+      if (seg.vertical_crop) {
+        const v = seg.vertical_crop,
+          keys = v.keyframes;
+        if (
+          (v.strategy === "fit" && keys.length !== 0) ||
+          (v.strategy === "fixed" && keys.length !== 1) ||
+          (v.strategy !== "fit" && keys[0]?.at_ms !== 0)
+        )
+          yield "vertical_crop: strategy requires fit with no keys or crop starting at zero";
+        let prev = -1;
+        for (const k of keys) {
+          yield* region("vertical_crop.region", k.region);
+          if (!(prev < k.at_ms && k.at_ms < seg.source_out_ms - seg.source_in_ms))
+            yield "vertical_crop: keys must increase inside cut";
+          if (keys[0] && (k.region[2] !== keys[0].region[2] || k.region[3] !== keys[0].region[3]))
+            yield "vertical_crop: interpolation requires fixed dimensions";
+          prev = k.at_ms;
+        }
+      }
       for (const [k, frame] of seg.crop.keyframes.entries()) {
         yield* region(`${path}.crop.keyframes[${k}].region`, frame.region);
       }

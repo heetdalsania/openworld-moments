@@ -20,3 +20,12 @@ Profile data is licensed under Apache-2.0.
 
 Profiles are local JSON data: `<catalog>/<id>/profile.json`. They never name executable plugins.
 See [loading and inheritance](../docs/architecture/detectors.md).
+
+## Vertical framing inputs (M25)
+
+`safe_zones.preserve` names regions that vertical framing must protect. Optional
+`subject_hints` names static subject regions in the same `regions` map. Both must
+reference defined normalized rectangles; neither describes tracked objects.
+M25 consumes effective local ROI calibration and checks upright frame compatibility.
+See [vertical layouts](../docs/architecture/vertical-layouts.md) for conservative
+fit fallbacks, confidence labels and editable suggestions.
