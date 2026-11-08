@@ -150,6 +150,7 @@
       encoders.
   - **Already Ready:** M26 and M28. M28's privacy blur regions already render through
     M24.
+- Pull request: [#30](https://github.com/heetdalsania/openworld-moments/pull/30)
 - Screenshots, reports, or artifacts:
   - [Render engine](../architecture/render.md) (IR, presets, hardware probes,
     validation thresholds, tool versions, golden outputs) and the
