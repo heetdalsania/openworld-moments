@@ -128,7 +128,7 @@
     already raise an export warning.
   - **M29** packaging needs no new runtime dependency (OTIO is test-only).
   - **M31** documentation can link the format reference.
-- Pull request: PR_LINK
+- Pull request: [#33](https://github.com/heetdalsania/openworld-moments/pull/33)
 - Screenshots, reports, or artifacts:
   - [Open exports and manifests](../architecture/exports.md) (format reference,
     versions, privacy, warnings, validation commands) and the goldens in
