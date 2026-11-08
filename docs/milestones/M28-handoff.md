@@ -104,3 +104,5 @@
   local `output/playwright/m28-review.png`, `m28-preview.png` and
   `m28-vertical-preview.png` record the synthetic Chromium walkthrough. No secrets,
   private paths, source footage, models, databases or build outputs are committed.
+
+- Pull request: [#34](https://github.com/heetdalsania/openworld-moments/pull/34).
