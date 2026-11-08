@@ -238,3 +238,6 @@ snippets. No FTS prefix indexes are kept, which made the trigger-built index abo
 - Rule collections evaluate against the index, so an incomplete index can omit
   items until it is rebuilt.
 - A CJK word inside a longer run of CJK characters is found only by prefix.
+- Some damage reads as an empty full-text index (searches return nothing rather than
+  an error). Only **Check index** (the full check) reports that case as corrupt;
+  a rebuild repairs it.

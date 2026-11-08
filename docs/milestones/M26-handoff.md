@@ -132,6 +132,8 @@
   - Captions, project timelines and free-form notes are not indexed beyond project
     titles.
   - A CJK word inside a longer CJK run is found only by prefix (unicode61).
+  - Some index damage reads as an empty index (no results, no error); only the full
+    check reports it as corrupt, and a rebuild repairs it.
   - Rule collections reflect the index, so they can be incomplete until a rebuild.
   - Collection rename and rule editing exist in the API (`PUT`); the desktop offers
     create, open, add, remove and delete.

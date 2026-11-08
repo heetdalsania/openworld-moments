@@ -54,7 +54,9 @@ def populated(lib: Library, sessions: int = 3) -> None:
 
 def corrupt_full_text(database: Database) -> None:
     with contextlib.closing(database.connect()) as conn, transaction(conn):
-        conn.execute("UPDATE search_fts_data SET block = zeroblob(length(block)) WHERE id > 10")
+        # Every segment and the structure record go missing (only averages stay), so
+        # any query reads a damaged index on every SQLite build.
+        conn.execute("DELETE FROM search_fts_data WHERE id <> 1")
 
 
 def test_index_version_default_matches_the_code() -> None:
