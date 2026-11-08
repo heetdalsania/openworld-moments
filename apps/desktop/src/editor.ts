@@ -11,6 +11,7 @@ import {
 
 import { editCaptions, type CaptionOperation } from "./captions";
 import { editAudio, type AudioOperation } from "./editorAudio";
+import { retimeBlur } from "./privacyBlur";
 import { trimVertical } from "./verticalLayout";
 
 export type EditorCommand =
@@ -78,7 +79,18 @@ function retime<T extends Timed>(
         const a = Math.max(item.start_ms, oldStart),
           b = Math.min(item.end_ms, oldEnd);
         const shift = next.timeline_start_ms + from - next.source_in_ms - oldStart;
-        return a < b ? [{ ...copy(item), start_ms: a + shift, end_ms: b + shift }] : [];
+        if (a >= b) return [];
+        const maybeBlur = item as T & { kind?: string };
+        if (maybeBlur.kind === "blur")
+          return [
+            retimeBlur(
+              item as unknown as import("@openworld-moments/contracts").BlurOverlay,
+              oldStart,
+              oldEnd,
+              shift,
+            ) as unknown as T,
+          ];
+        return [{ ...copy(item), start_ms: a + shift, end_ms: b + shift }];
       });
     })
     .sort((a, b) => a.start_ms - b.start_ms);
@@ -178,7 +190,11 @@ export function applyCommand(document: EditorProject, command: EditorCommand): E
       if (command.title !== undefined) p.title = command.title;
       if (command.layout !== undefined) out.layout = copy(command.layout);
       if (command.captions !== undefined) p.captions = copy(command.captions);
-      if (command.overlays !== undefined) p.overlays = copy(command.overlays);
+      if (command.overlays !== undefined) {
+        p.overlays = copy(command.overlays);
+        if (p.overlays.some((o) => o.kind === "blur" && o.keyframes))
+          out.schema_version = p.schema_version = formatVersion(SUPPORTED_VERSION);
+      }
       if (command.audio !== undefined) p.audio = copy(command.audio);
       return copy(load("editor-project", out));
     }

@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/privacy-review.schema.json",
+  "title": "PrivacyReview",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_id",
+    "revision",
+    "detector_version",
+    "token",
+    "config",
+    "flags",
+    "current",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/ProjectId"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "detector_version": {
+      "const": "conservative-review/1"
+    },
+    "token": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
+    "config": {
+      "$ref": "#/$defs/PrivacyConfig"
+    },
+    "flags": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": {
+        "$ref": "#/$defs/RiskFlag"
+      }
+    },
+    "current": {
+      "type": "boolean"
+    },
+    "summary": {
+      "$ref": "#/$defs/PrivacySummary"
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    }
+  },
+  "$defs": {
+    "SpoilerRange": {
+      "title": "SpoilerRange",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms", "label"],
+      "properties": {
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 1
+        }
+      }
+    },
+    "PrivacyConfig": {
+      "title": "PrivacyConfig",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["labels", "ranges"],
+      "properties": {
+        "labels": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1
+          }
+        },
+        "ranges": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/SpoilerRange"
+          }
+        }
+      }
+    },
+    "PrivacyDecision": {
+      "title": "PrivacyDecision",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state"],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "state": {
+          "enum": ["unresolved", "acknowledge", "ignore", "fixed"]
+        }
+      }
+    },
+    "RiskFlag": {
+      "title": "RiskFlag",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "confidence",
+        "evidence_kind",
+        "evidence",
+        "start_ms",
+        "end_ms",
+        "decision"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "category": {
+          "enum": ["phone", "username", "subtitle", "spoiler", "mixed_audio", "speech"]
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "evidence_kind": {
+          "enum": ["ocr", "transcript", "caption", "audio_metadata", "audio", "manual"]
+        },
+        "evidence": {
+          "type": "string",
+          "maxLength": 2000,
+          "minLength": 1
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "source_start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "decision": {
+          "enum": ["unresolved", "acknowledge", "ignore", "fixed"]
+        },
+        "time_domain": {
+          "enum": ["project", "session"]
+        }
+      }
+    },
+    "PrivacySummary": {
+      "title": "PrivacySummary",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token", "detector_version", "acknowledged", "unresolved", "findings"],
+      "properties": {
+        "token": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "detector_version": {
+          "const": "conservative-review/1"
+        },
+        "acknowledged": {
+          "type": "boolean"
+        },
+        "unresolved": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findings": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "title": "PrivacyFindingDecision",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "category", "state"],
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/Sha256"
+              },
+              "category": {
+                "enum": ["phone", "username", "subtitle", "spoiler", "mixed_audio", "speech"]
+              },
+              "state": {
+                "enum": ["unresolved", "acknowledge", "ignore", "fixed"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState, type RefObject } from "react";
-import type { Segment } from "@openworld-moments/contracts";
+import type { Segment, BlurOverlay } from "@openworld-moments/contracts";
+import { drawPrivacyBlurs } from "./privacyBlur";
 import { FIT, fitRect, pixels, regionAt } from "./verticalLayout";
 /** A real 1080×1920 backing surface, driven by the existing two-element player.
  * Native decoders apply rotation; crop coordinates are quantized against originals,
  * then scaled to the decoded proxy. No new decoder or independent audio clock. */
 export function VerticalPreview({
   video,
+  aspectRatio = "9:16",
+  blurs = [],
   cut,
   width,
   height,
@@ -14,12 +17,16 @@ export function VerticalPreview({
   playing,
 }: {
   video: RefObject<HTMLVideoElement | null>;
+  aspectRatio?: "16:9" | "9:16" | "1:1";
+  blurs?: BlurOverlay[];
   cut?: Segment;
   width: number;
   height: number;
   atMs: number;
   playing: boolean;
 }) {
+  const outputWidth = aspectRatio === "9:16" ? 1080 : 1920;
+  const outputHeight = aspectRatio === "16:9" ? 1080 : 1920;
   const canvas = useRef<HTMLCanvasElement>(null),
     [error, setError] = useState("");
   useEffect(() => {
@@ -38,25 +45,51 @@ export function VerticalPreview({
             playing && cut
               ? v.currentTime * 1000 - cut.source_in_ms
               : atMs - (cut?.timeline_start_ms ?? 0);
-          const [x, y, w, h] = pixels(regionAt(layout, ms), width, height),
-            [ox, oy, fw, fh] = fitRect(w, h);
+          let r = regionAt(layout, ms);
+          if (aspectRatio !== "9:16") {
+            r = [0, 0, 1, 1];
+            const keys = cut?.crop.keyframes ?? [];
+            const active = keys.filter((k) => k.at_ms <= ms).at(-1);
+            if (active) r = active.region;
+            else if (cut?.crop.mode === "fill") {
+              const ratio = outputWidth / outputHeight;
+              if (width / height > ratio)
+                r = [(1 - (height * ratio) / width) / 2, 0, (height * ratio) / width, 1];
+              else r = [0, (1 - width / ratio / height) / 2, 1, width / ratio / height];
+            }
+          }
+          const [x, y, w, h] = pixels(r, width, height);
+          const [ox, oy, fw, fh] = fitRect(w, h, outputWidth, outputHeight);
           const sx = (x * v.videoWidth) / width,
             sy = (y * v.videoHeight) / height,
             sw = (w * v.videoWidth) / width,
             sh = (h * v.videoHeight) / height;
-          ctx.clearRect(0, 0, 1080, 1920);
+          ctx.clearRect(0, 0, outputWidth, outputHeight);
           ctx.fillStyle = "black";
-          ctx.fillRect(0, 0, 1080, 1920);
-          if (layout.background === "blur") {
-            const scale = Math.max(1080 / w, 1920 / h),
+          ctx.fillRect(0, 0, outputWidth, outputHeight);
+          if (aspectRatio === "9:16" && layout.background === "blur") {
+            const scale = Math.max(outputWidth / w, outputHeight / h),
               bw = w * scale,
               bh = h * scale;
             ctx.save();
             ctx.filter = "blur(20px)";
-            ctx.drawImage(v, sx, sy, sw, sh, (1080 - bw) / 2, (1920 - bh) / 2, bw, bh);
+            ctx.drawImage(
+              v,
+              sx,
+              sy,
+              sw,
+              sh,
+              (outputWidth - bw) / 2,
+              (outputHeight - bh) / 2,
+              bw,
+              bh,
+            );
             ctx.restore();
           }
           ctx.drawImage(v, sx, sy, sw, sh, ox, oy, fw, fh);
+          const timelineMs =
+            playing && cut ? cut.timeline_start_ms + v.currentTime * 1000 - cut.source_in_ms : atMs;
+          drawPrivacyBlurs(ctx, blurs, timelineMs);
         } catch {
           setError("Vertical preview could not draw this source. Your layout is kept.");
         }
@@ -77,15 +110,17 @@ export function VerticalPreview({
       v.removeEventListener("loadeddata", draw);
       v.removeEventListener("timeupdate", draw);
     };
-  }, [video, cut, width, height, atMs, playing]);
+  }, [video, cut, width, height, atMs, playing, aspectRatio, blurs, outputWidth, outputHeight]);
   return (
     <>
       <canvas
         ref={canvas}
         className="vertical-preview"
-        width={1080}
-        height={1920}
-        aria-label="Vertical preview 1080 by 1920"
+        width={outputWidth}
+        height={outputHeight}
+        aria-label={
+          aspectRatio === "9:16" ? "Vertical preview 1080 by 1920" : "Privacy blur preview"
+        }
       />
       {error && <p role="alert">{error}</p>}
     </>

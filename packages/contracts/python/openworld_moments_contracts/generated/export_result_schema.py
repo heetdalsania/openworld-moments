@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
+from . import privacy_review_schema
+
 
 class Capability(RootModel[str]):
     root: Annotated[str, Field(max_length=40, pattern="^[a-z][a-z0-9_]*$")]
@@ -77,3 +79,4 @@ class ExportResult(BaseModel):
             description="True only when the user explicitly asked for absolute source locations."
         ),
     ]
+    privacy_review: privacy_review_schema.PrivacySummary | None = None

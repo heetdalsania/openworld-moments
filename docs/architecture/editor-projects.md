@@ -174,3 +174,12 @@ visual UI or real-game media is needed for this model milestone.
 ## M23 caption and audio extension
 
 Contracts 1.17 add optional caption settings without changing model version or earlier invariants. Explicit caption/audio commands, current-preview behavior and sidecar serialization are documented in [captions and audio](./captions-and-audio.md). Existing retiming carries their timed data through edits.
+
+## M28 privacy review
+
+See [privacy and spoiler review](./privacy-review.md) for the mandatory current-review
+gate on project exports and new renders, contracts 1.22, output-space moving blur
+keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
+sidecars now flush the project and use the gated `project_export` host command;
+`caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
+Migration 0018 stores review configuration/decisions without copied evidence text.

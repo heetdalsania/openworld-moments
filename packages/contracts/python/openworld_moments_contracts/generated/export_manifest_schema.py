@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
-from . import common_schema
+from . import common_schema, privacy_review_schema
 
 
 class ManifestSource(BaseModel):
@@ -239,3 +239,4 @@ class ExportManifest(BaseModel):
     tools: Annotated[ManifestTools | None, Field(title="ManifestTools")] = None
     output: Annotated[ManifestOutput | None, Field(title="ManifestOutput")] = None
     profiles: Annotated[list[ManifestProfile] | None, Field(max_length=100)] = None
+    privacy_review: privacy_review_schema.PrivacySummary | None = None

@@ -30,6 +30,7 @@ import { CaptionPanel, CaptionPreview } from "./CaptionPanel";
 import { AudioPanel } from "./AudioPanel";
 import { ExportPanel } from "./ExportPanel";
 import { LayoutPanel } from "./LayoutPanel";
+import { PrivacyPanel } from "./PrivacyPanel";
 import { VerticalPreview } from "./VerticalPreview";
 import { audioAt, EditorAudio } from "./editorAudio";
 import type { EditorCommand } from "./editor";
@@ -654,8 +655,11 @@ function LoadedEditor({
             >
               <video ref={v0} {...props(0)} />
               <video ref={v1} {...props(1)} />
-              {document.layout.aspect_ratio === "9:16" && (
+              {(document.layout.aspect_ratio === "9:16" ||
+                project.overlays.some((o) => o.kind === "blur")) && (
                 <VerticalPreview
+                  aspectRatio={document.layout.aspect_ratio}
+                  blurs={project.overlays.filter((o) => o.kind === "blur")}
                   video={state.activeElement === 0 ? v0 : v1}
                   cut={cuts.find((c) => c.id === current?.segment.key)}
                   width={previewWidth}
@@ -682,9 +686,9 @@ function LoadedEditor({
             </div>
           </div>
           <p className="muted">
-            Vertical crops, caption placement and audio edits are previewed. Privacy blurs and text
-            overlays appear only in supported exports. Blurred backgrounds are an approximate
-            preview.
+            Vertical crops, privacy blur geometry, caption placement and audio edits are previewed.
+            Blur appearance is approximate; verify the rendered file. Blurs do not remove caption or
+            exported metadata text. Text overlays appear only in supported exports.
           </p>
           {state.error && <p role="alert">{state.error}</p>}
           <div className="transport">
@@ -960,6 +964,12 @@ function LoadedEditor({
           onCommand={(command: EditorCommand) => perform(() => workspace.execute(command))}
         />
       </div>
+      <PrivacyPanel
+        workspace={workspace}
+        atMs={state.virtualMs}
+        seek={seek}
+        onCommand={(c) => perform(() => workspace.execute(c))}
+      />
       <ExportPanel
         projectId={project.id}
         document={document}

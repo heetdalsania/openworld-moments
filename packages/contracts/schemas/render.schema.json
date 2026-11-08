@@ -360,6 +360,13 @@
               },
               "region": {
                 "$ref": "common.schema.json#/$defs/Region"
+              },
+              "keyframes": {
+                "type": "array",
+                "maxItems": 100,
+                "items": {
+                  "$ref": "project.schema.json#/$defs/CropKeyframe"
+                }
               }
             }
           }
@@ -418,6 +425,9 @@
         },
         "layout_profile": {
           "$ref": "profile.schema.json"
+        },
+        "privacy_review": {
+          "$ref": "privacy-review.schema.json#/$defs/PrivacySummary"
         }
       }
     },

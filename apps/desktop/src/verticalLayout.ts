@@ -68,7 +68,7 @@ export function layoutWarnings(
   w: number,
   h: number,
   profile?: Profile,
-  overlays: { region: Region }[] = [],
+  overlays: { region: Region; keyframes?: { region: Region }[] }[] = [],
 ): string[] {
   if (!profile) return ["No compatible current profile: protected HUD regions are unknown."];
   const names = profile.safe_zones?.preserve ?? [];
@@ -109,7 +109,18 @@ export function layoutWarnings(
       const swept: Region = [x, y, right - x, bottom - y],
         area = Math.min(...boxes.map((r) => r[2] * r[3]));
       if (
-        overlays.some((o) => (visibleFraction(o.region, swept) * swept[2] * swept[3]) / area > 0.05)
+        overlays.some((o) => {
+          const regions = [o.region, ...(o.keyframes ?? []).map((k) => k.region)];
+          const x = Math.min(...regions.map((r) => r[0])),
+            y = Math.min(...regions.map((r) => r[1]));
+          const envelope: Region = [
+            x,
+            y,
+            Math.max(...regions.map((r) => r[0] + r[2])) - x,
+            Math.max(...regions.map((r) => r[1] + r[3])) - y,
+          ];
+          return (visibleFraction(envelope, swept) * swept[2] * swept[3]) / area > 0.05;
+        })
       )
         result.push(`Protected region ${name}: a privacy blur may obscure it.`);
     }

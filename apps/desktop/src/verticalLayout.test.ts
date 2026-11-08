@@ -85,3 +85,19 @@ it("warns when a moving HUD crosses a narrow blur between key samples", () => {
     layoutWarnings(layout, 1920, 1080, profile, [{ region: [0.56, 0.34, 0.02, 0.02] }]),
   ).toEqual(["Protected region hud: a privacy blur may obscure it."]);
 });
+
+it("warns when a moving blur crosses a protected region between keys", () => {
+  const profile = {
+    ...p,
+    regions: { center: [0.4, 0.4, 0.2, 0.2] },
+    safe_zones: { preserve: ["center"] },
+  } as unknown as Profile;
+  expect(
+    layoutWarnings(FIT, 1920, 1080, profile, [
+      {
+        region: [0, 0.45, 0.05, 0.05],
+        keyframes: [{ region: [0, 0.45, 0.05, 0.05] }, { region: [0.95, 0.45, 0.05, 0.05] }],
+      },
+    ])[0],
+  ).toContain("privacy blur");
+});

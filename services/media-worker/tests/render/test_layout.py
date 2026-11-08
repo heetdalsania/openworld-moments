@@ -125,3 +125,19 @@ def test_many_hud_warnings_and_hdr_still_produce_a_valid_bounded_record() -> Non
     record(plan)
     assert len(plan["notes"]) == 20
     assert "further notices" in plan["notes"][-1]
+
+
+def test_moving_blur_crossing_protected_region_warns_between_keyframes() -> None:
+    profile = {
+        **PROFILE,
+        "regions": {"center": [0.4, 0.4, 0.2, 0.2]},
+        "safe_zones": {"preserve": ["center"]},
+    }
+    blur = {
+        "region": [0, 0.45, 0.05, 0.05],
+        "keyframes": [
+            {"at_ms": 0, "region": [0, 0.45, 0.05, 0.05]},
+            {"at_ms": 1000, "region": [0.95, 0.45, 0.05, 0.05]},
+        ],
+    }
+    assert "privacy blur" in warnings(FIT, 1920, 1080, profile, [blur])[0]

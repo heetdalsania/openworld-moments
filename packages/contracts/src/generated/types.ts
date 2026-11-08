@@ -317,6 +317,7 @@ export interface ContractsBundle {
   job?: Job;
   "media-asset"?: MediaAsset;
   overlap?: AssetOverlap;
+  "privacy-review"?: PrivacyReview;
   "profile-patch"?: ProfilePatch;
   profile?: Profile;
   "project-export"?: ProjectExport;
@@ -1118,7 +1119,7 @@ export interface Caption {
   text: string;
 }
 /**
- * Privacy blur over a region for a time range.
+ * Output-frame normalized privacy blur. Optional fixed-size linear translation keyframes relative to start_ms, starting at zero. region equals the first key.
  *
  * This interface was referenced by `Project`'s JSON-Schema
  * via the `definition` "BlurOverlay".
@@ -1128,6 +1129,10 @@ export interface BlurOverlay {
   start_ms: TimelineMs;
   end_ms: TimelineMs;
   region: Region;
+  /**
+   * @maxItems 100
+   */
+  keyframes?: CropKeyframe[];
 }
 /**
  * This interface was referenced by `Project`'s JSON-Schema
@@ -1894,6 +1899,7 @@ export interface ExportManifest {
    * @maxItems 100
    */
   profiles?: ManifestProfile[];
+  privacy_review?: PrivacySummary;
 }
 export interface ManifestSource {
   sha256: Sha256;
@@ -1944,6 +1950,25 @@ export interface ManifestProfile {
   version: SemVer;
 }
 /**
+ * This interface was referenced by `PrivacyReview`'s JSON-Schema
+ * via the `definition` "PrivacySummary".
+ */
+export interface PrivacySummary {
+  token: Sha256;
+  detector_version: "conservative-review/1";
+  acknowledged: boolean;
+  unresolved: number;
+  /**
+   * @maxItems 2000
+   */
+  findings: PrivacyFindingDecision[];
+}
+export interface PrivacyFindingDecision {
+  id: Sha256;
+  category: "phone" | "username" | "subtitle" | "spoiler" | "mixed_audio" | "speech";
+  state: "unresolved" | "acknowledge" | "ignore" | "fixed";
+}
+/**
  * One open-format export (M27): content plus what the format carries and every warning about what it cannot.
  */
 export interface ExportResult {
@@ -1967,6 +1992,7 @@ export interface ExportResult {
    * True only when the user explicitly asked for absolute source locations.
    */
   includes_paths: boolean;
+  privacy_review?: PrivacySummary;
 }
 /**
  * Something the format cannot represent. Exports never drop data silently.
@@ -2766,6 +2792,71 @@ export interface AlignResult {
 export interface OverlapOverride {
   overlap_ms: TimelineMs | null;
 }
+export interface PrivacyReview {
+  schema_version: string;
+  project_id: ProjectId;
+  revision: number;
+  detector_version: "conservative-review/1";
+  token: Sha256;
+  config: PrivacyConfig;
+  /**
+   * @maxItems 2000
+   */
+  flags: RiskFlag[];
+  current: boolean;
+  summary: PrivacySummary;
+  session_id?: SessionId;
+}
+/**
+ * This interface was referenced by `PrivacyReview`'s JSON-Schema
+ * via the `definition` "PrivacyConfig".
+ */
+export interface PrivacyConfig {
+  /**
+   * @maxItems 50
+   */
+  labels: string[];
+  /**
+   * @maxItems 100
+   */
+  ranges: SpoilerRange[];
+}
+/**
+ * This interface was referenced by `PrivacyReview`'s JSON-Schema
+ * via the `definition` "SpoilerRange".
+ */
+export interface SpoilerRange {
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  label: string;
+}
+/**
+ * This interface was referenced by `PrivacyReview`'s JSON-Schema
+ * via the `definition` "RiskFlag".
+ */
+export interface RiskFlag {
+  id: Sha256;
+  category: "phone" | "username" | "subtitle" | "spoiler" | "mixed_audio" | "speech";
+  confidence: Confidence;
+  evidence_kind: "ocr" | "transcript" | "caption" | "audio_metadata" | "audio" | "manual";
+  evidence: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  asset_id?: AssetId;
+  source_start_ms?: TimelineMs;
+  source_end_ms?: TimelineMs;
+  region?: Region;
+  decision: "unresolved" | "acknowledge" | "ignore" | "fixed";
+  time_domain?: "project" | "session";
+}
+/**
+ * This interface was referenced by `PrivacyReview`'s JSON-Schema
+ * via the `definition` "PrivacyDecision".
+ */
+export interface PrivacyDecision {
+  id: Sha256;
+  state: "unresolved" | "acknowledge" | "ignore" | "fixed";
+}
 /**
  * Media-free local ROI overrides, separate from an installed profile.
  */
@@ -3149,6 +3240,10 @@ export interface RenderPlan {
     start_ms: TimelineMs;
     end_ms: TimelineMs;
     region: Region;
+    /**
+     * @maxItems 100
+     */
+    keyframes?: CropKeyframe[];
   }[];
   /**
    * Project content that this render explicitly leaves out because the user chose to (text rendering is a hook in M24).
@@ -3346,6 +3441,7 @@ export interface RenderPlan {
     render_engine?: SemVer;
   };
   layout_profile?: Profile;
+  privacy_review?: PrivacySummary;
 }
 /**
  * This interface was referenced by `undefined`'s JSON-Schema

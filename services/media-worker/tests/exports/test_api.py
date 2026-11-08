@@ -63,7 +63,9 @@ def test_export_route(api: tuple[TestClient, Fixture]) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body == fixture.export("otio")
-    assert body["schema_version"] == "1.21" and body["filename"].endswith(".otio")
+    assert body["schema_version"] == str(
+        __import__("openworld_moments_contracts").SUPPORTED_VERSION
+    ) and body["filename"].endswith(".otio")
     for payload, status in (
         ({"format": "edl"}, 422),
         ({"format": "srt", "include_paths": True}, 422),

@@ -346,9 +346,6 @@ export const projectSelection = (
   call("GET", `/v1/sessions/${id}/project-selection`);
 
 /** Explicit native save dialog; no webview-supplied destination path. */
-export const exportCaptions = (text: string, format: "srt" | "vtt"): Promise<boolean> =>
-  invoke("caption_export", { text, format });
-
 // -- rendering (M24) -------------------------------------------------------------------
 export type RenderPreset = import("@openworld-moments/contracts").RenderPreset;
 export type RenderRecord = import("@openworld-moments/contracts").RenderRecord;
@@ -455,3 +452,22 @@ export async function saveRenderManifest(renderId: string): Promise<SavedExport>
     throw toApiError(error);
   }
 }
+
+// -- privacy and spoiler review (M28) ------------------------------------------------
+export type { PrivacyReview, PrivacyConfig, RiskFlag } from "@openworld-moments/contracts";
+import type { PrivacyReview, PrivacyConfig, PrivacyDecision } from "@openworld-moments/contracts";
+export const privacyReview = (id: string): Promise<PrivacyReview> =>
+  call("GET", `/v1/projects/${id}/privacy-review`);
+export const configurePrivacy = (id: string, config: PrivacyConfig): Promise<PrivacyReview> =>
+  call("PUT", `/v1/projects/${id}/privacy-review`, config);
+export const decidePrivacy = (
+  id: string,
+  token: string,
+  decisions: PrivacyDecision[],
+  acknowledged: boolean,
+): Promise<PrivacyReview> =>
+  call("POST", `/v1/projects/${id}/privacy-review`, { token, decisions, acknowledged });
+export const clearPrivacy = (id: string): Promise<{ deleted: boolean }> =>
+  call("DELETE", `/v1/projects/${id}/privacy-review`);
+export const deletePrivacyText = (id: string): Promise<{ deleted: boolean }> =>
+  call("DELETE", `/v1/projects/${id}/privacy-text`);

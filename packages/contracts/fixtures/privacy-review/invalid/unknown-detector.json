@@ -1,0 +1,41 @@
+{
+  "description": "unknown-detector",
+  "expect": "schema",
+  "document": {
+    "schema_version": "1.22",
+    "project_id": "prj_01JCBQ00000000000000000005",
+    "revision": 1,
+    "detector_version": "pii-perfect/1",
+    "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "config": {
+      "labels": [],
+      "ranges": []
+    },
+    "flags": [
+      {
+        "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "category": "phone",
+        "confidence": 0.7,
+        "evidence_kind": "caption",
+        "evidence": "Call 202-555-0186",
+        "start_ms": 100,
+        "end_ms": 500,
+        "decision": "unresolved"
+      }
+    ],
+    "current": false,
+    "summary": {
+      "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "detector_version": "conservative-review/1",
+      "acknowledged": false,
+      "unresolved": 1,
+      "findings": [
+        {
+          "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "category": "phone",
+          "state": "unresolved"
+        }
+      ]
+    }
+  }
+}

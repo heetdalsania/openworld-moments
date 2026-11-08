@@ -34,6 +34,7 @@ from openworld_moments_contracts.generated import (
     job_schema,
     media_asset_schema,
     overlap_schema,
+    privacy_review_schema,
     profile_patch_schema,
     profile_schema,
     project_export_schema,
@@ -56,6 +57,7 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "privacy-review": (privacy_review_schema.PrivacyReview, True),
     "editor-project": (editor_project_schema.EditorProject, True),
     "story-candidate": (story_candidate_schema.StoryCandidate, True),
     "story-candidates": (story_candidates_schema.StoryCandidates, True),

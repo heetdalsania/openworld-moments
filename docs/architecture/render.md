@@ -300,3 +300,12 @@ Every golden is exact to the millisecond here. The contract budget is 100 ms.
 See [vertical layouts](./vertical-layouts.md) for independent per-cut framing,
 new presets, smoothstep graph expressions, review/revision refusal, and foreground
 black-frame validation. The horizontal pipeline above retains its existing behavior.
+
+## M28 privacy review
+
+See [privacy and spoiler review](./privacy-review.md) for the mandatory current-review
+gate on project exports and new renders, contracts 1.22, output-space moving blur
+keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
+sidecars now flush the project and use the gated `project_export` host command;
+`caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
+Migration 0018 stores review configuration/decisions without copied evidence text.

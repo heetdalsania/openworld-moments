@@ -92,6 +92,13 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "projects", id, "render"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "projects", id, "renders"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "renders", id]) => is_id(id, "job_") && query.is_none(),
+        // M28: local creator review and explicit text-only deletion.
+        ("GET" | "PUT" | "POST" | "DELETE", ["", "v1", "projects", id, "privacy-review"]) => {
+            is_id(id, "prj_") && query.is_none()
+        }
+        ("DELETE", ["", "v1", "projects", id, "privacy-text"]) => {
+            is_id(id, "prj_") && query.is_none()
+        }
         // M27: open-format exports of saved data; the host saves the file itself.
         ("POST", ["", "v1", "projects", id, "exports"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "renders", id, "manifest"]) => is_id(id, "job_") && query.is_none(),
@@ -351,6 +358,26 @@ mod tests {
             ("GET", &format!("/v1/sessions/{SESSION}/project-selection")),
             ("POST", &format!("/v1/sessions/{SESSION}/projects")),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003"),
+            (
+                "GET",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-review",
+            ),
+            (
+                "PUT",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-review",
+            ),
+            (
+                "POST",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-review",
+            ),
+            (
+                "DELETE",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-review",
+            ),
+            (
+                "DELETE",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-text",
+            ),
             ("GET", "/v1/render/presets"),
             ("GET", "/v1/render/encoders"),
             ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
@@ -471,6 +498,15 @@ mod tests {
             (
                 "POST",
                 "/v1/projects/prj_01JCBQ00000000000000000003/render?output=/tmp/x.mp4",
+            ),
+            ("POST", "/v1/projects/prj_bad/privacy-review"),
+            (
+                "GET",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-review?path=x",
+            ),
+            (
+                "GET",
+                "/v1/projects/prj_01JCBQ00000000000000000003/privacy-text",
             ),
             ("POST", "/v1/projects/prj_bad/render"),
             ("PUT", "/v1/render/presets"),

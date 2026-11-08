@@ -152,7 +152,26 @@
       }
     ]
   },
-  "extensions": {},
+  "extensions": {
+    "privacy_review": {
+      "acknowledged": true,
+      "detector_version": "conservative-review/1",
+      "findings": [
+        {
+          "category": "subtitle",
+          "id": "cdf3d75ba5fc4a69954de83aa92dccd780aef2bd170bfa8a982bfb3530ecce48",
+          "state": "acknowledge"
+        },
+        {
+          "category": "subtitle",
+          "id": "8407daaba5faac9d4ba3ae28536e97b3602a2d440237cc929fe51b3ffa6248d8",
+          "state": "acknowledge"
+        }
+      ],
+      "token": "ece75b550b0a19ec53a07d33799d80bb0fe3845291fd5cc080419f9b3d88c819",
+      "unresolved": 0
+    }
+  },
   "format": "openworld-moments.project",
   "format_version": "1.0",
   "generator": {
@@ -161,6 +180,6 @@
   },
   "project_revision": 3,
   "saved_at": "2026-11-21T11:00:00.000Z",
-  "schema_version": "1.21",
+  "schema_version": "1.22",
   "warnings": []
 }
