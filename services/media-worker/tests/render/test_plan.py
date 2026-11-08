@@ -117,14 +117,14 @@ def test_user_text_and_paths_never_enter_the_argument_array() -> None:
     assert HOSTILE not in blob and "クリップ" not in blob and "rm -rf" not in blob
     argv = plan["command"]["argv"]
     assert [a for a in argv if a.startswith("{")] == ["{source:0}", "{source:1}", "{output}"]
-    real = materialize(
-        argv,
-        [Path("/lib/" + HOSTILE + ".mp4"), Path("/lib/クリップ é.mov")],
-        Path("/lib/staging/render.mp4"),
-    )
+    hostile, unicode = Path("/lib/" + HOSTILE + ".mp4"), Path("/lib/クリップ é.mov")
+    output = Path("/lib/staging/render.mp4")
+    real = materialize(argv, [hostile, unicode], output)
     # Each path is exactly one argument, prefixed with the file protocol; nothing is joined.
-    assert f"file:/lib/{HOSTILE}.mp4" in real and "file:/lib/クリップ é.mov" in real
-    assert real[-1] == "file:/lib/staging/render.mp4"
+    # Paths keep the platform's own separators (backslashes on Windows).
+    assert f"file:{hostile}" in real and f"file:{unicode}" in real
+    assert real[-1] == f"file:{output}"
+    assert sum(HOSTILE in a for a in real) == 1
     record(plan)  # the stored plan satisfies the contract
 
 
