@@ -490,7 +490,7 @@ ATTACH = {
     ),
     "collection": (
         "INSERT INTO collection_items (collection_id, session_id, position, added_at) "
-        "VALUES (1, ?, 0, '2026-11-21T09:00:00Z')",
+        "VALUES ('col_00000000000000000000000001', ?, 0, '2026-11-21T09:00:00Z')",
         "SELECT count(*) FROM collection_items",
     ),
 }
@@ -500,8 +500,9 @@ def _attach(database: Database, kind: str, session_id: str) -> None:
     insert, _ = ATTACH[kind]
     with contextlib.closing(database.connect()) as conn, transaction(conn):
         conn.execute(
-            "INSERT OR IGNORE INTO collections (id, name, created_at) VALUES (1, 'Best', ?)",
-            (NOW,),
+            "INSERT OR IGNORE INTO collections (id, name, kind, created_at, updated_at) "
+            "VALUES ('col_00000000000000000000000001', 'Best', 'manual', ?, ?)",
+            (NOW, NOW),
         )
         conn.execute(insert, (session_id,))
 

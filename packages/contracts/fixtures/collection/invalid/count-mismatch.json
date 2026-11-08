@@ -1,0 +1,49 @@
+{
+  "description": "A manual page total equals the item count",
+  "expect": "semantic",
+  "message_contains": "item_count",
+  "document": {
+    "schema_version": "1.20",
+    "id": "col_00000000000000000000000001",
+    "name": "Best of",
+    "kind": "manual",
+    "item_count": 4,
+    "created_at": "2026-11-20T05:40:10Z",
+    "updated_at": "2026-11-21T12:00:01Z",
+    "offset": 0,
+    "total": 1,
+    "items": [
+      {
+        "key": "transcript:2",
+        "kind": "transcript",
+        "title": [],
+        "snippet": [
+          {
+            "text": "Over here!",
+            "match": false
+          }
+        ],
+        "matched_in": [],
+        "session_id": "ses_01JCBQ00000000000000000002",
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "transcript_id": 2,
+        "range": {
+          "timebase": "session",
+          "start_ms": 1000,
+          "end_ms": 1700
+        },
+        "source_range": {
+          "asset_id": "ast_01JCBQ00000000000000000001",
+          "start_ms": 1000,
+          "end_ms": 1700
+        },
+        "occurred_at": "2026-11-20T10:14:22Z",
+        "duration_ms": 700,
+        "source_kind": "xbox",
+        "confidence": 0.915,
+        "item_id": 3,
+        "added_at": "2026-11-21T12:00:01Z"
+      }
+    ]
+  }
+}

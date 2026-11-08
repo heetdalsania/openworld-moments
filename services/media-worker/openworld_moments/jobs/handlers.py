@@ -51,6 +51,7 @@ from openworld_moments.media.probe import (
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.render.plan import RenderError
 from openworld_moments.render.service import RenderCancelled, Renderer, RenderFailed
+from openworld_moments.search import index as search_index
 from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
 from openworld_moments.storage import Database, NotFoundError
 from openworld_moments.stories.service import StoryCancelled, StoryError, StoryRequest, StoryService
@@ -548,6 +549,22 @@ def story_handler(service: StoryService) -> JobHandler:
     return JobHandler("story", run, validate, "analyzing", True, 3)
 
 
+def index_handler(database: Database) -> JobHandler:
+    """M26: rebuild the derived search index from canonical records."""
+
+    def validate(params: Mapping[str, Any]) -> dict[str, Any]:
+        _reject_unknown(params, set())
+        return {}
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return search_index.rebuild(database, cancel=ctx.cancel_event, progress=ctx.progress)
+        except search_index.IndexCancelled as exc:
+            raise Cancelled from exc
+
+    return JobHandler("index", run, validate, "indexing", True, 3)
+
+
 def _job_failure(exc: ImportFailure) -> JobFailure:
     return JobFailure(
         exc.code,
@@ -633,4 +650,6 @@ def build_handlers(
         handlers[story.kind] = story
         render = render_handler(renderer or Renderer(database, tools))
         handlers[render.kind] = render
+        indexer = index_handler(database)
+        handlers[indexer.kind] = indexer
     return handlers

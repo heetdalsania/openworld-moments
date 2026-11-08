@@ -373,3 +373,54 @@ export const renderProject = (id: string, options: RenderOptions): Promise<Job> 
 
 export const projectRenders = (id: string): Promise<RenderRecord[]> =>
   call("GET", `/v1/projects/${id}/renders`);
+
+// -- search and collections (M26) ------------------------------------------------------
+
+export type SearchResults = import("@openworld-moments/contracts").SearchResults;
+export type SearchResult = import("@openworld-moments/contracts").SearchResult;
+export type SearchFilters = import("@openworld-moments/contracts").SearchFilters;
+export type SearchRequest = import("@openworld-moments/contracts").SearchRequest;
+export type SearchIndexStatus = import("@openworld-moments/contracts").SearchIndexStatus;
+export type Collection = import("@openworld-moments/contracts").Collection;
+export type CollectionSummary = import("@openworld-moments/contracts").CollectionSummary;
+export type CollectionRule = import("@openworld-moments/contracts").CollectionRule;
+export type CollectionItemRef = import("@openworld-moments/contracts").CollectionItemRef;
+
+export const search = (request: SearchRequest): Promise<SearchResults> =>
+  call("POST", "/v1/search", request);
+
+export const searchIndexStatus = (check = false): Promise<SearchIndexStatus> =>
+  call("GET", check ? "/v1/search/index?check=true" : "/v1/search/index");
+
+/** Rebuilds the derived index from canonical records in a background job. */
+export const rebuildSearchIndex = (): Promise<Job> => call("POST", "/v1/search/index/rebuild", {});
+
+/** Deletes all derived search text; clips, events and transcripts are untouched. */
+export const clearSearchIndex = (): Promise<SearchIndexStatus> =>
+  call("DELETE", "/v1/search/index");
+
+export const listCollections = (): Promise<CollectionSummary[]> => call("GET", "/v1/collections");
+
+export const getCollection = (id: string, offset = 0, limit = 50): Promise<Collection> =>
+  call(
+    "GET",
+    offset ? `/v1/collections/${id}?offset=${offset}&limit=${limit}` : `/v1/collections/${id}`,
+  );
+
+export const createCollection = (name: string, rule?: CollectionRule): Promise<CollectionSummary> =>
+  call("POST", "/v1/collections", rule ? { name, rule } : { name });
+
+export const renameCollection = (id: string, name: string): Promise<CollectionSummary> =>
+  call("PUT", `/v1/collections/${id}`, { name });
+
+export const deleteCollection = (id: string): Promise<{ deleted: boolean }> =>
+  call("DELETE", `/v1/collections/${id}`);
+
+export const addToCollection = (
+  id: string,
+  item: CollectionItemRef,
+): Promise<{ item_id: number; added: boolean }> =>
+  call("POST", `/v1/collections/${id}/items`, item);
+
+export const removeFromCollection = (id: string, itemId: number): Promise<{ deleted: boolean }> =>
+  call("DELETE", `/v1/collections/${id}/items/${itemId}`);

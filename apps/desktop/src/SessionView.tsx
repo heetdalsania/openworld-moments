@@ -30,7 +30,7 @@ import { formatDuration, mediaUrl, thumbnailUrl } from "./media";
 import { type PlayerState, SessionPlayer } from "./player";
 import { invalidate, useAction, useQuery } from "./query";
 import { routeHref } from "./route";
-import { EventReviewPanel } from "./EventReviewPanel";
+import { EventReviewPanel, reviewToPlayback } from "./EventReviewPanel";
 import { CreateProject } from "./CreateProject";
 import { SegmentWave } from "./TimelineWave";
 import { TranscriptPanel } from "./TranscriptPanel";
@@ -353,7 +353,7 @@ function ClipList({ session, media, overlaps, timeline, onSeek }: ClipListProps)
 const SKIP_MS = 5000;
 
 /** One session as a continuous, gap-free timeline with corrections. */
-export function SessionView({ id }: { id: string }) {
+export function SessionView({ id, at }: { id: string; at?: number }) {
   const session = useQuery(`sessions:${id}`, () => getSession(id));
   const overlaps = useQuery(`sessions:${id}:overlaps`, () => sessionOverlaps(id));
   const ids = session.data?.assets.map((m) => m.asset_id) ?? [];
@@ -412,6 +412,14 @@ export function SessionView({ id }: { id: string }) {
   }, [playing]);
 
   const seek = useCallback((virtualMs: number) => player.current?.seek(virtualMs), []);
+
+  // Opened from a search result: seek once to its unique-session time.
+  const opened = useRef<number | null>(null);
+  useEffect(() => {
+    if (at === undefined || !ready || !timeline || !player.current || opened.current === at) return;
+    opened.current = at;
+    player.current.seek(reviewToPlayback(timeline, at));
+  }, [at, ready, timeline]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const p = player.current;

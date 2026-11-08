@@ -543,7 +543,97 @@ def _render_encoders(doc: Document) -> Iterable[str]:
             yield f"encoders[{i}].reason: required when unavailable"
 
 
+_ID_FIELD = {
+    "clip": "asset_id",
+    "session": "session_id",
+    "event": "event_id",
+    "transcript": "transcript_id",
+    "project": "project_id",
+}
+
+
+def _search_result(path: str, item: Document) -> Iterable[str]:
+    prefix, _, ident = item["key"].partition(":")
+    if prefix != item["kind"]:
+        yield f"{path}.key: must start with the result kind"
+    field = _ID_FIELD[item["kind"]]
+    if str(item.get(field, "")) != ident:
+        yield f"{path}.{field}: must match the key"
+    span = item.get("range")
+    if span is not None:
+        yield from _range(f"{path}.range.end_ms", span["start_ms"], span["end_ms"])
+        if (span["timebase"] == "clip") != (item["kind"] == "clip"):
+            yield f"{path}.range.timebase: clip results use clip time; others session time"
+    source = item.get("source_range")
+    if source is not None:
+        yield from _range(f"{path}.source_range.end_ms", source["start_ms"], source["end_ms"])
+        if source["asset_id"] != item.get("asset_id"):
+            yield f"{path}.source_range.asset_id: must match the result clip"
+
+
+def _page(doc: Document, limit: int) -> Iterable[str]:
+    if len(doc["items"]) > limit:
+        yield "items: more items than the page limit"
+    if doc["items"] and doc["offset"] + len(doc["items"]) > doc["total"]:
+        yield "total: smaller than offset plus items on this page"
+    keys = [item["key"] for item in doc["items"]]
+    if len(keys) != len(set(keys)):
+        yield "items: each result appears once"
+    for i, item in enumerate(doc["items"]):
+        yield from _search_result(f"items[{i}]", item)
+
+
+def _search(doc: Document) -> Iterable[str]:
+    yield from _page(doc, doc["limit"])
+    for i, item in enumerate(doc["items"]):
+        if "reasons" in item or "item_id" in item:
+            yield f"items[{i}]: only collection items carry reasons or item IDs"
+    for name, facets in doc["facets"].items():
+        values = [f["value"] for f in facets]
+        if len(values) != len(set(values)):
+            yield f"facets.{name}: each value appears once"
+        for j, facet in enumerate(facets):
+            if facet["count"] > doc["total"]:
+                yield f"facets.{name}[{j}].count: cannot exceed total"
+
+
+def _search_index(doc: Document) -> Iterable[str]:
+    reasons = doc["reasons"]
+    if (doc["status"] == "current") != (not reasons):
+        yield "reasons: a current index has no reasons; any other status has one"
+    if (doc["status"] == "corrupt") != ("full_text_corrupt" in reasons):
+        yield "status: corrupt exactly when the full-text index failed its check"
+    if "full_text_corrupt" in reasons and not doc["checked"]:
+        yield "checked: corruption is only reported by a full check"
+    if (doc["index_version"] != doc["expected_version"]) != ("version_changed" in reasons):
+        yield "reasons: version_changed exactly when the index version differs"
+
+
+def _collection(doc: Document) -> Iterable[str]:
+    yield from _page(doc, 100)
+    if doc["kind"] == "manual" and "rule" in doc:
+        yield "rule: only rule-based collections have a rule"
+    if doc["kind"] == "rule" and "item_count" in doc:
+        yield "item_count: rule-based collections have no stored items"
+    for i, item in enumerate(doc["items"]):
+        if doc["kind"] == "rule":
+            if "reasons" not in item:
+                yield f"items[{i}].reasons: rule-based items explain why they matched"
+            if "item_id" in item:
+                yield f"items[{i}].item_id: rule-based collections have no stored items"
+        else:
+            if "reasons" in item:
+                yield f"items[{i}].reasons: manual items were added by hand"
+            if "item_id" not in item or "added_at" not in item:
+                yield f"items[{i}]: manual items carry item_id and added_at"
+    if doc["kind"] == "manual" and doc.get("item_count") != doc["total"]:
+        yield "total: must equal item_count for a manual collection"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "collection": _collection,
+    "search": _search,
+    "search-index": _search_index,
     "render": _render,
     "render-encoders": _render_encoders,
     "story-candidate": _story_candidate,

@@ -1,0 +1,69 @@
+{
+  "description": "Rule-based items explain why they matched",
+  "expect": "semantic",
+  "message_contains": "explain why they matched",
+  "document": {
+    "schema_version": "1.20",
+    "id": "col_01JCBQ00000000000000000061",
+    "name": "Confirmed wanted moments",
+    "kind": "rule",
+    "rule": {
+      "version": 1,
+      "query": "wanted",
+      "filters": {
+        "kinds": ["event"],
+        "min_confidence": 0.8,
+        "review_states": ["confirmed", "corrected"]
+      }
+    },
+    "created_at": "2026-11-21T12:00:00Z",
+    "updated_at": "2026-11-21T12:00:00Z",
+    "offset": 0,
+    "total": 1,
+    "items": [
+      {
+        "key": "event:evt_01JCBQ00000000000000000003",
+        "kind": "event",
+        "title": [
+          {
+            "text": "openworld.",
+            "match": false
+          },
+          {
+            "text": "wanted",
+            "match": true
+          },
+          {
+            "text": "_level_changed",
+            "match": false
+          }
+        ],
+        "snippet": [
+          {
+            "text": "WANTED",
+            "match": true
+          },
+          {
+            "text": " level rising",
+            "match": false
+          }
+        ],
+        "matched_in": ["label", "on-screen text"],
+        "session_id": "ses_01JCBQ00000000000000000002",
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "event_id": "evt_01JCBQ00000000000000000003",
+        "range": {
+          "timebase": "session",
+          "start_ms": 823400,
+          "end_ms": 824100
+        },
+        "occurred_at": "2026-11-20T10:14:22Z",
+        "duration_ms": 700,
+        "source_kind": "xbox",
+        "event_type": "openworld.wanted_level_changed",
+        "confidence": 0.97,
+        "review_state": "confirmed"
+      }
+    ]
+  }
+}

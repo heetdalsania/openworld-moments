@@ -16,6 +16,7 @@ from referencing.jsonschema import DRAFT202012
 from openworld_moments_contracts.errors import ContractError
 from openworld_moments_contracts.generated import (
     analysis_schema,
+    collection_schema,
     derived_media_schema,
     editor_project_schema,
     error_schema,
@@ -37,6 +38,8 @@ from openworld_moments_contracts.generated import (
     render_encoders_schema,
     render_preset_schema,
     render_schema,
+    search_index_schema,
+    search_schema,
     session_schema,
     speech_models_schema,
     story_candidate_schema,
@@ -75,6 +78,9 @@ CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
     "session": (session_schema.Session, True),
     "render": (render_schema.RenderRecord, True),
     "render-encoders": (render_encoders_schema.RenderEncoders, True),
+    "collection": (collection_schema.Collection, True),
+    "search": (search_schema.SearchResults, True),
+    "search-index": (search_index_schema.SearchIndexStatus, True),
     "speech-models": (speech_models_schema.SpeechModels, True),
     "transcript": (transcript_schema.Transcript, True),
     "transcription": (transcription_schema.TranscriptionResult, True),

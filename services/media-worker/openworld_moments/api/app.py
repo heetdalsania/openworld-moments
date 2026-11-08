@@ -28,7 +28,7 @@ from typing import Annotated, Any, Literal
 from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from openworld_moments_contracts import normalize
+from openworld_moments_contracts import load, normalize
 from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -57,6 +57,9 @@ from openworld_moments.review.service import (
     ReviewChange,
     ReviewError,
 )
+from openworld_moments.search import index as search_index
+from openworld_moments.search.filters import CollectionRule, SearchRequest
+from openworld_moments.search.service import SearchError, SearchService
 from openworld_moments.sessions.service import SessionError, SessionService
 from openworld_moments.storage import (
     AssetRepository,
@@ -268,6 +271,32 @@ class SubmitRender(BaseModel):
     review_layout: bool = False
     expected_revision: int | None = Field(default=None, ge=0, le=9007199254740991)
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class SubmitIndexRebuild(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
+class CreateCollection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=80)
+    rule: CollectionRule | None = None
+
+
+class UpdateCollection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    rule: CollectionRule | None = None
+
+
+class AddCollectionItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["clip", "session", "event", "transcript", "project"]
+    id: (
+        Annotated[str, Field(pattern=r"^(ast|ses|evt|prj)_[0-9A-HJKMNP-TV-Z]{26}$")]
+        | Annotated[int, Field(strict=True, ge=1)]
+    )
 
 
 class SubmitTranscription(BaseModel):
@@ -628,6 +657,106 @@ def create_app(
             raise EngineError(
                 "render.not_found", "That render does not exist.", status=404
             ) from exc
+
+    # -- search and collections (M26) ------------------------------------------------------
+
+    search = SearchService(engine.database)
+    collection_id = re.compile(r"^col_[0-9A-HJKMNP-TV-Z]{26}$")
+    item_prefix = {"clip": "ast_", "session": "ses_", "event": "evt_", "project": "prj_"}
+
+    @app.exception_handler(SearchError)
+    async def search_error(request: Request, exc: SearchError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=exc.status
+        )
+
+    def known_collection(cid_: str) -> str:
+        if not collection_id.fullmatch(cid_):
+            raise SearchError("collection.not_found", "That collection does not exist.", 404)
+        return cid_
+
+    def index_job_active() -> bool:
+        return any(
+            j.kind == "index" and j.state not in ("ready", "cancelled", "failed")
+            for j in engine.list(limit=200)
+        )
+
+    @app.post("/v1/search")
+    async def run_search(body: SearchRequest) -> dict[str, Any]:
+        return await asyncio.to_thread(search.search, body)
+
+    @app.get("/v1/search/index")
+    async def index_status(check: bool = False) -> dict[str, Any]:
+        result = await asyncio.to_thread(search_index.status, engine.database, check=check)
+        return normalize(load("search-index", {"schema_version": str(SUPPORTED_VERSION), **result}))
+
+    @app.post("/v1/search/index/rebuild", status_code=201)
+    async def rebuild_index(
+        body: SubmitIndexRebuild, request: Request, response: Response
+    ) -> dict[str, Any]:
+        return await submit_job("index", {}, body.idempotency_key, request, response)
+
+    @app.delete("/v1/search/index")
+    async def clear_index() -> dict[str, Any]:
+        if index_job_active():
+            raise SearchError(
+                "search.index_busy", "Wait for the index rebuild to finish or cancel it.", 409
+            )
+        await asyncio.to_thread(search_index.clear, engine.database)
+        result = await asyncio.to_thread(search_index.status, engine.database)
+        return normalize(load("search-index", {"schema_version": str(SUPPORTED_VERSION), **result}))
+
+    @app.get("/v1/collections")
+    async def list_collections() -> list[dict[str, Any]]:
+        return await asyncio.to_thread(search.collections)
+
+    @app.post("/v1/collections", status_code=201)
+    async def create_collection(body: CreateCollection) -> dict[str, Any]:
+        return await asyncio.to_thread(search.create, body.name, body.rule)
+
+    @app.get("/v1/collections/{collection}")
+    async def get_collection(
+        collection: str,
+        offset: int = Query(default=0, ge=0, le=10000),
+        limit: int = Query(default=50, ge=1, le=100),
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            search.collection, known_collection(collection), offset, limit
+        )
+
+    @app.put("/v1/collections/{collection}")
+    async def update_collection(collection: str, body: UpdateCollection) -> dict[str, Any]:
+        return await asyncio.to_thread(
+            search.update, known_collection(collection), body.name, body.rule
+        )
+
+    @app.delete("/v1/collections/{collection}")
+    async def delete_collection(collection: str) -> dict[str, Any]:
+        await asyncio.to_thread(search.delete, known_collection(collection))
+        return {"deleted": True}
+
+    @app.post("/v1/collections/{collection}/items", status_code=201)
+    async def add_collection_item(
+        collection: str, body: AddCollectionItem, response: Response
+    ) -> dict[str, Any]:
+        valid = (
+            isinstance(body.id, int)
+            if body.kind == "transcript"
+            else isinstance(body.id, str) and body.id.startswith(item_prefix[body.kind])
+        )
+        if not valid:
+            raise SearchError("collection.invalid_item", "That ID does not match the item kind.")
+        result = await asyncio.to_thread(
+            search.add_item, known_collection(collection), body.kind, body.id
+        )
+        if not result["added"]:
+            response.status_code = 200
+        return result
+
+    @app.delete("/v1/collections/{collection}/items/{item_id}")
+    async def remove_collection_item(collection: str, item_id: int) -> dict[str, Any]:
+        await asyncio.to_thread(search.remove_item, known_collection(collection), item_id)
+        return {"deleted": True}
 
     # -- transcription (M18) ---------------------------------------------------------------
 

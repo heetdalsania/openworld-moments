@@ -425,6 +425,74 @@ describe("session view", () => {
 });
 
 describe("sessions in the app", () => {
+  it("searches with the keyboard alone and opens a result at its moment (E2E)", async () => {
+    // M26: "/" opens Search, typing searches, Down then Enter opens the session at the
+    // result's unique-session time (3.0 s here, Part 2 at 1.6 s after its 600 ms overlap).
+    host.route("GET /v1/search/index", {
+      schema_version: "1.20",
+      index_version: 1,
+      expected_version: 1,
+      status: "current",
+      reasons: [],
+      documents: { clip: 3, session: 1, event: 0, transcript: 1, project: 0 },
+      checked: false,
+    });
+    host.route("GET /v1/collections", []);
+    host.route("POST /v1/search", (body: unknown) => {
+      const query = (body as { query: string }).query;
+      const items = query
+        ? [
+            {
+              key: "transcript:7",
+              kind: "transcript",
+              title: [],
+              snippet: [
+                { text: "the ", match: false },
+                { text: "getaway", match: true },
+                { text: " car", match: false },
+              ],
+              matched_in: ["spoken text"],
+              session_id: SES,
+              asset_id: B,
+              transcript_id: 7,
+              range: { timebase: "session", start_ms: 3000, end_ms: 3500 },
+              source_range: { asset_id: B, start_ms: 1600, end_ms: 2100 },
+            },
+          ]
+        : [];
+      return {
+        schema_version: "1.20",
+        query: { text: query, terms: query ? [query] : [], ignored: [] },
+        filters: {},
+        offset: 0,
+        limit: 25,
+        total: items.length,
+        items,
+        facets: { kind: [], event_type: [], review_state: [], source_kind: [] },
+        index_status: "current",
+        took_ms: 2,
+      };
+    });
+    window.location.hash = "#/sessions";
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("link", { name: /Saturday evening/ });
+    await user.keyboard("/");
+    const box = await screen.findByRole("searchbox", { name: "Search your library" });
+    await waitFor(() => expect(document.activeElement).toBe(box));
+    await user.keyboard("getaway");
+    const result = await screen.findByRole("link", { name: /getaway/ });
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(result);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(window.location.hash).toBe(`#/session/${SES}@3000`));
+    expect(await screen.findByText(/Clip 2 of 3: Part 2\.mp4 at 0:01\.60/)).toBeTruthy();
+    expect(activeVideo().getAttribute("src")).toBe(proxy(B));
+    // Ctrl/Cmd+K returns to Search from the player.
+    await user.keyboard("{Control>}k{/Control}");
+    await waitFor(() => expect(window.location.hash).toBe("#/search"));
+  });
+
   it("opens a session from the list and plays it (E2E seek/play/reorder)", async () => {
     const user = userEvent.setup();
     render(<App />);

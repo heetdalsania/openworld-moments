@@ -1,0 +1,78 @@
+{
+  "description": "A rule-based collection stores its rule",
+  "expect": "schema",
+  "message_contains": "rule",
+  "document": {
+    "schema_version": "1.20",
+    "id": "col_01JCBQ00000000000000000061",
+    "name": "Confirmed wanted moments",
+    "kind": "rule",
+    "created_at": "2026-11-21T12:00:00Z",
+    "updated_at": "2026-11-21T12:00:00Z",
+    "offset": 0,
+    "total": 1,
+    "items": [
+      {
+        "key": "event:evt_01JCBQ00000000000000000003",
+        "kind": "event",
+        "title": [
+          {
+            "text": "openworld.",
+            "match": false
+          },
+          {
+            "text": "wanted",
+            "match": true
+          },
+          {
+            "text": "_level_changed",
+            "match": false
+          }
+        ],
+        "snippet": [
+          {
+            "text": "WANTED",
+            "match": true
+          },
+          {
+            "text": " level rising",
+            "match": false
+          }
+        ],
+        "matched_in": ["label", "on-screen text"],
+        "session_id": "ses_01JCBQ00000000000000000002",
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "event_id": "evt_01JCBQ00000000000000000003",
+        "range": {
+          "timebase": "session",
+          "start_ms": 823400,
+          "end_ms": 824100
+        },
+        "occurred_at": "2026-11-20T10:14:22Z",
+        "duration_ms": 700,
+        "source_kind": "xbox",
+        "event_type": "openworld.wanted_level_changed",
+        "confidence": 0.97,
+        "review_state": "confirmed",
+        "reasons": [
+          {
+            "criterion": "text",
+            "detail": "Matches wanted in the label and on-screen text"
+          },
+          {
+            "criterion": "kind",
+            "detail": "Is an event (event allowed)"
+          },
+          {
+            "criterion": "review_state",
+            "detail": "Review state is confirmed"
+          },
+          {
+            "criterion": "confidence",
+            "detail": "Confidence 0.97 is at least 0.80"
+          }
+        ]
+      }
+    ]
+  }
+}

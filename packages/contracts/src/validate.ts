@@ -29,6 +29,9 @@ import renderPreset from "../schemas/render-preset.schema.json" with { type: "js
 import session from "../schemas/session.schema.json" with { type: "json" };
 import renderEncoders from "../schemas/render-encoders.schema.json" with { type: "json" };
 import render from "../schemas/render.schema.json" with { type: "json" };
+import collection from "../schemas/collection.schema.json" with { type: "json" };
+import searchIndex from "../schemas/search-index.schema.json" with { type: "json" };
+import search from "../schemas/search.schema.json" with { type: "json" };
 import speechModels from "../schemas/speech-models.schema.json" with { type: "json" };
 import transcript from "../schemas/transcript.schema.json" with { type: "json" };
 import transcription from "../schemas/transcription.schema.json" with { type: "json" };
@@ -57,6 +60,9 @@ import type {
   ProfilePatch,
   Project,
   RenderPreset,
+  Collection,
+  SearchResults,
+  SearchIndexStatus,
   Session,
   RenderEncoders,
   RenderRecord,
@@ -95,6 +101,9 @@ export interface ContractTypes {
   session: Session;
   render: RenderRecord;
   "render-encoders": RenderEncoders;
+  collection: Collection;
+  search: SearchResults;
+  "search-index": SearchIndexStatus;
   "speech-models": SpeechModels;
   transcript: Transcript;
   transcription: TranscriptionResult;
@@ -129,6 +138,9 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   session: [session, true],
   render: [render, true],
   "render-encoders": [renderEncoders, true],
+  collection: [collection, true],
+  search: [search, true],
+  "search-index": [searchIndex, true],
   "speech-models": [speechModels, true],
   transcript: [transcript, true],
   transcription: [transcription, true],

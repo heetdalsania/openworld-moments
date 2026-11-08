@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.20",
+  "index_version": 1,
+  "expected_version": 1,
+  "status": "corrupt",
+  "reasons": ["full_text_corrupt"],
+  "documents": {
+    "clip": 2,
+    "session": 1,
+    "event": 2,
+    "transcript": 2,
+    "project": 1
+  },
+  "checked": true,
+  "built_at": "2026-11-21T12:00:00.000Z"
+}
