@@ -418,6 +418,20 @@ pub async fn watched_folder_files(
         .map_err(to_ui_error)
 }
 
+/// Explicit sidecar save; format is fixed and the webview cannot name a destination.
+#[tauri::command]
+pub async fn caption_export(app: AppHandle, text: String, format: String) -> Result<bool, Value> {
+    let (name, ext) = match format.as_str() {
+        "srt" => ("captions.srt", "srt"),
+        "vtt" => ("captions.vtt", "vtt"),
+        _ => return Err(crate::media::route_refused()),
+    };
+    if text.len() > 4 * 1024 * 1024 || text.contains('\0') {
+        return Err(crate::media::route_refused());
+    }
+    calibration_save(app, text.into_bytes(), name, ext).await.map_err(|_| json!({"code":"caption.export_failed","message":"Choose a new filename with the expected extension. Existing files are never replaced.","retryable":true}))
+}
+
 /// Export only the worker-validated, saved media-free patch. No webview path input.
 #[tauri::command]
 pub async fn calibration_export_patch(

@@ -76,6 +76,7 @@ beforeEach(() => {
     offset: 0,
   }));
   host.route("GET /v1/jobs?limit=200", []);
+  host.route("GET /v1/profiles", []);
   vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(async function (
     this: HTMLMediaElement,
   ) {
@@ -345,4 +346,194 @@ it("exposes frozen project snapshots so view code cannot bypass M21 commands", a
     workspace.document.project.title = "Bypass";
   }).toThrow();
   expect(workspace.document.project.title).toBe(fixture.project.title);
+});
+
+it("caption correction, mute/gain, burn-in and sidecar state survive autosave and reload", async () => {
+  const user = userEvent.setup();
+  let view = editor();
+  await ready();
+  const text = screen.getByLabelText("Caption text");
+  text.focus();
+  await user.clear(text);
+  await user.type(text, "Café & bridge\n你好 🚗");
+  screen.getByRole("button", { name: "Apply caption" }).focus();
+  await user.keyboard("{Enter}");
+  screen.getByRole("button", { name: "Mute selected cut" }).focus();
+  await user.keyboard("{Enter}");
+  fireEvent.change(screen.getByLabelText("Project gain (dB)"), { target: { value: "6" } });
+  fireEvent.click(screen.getByRole("button", { name: "Apply project gain" }));
+  fireEvent.click(screen.getByLabelText("Burn captions into future renders"));
+  await user.selectOptions(screen.getByLabelText("Sidecar output"), "both");
+  const ws = await openWorkspace(PID);
+  await act(async () => {
+    await ws.flush();
+  });
+  const saved = structuredClone(ws.document);
+  expect(saved.project.audio.mute_ranges[0]?.start_ms).toBe(0);
+  expect(saved.project.audio.gain_db).toBe(6);
+  expect(saved.project.caption_settings?.sidecar).toBe("both");
+  expect(saved.project.captions[0]?.text).toBe("Café & bridge\n你好 🚗");
+  view.unmount();
+  resetWorkspaces();
+  resetQueries();
+  view = editor();
+  await ready();
+  expect(screen.getByLabelText("Caption text")).toHaveProperty("value", "Café & bridge\n你好 🚗");
+  expect(screen.getByLabelText("Burn captions into future renders")).toHaveProperty(
+    "checked",
+    true,
+  );
+  expect(screen.getByLabelText("Sidecar output")).toHaveProperty("value", "both");
+  expect(screen.getByLabelText("Audio at playhead").textContent).toBe("Muted");
+  view.unmount();
+});
+it("sidecar save cancellation/failure preserves project and exports only explicit plain text", async () => {
+  editor();
+  await ready();
+  fireEvent.change(screen.getByLabelText("Sidecar output"), { target: { value: "both" } });
+  const original = invoke.getMockImplementation();
+  let fail = false;
+  let exported = "";
+  invoke.mockImplementation((command: string, args?: Record<string, unknown>) => {
+    if (command === "caption_export") {
+      exported = String(args?.text);
+      return fail
+        ? Promise.reject({
+            code: "caption.export_failed",
+            message: "Choose a new filename",
+            retryable: true,
+          })
+        : Promise.resolve(false);
+    }
+    return original?.(command, args);
+  });
+  const ws = await openWorkspace(PID),
+    before = structuredClone(ws.document);
+  fireEvent.click(screen.getByRole("button", { name: "Save VTT sidecar…" }));
+  await screen.findByText(/Sidecar save cancelled/);
+  expect(exported).toContain("WEBVTT");
+  expect(ws.document).toEqual(before);
+  fail = true;
+  fireEvent.click(screen.getByRole("button", { name: "Save SRT sidecar…" }));
+  await screen.findByText(/Choose a new filename/);
+  expect(ws.document).toEqual(before);
+});
+it("warns about configured HUD conflicts and does not apply editor shortcuts to caption text", async () => {
+  const profile = {
+    schema_version: "1.9",
+    id: "safe-hud",
+    profile_version: "1.0.0",
+    display_name: "HUD test",
+    game_family: "generic",
+    license: "Apache-2.0",
+    capabilities: [],
+    frame: { aspect_ratios: ["16:9"], min_width: 64, min_height: 36 },
+    regions: { hud: [0, 0, 1, 0.3] },
+    safe_zones: { preserve: ["hud"] },
+    detectors: [],
+  };
+  host.route("GET /v1/profiles", [
+    {
+      id: profile.id,
+      profile_version: profile.profile_version,
+      display_name: profile.display_name,
+    },
+  ]);
+  host.route("GET /v1/profiles/safe-hud/calibration", { effective: profile });
+  editor();
+  await ready();
+  await waitFor(() =>
+    expect(screen.getByLabelText("Protected HUD/subtitle profile").textContent).toContain(
+      "HUD test",
+    ),
+  );
+  fireEvent.change(screen.getByLabelText("Protected HUD/subtitle profile"), {
+    target: { value: "safe-hud" },
+  });
+  await screen.findByText(/overlaps protected regions: hud/);
+  const ws = await openWorkspace(PID),
+    before = ws.document.project.tracks[0]?.segments.length;
+  const user = userEvent.setup();
+  screen.getByLabelText("Caption text").focus();
+  await user.keyboard("s{Delete}");
+  expect(ws.document.project.tracks[0]?.segments.length).toBe(before);
+  fireEvent.change(screen.getByLabelText("Caption placement"), { target: { value: "bottom" } });
+  expect(screen.queryByText(/overlaps protected regions/)).toBeNull();
+});
+it("cancelled transcript loading and a concurrent edit cannot replace caption drafts", async () => {
+  let resolve: (value: unknown) => void = () => undefined;
+  host.route(
+    `GET /v1/sessions/${SES}/transcript`,
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  editor();
+  await ready();
+  fireEvent.click(screen.getByLabelText("Replace existing captions"));
+  fireEvent.click(screen.getByRole("button", { name: "Use session transcript" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel transcript loading" }));
+  await act(async () => resolve({ schema_version: "1.13", session_id: SES, segments: [] }));
+  const ws = await openWorkspace(PID);
+  expect(ws.document.project.captions[0]?.text).toBe("Here we go");
+  fireEvent.click(screen.getByRole("button", { name: "Use session transcript" }));
+  fireEvent.click(screen.getByRole("button", { name: "Mute selected cut" }));
+  await act(async () => resolve({ schema_version: "1.13", session_id: SES, segments: [] }));
+  await screen.findByText(/project changed while loading/i);
+  expect(ws.document.project.captions[0]?.text).toBe("Here we go");
+});
+
+it("caption and audio edits update preview without restarting the playing source", async () => {
+  editor();
+  await ready();
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  await screen.findByRole("button", { name: "Pause" });
+  fireEvent.click(screen.getByRole("button", { name: "Mute selected cut" }));
+  expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+  fireEvent.click(screen.getByLabelText("Burn captions into future renders"));
+  expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+  expect(screen.getByLabelText("Audio at playhead").textContent).toBe("Muted");
+});
+
+it("typing an unapplied caption draft cancels a pending transcript replacement", async () => {
+  let resolve: (value: unknown) => void = () => undefined;
+  host.route(
+    `GET /v1/sessions/${SES}/transcript`,
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  editor();
+  await ready();
+  fireEvent.click(screen.getByLabelText("Replace existing captions"));
+  fireEvent.click(screen.getByRole("button", { name: "Use session transcript" }));
+  const user = userEvent.setup(),
+    text = screen.getByLabelText("Caption text");
+  await user.clear(text);
+  await user.type(text, "Unapplied local correction");
+  await act(async () => resolve({ schema_version: "1.13", session_id: SES, segments: [] }));
+  expect(screen.getByLabelText("Caption text")).toHaveProperty(
+    "value",
+    "Unapplied local correction",
+  );
+  await screen.findByText(/cancelled because fields changed/);
+});
+
+it("unapplied caption/trim fields survive audio commands while undo resets actual content changes", async () => {
+  editor();
+  await ready();
+  fireEvent.change(screen.getByLabelText("Caption text"), { target: { value: "Local draft" } });
+  await numeric("Source in (ms)", 13000);
+  fireEvent.click(screen.getByRole("button", { name: "Mute selected cut" }));
+  expect(screen.getByLabelText("Caption text")).toHaveProperty("value", "Local draft");
+  expect(screen.getByLabelText("Source in (ms)")).toHaveProperty("value", "13000");
+  fireEvent.click(screen.getByRole("button", { name: "Apply caption" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+  expect(screen.getByLabelText("Caption text")).toHaveProperty("value", "Here we go");
+  expect(screen.getByLabelText("Source in (ms)")).toHaveProperty("value", "13000");
+  fireEvent.click(screen.getByRole("button", { name: "Apply trim" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+  expect(screen.getByLabelText("Source in (ms)")).toHaveProperty("value", "12500");
 });

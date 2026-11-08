@@ -26,6 +26,10 @@ import { openWorkspace, type ProjectWorkspace } from "./projectWorkspace";
 import { useQuery } from "./query";
 import { frameMs, nearestBoundary, toSource } from "./timeline";
 import { SegmentWave } from "./TimelineWave";
+import { CaptionPanel, CaptionPreview } from "./CaptionPanel";
+import { AudioPanel } from "./AudioPanel";
+import { audioAt, EditorAudio } from "./editorAudio";
+import type { EditorCommand } from "./editor";
 
 const initialPlayer: PlayerState = {
   virtualMs: 0,
@@ -55,15 +59,14 @@ function CutInspector({
   onRemove: () => void;
   onSplit: (offset: number) => void;
 }) {
-  const [trim, setTrim] = useState<{ cut: Segment | undefined; from: string; to: string }>({
-    cut: undefined,
-    from: "",
-    to: "",
-  });
-  const from = trim.cut === cut ? trim.from : String(cut.source_in_ms);
-  const to = trim.cut === cut ? trim.to : String(cut.source_out_ms);
-  const setFrom = (value: string) => setTrim({ cut, from: value, to });
-  const setTo = (value: string) => setTrim({ cut, from, to: value });
+  const signature = JSON.stringify([cut.id, cut.source_in_ms, cut.source_out_ms]);
+  const initialTrim = { signature, from: String(cut.source_in_ms), to: String(cut.source_out_ms) };
+  const [trim, setTrim] = useState(initialTrim);
+  // Only actual range changes reset fields; metadata/audio commands clone unchanged cuts.
+  if (trim.signature !== signature) setTrim(initialTrim);
+  const { from, to } = trim;
+  const setFrom = (value: string) => setTrim({ ...trim, from: value });
+  const setTo = (value: string) => setTrim({ ...trim, to: value });
   const [offset, setOffset] = useState(
     String(Math.max(1, Math.round((cut.source_out_ms - cut.source_in_ms) / 2))),
   );
@@ -73,7 +76,7 @@ function CutInspector({
       commit();
   };
   const cancelDrag = () => {
-    setTrim({ cut, from: String(cut.source_in_ms), to: String(cut.source_out_ms) });
+    setTrim(initialTrim);
   };
   return (
     <aside className="cut-inspector panel" aria-labelledby="cut-heading">
@@ -300,11 +303,20 @@ function LoadedEditor({
   const urls = useRef<Record<string, ProjectMedia>>({});
   urls.current = media.data ?? {};
   const [state, setState] = useState(initialPlayer);
+  const audio = useRef(new EditorAudio());
+  const playRequest = useRef(0);
+  const lastMapping = useRef("");
+  const lastMedia = useRef<unknown>(undefined);
   const [waiting, setWaiting] = useState(false);
   const drag = useRef<string | undefined>(undefined);
   const shortcuts = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     if (!v0.current || !v1.current || !media.data) return;
+    const mapping = JSON.stringify(timeline);
+    if (player.current && mapping === lastMapping.current && media.data === lastMedia.current)
+      return;
+    lastMapping.current = mapping;
+    lastMedia.current = media.data;
     if (!player.current)
       player.current = new SessionPlayer(
         timeline,
@@ -318,7 +330,22 @@ function LoadedEditor({
     }
     setState(player.current.state);
   }, [timeline, media.data]);
-  useEffect(() => () => player.current?.pause(), []);
+  useEffect(
+    () => () => {
+      playRequest.current++;
+      player.current?.pause();
+      audio.current.close();
+    },
+    [],
+  );
+  useEffect(() => {
+    const linear = audioAt(project.audio, state.virtualMs).linear;
+    audio.current.apply(linear);
+    if (linear > 1 && typeof AudioContext === "undefined" && player.current?.state.playing) {
+      player.current.pause();
+      setEditError("This preview cannot amplify audio. Choose gain at or below 0 dB.");
+    }
+  }, [project.audio, state.virtualMs]);
   useEffect(() => {
     if (!state.playing) return;
     let frame = requestAnimationFrame(function loop() {
@@ -336,8 +363,29 @@ function LoadedEditor({
   const cut = cuts.find((c) => c.id === selected) ?? cuts[0];
   const cutIndex = cut ? cuts.indexOf(cut) : -1;
   const seek = (ms: number) => {
+    playRequest.current++;
     player.current?.pause();
     player.current?.seek(ms);
+  };
+  const togglePlayback = () => {
+    if (!canPlay) return;
+    const token = ++playRequest.current;
+    if (player.current?.state.playing) {
+      player.current.pause();
+      return;
+    }
+    const elements = [v0.current, v1.current].filter((v): v is HTMLVideoElement => v !== null);
+    audio.current.apply(
+      audioAt(workspace.document.project.audio, player.current?.virtualMs ?? 0).linear,
+    );
+    void audio.current
+      .start(elements)
+      .then(() => {
+        if (token === playRequest.current) player.current?.play();
+      })
+      .catch((e) =>
+        setEditError(e instanceof Error ? e.message : "Audio preview could not start."),
+      );
   };
   const perform = (action: () => void) => {
     try {
@@ -385,10 +433,10 @@ function LoadedEditor({
     if (target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
     const actions: Record<string, () => void> = {
       " ": () => {
-        if (canPlay) player.current?.toggle();
+        togglePlayback();
       },
       k: () => {
-        if (canPlay) player.current?.toggle();
+        togglePlayback();
       },
       ",": () => player.current?.step(-1),
       ".": () => player.current?.step(1),
@@ -429,6 +477,7 @@ function LoadedEditor({
   const props = (index: 0 | 1) => ({
     className: index === state.activeElement ? "session-video active" : "session-video",
     preload: "auto" as const,
+    crossOrigin: "anonymous" as const,
     playsInline: true,
     "aria-hidden": index !== state.activeElement,
     onEnded: () => player.current?.ended(index),
@@ -595,6 +644,7 @@ function LoadedEditor({
             >
               <video ref={v0} {...props(0)} />
               <video ref={v1} {...props(1)} />
+              <CaptionPreview document={document} atMs={state.virtualMs} />
               {!canPlay && (
                 <div className="player-empty">
                   {cuts.length === 0
@@ -612,11 +662,12 @@ function LoadedEditor({
             </div>
           </div>
           <p className="muted">
-            Frame preview only. Captions, overlays and final crops are not shown here.
+            Caption placement and audio edits are previewed. Final crops and other overlays are not
+            shown here.
           </p>
           {state.error && <p role="alert">{state.error}</p>}
           <div className="transport">
-            <button disabled={!canPlay} onClick={() => player.current?.toggle()}>
+            <button disabled={!canPlay} onClick={togglePlayback}>
               {state.playing ? "Pause" : "Play"}
             </button>
             <button
@@ -788,6 +839,28 @@ function LoadedEditor({
                   {segment && m?.waveform && (
                     <SegmentWave segment={segment} durationMs={timeline.durationMs} />
                   )}
+                  {project.audio.mute_ranges.flatMap((range, n) => {
+                    const start = Math.max(s.timeline_start_ms, range.start_ms),
+                      end = Math.min(
+                        s.timeline_start_ms + s.source_out_ms - s.source_in_ms,
+                        range.end_ms,
+                      );
+                    return start < end
+                      ? [
+                          <span
+                            key={n}
+                            className="cut-muted"
+                            title={`Muted ${start}–${end} ms`}
+                            style={{
+                              left: `${((start - s.timeline_start_ms) / (s.source_out_ms - s.source_in_ms)) * 100}%`,
+                              width: `${((end - start) / (s.source_out_ms - s.source_in_ms)) * 100}%`,
+                            }}
+                          >
+                            Muted
+                          </span>,
+                        ]
+                      : [];
+                  })}
                   <span className="cut-source-range">
                     Source {formatClock(s.source_in_ms)} → {formatClock(s.source_out_ms)}
                   </span>
@@ -836,6 +909,27 @@ function LoadedEditor({
           </p>
         )}
       </section>
+      <div className="editor-detail-panels">
+        <CaptionPanel
+          workspace={workspace}
+          atMs={state.virtualMs}
+          sourceAspect={(() => {
+            const v = currentMedia?.asset?.video;
+            if (!v) return 16 / 9;
+            return v.rotation === 90 || v.rotation === 270
+              ? v.height / v.width
+              : v.width / v.height;
+          })()}
+          onCommand={(command: EditorCommand) => perform(() => workspace.execute(command))}
+          seek={seek}
+        />
+        <AudioPanel
+          document={document}
+          cut={cut}
+          atMs={state.virtualMs}
+          onCommand={(command: EditorCommand) => perform(() => workspace.execute(command))}
+        />
+      </div>
       {showRecovery && (
         <section className="panel" aria-labelledby="recovery-heading">
           <h2 id="recovery-heading">Recovery JSON</h2>

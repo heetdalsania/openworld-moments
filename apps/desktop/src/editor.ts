@@ -1,8 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Pure M21 command model. No IO, clocks, media writes, or implicit source choices. */
-import { load, type EditorProject, type Project, type Segment } from "@openworld-moments/contracts";
+import {
+  formatVersion,
+  SUPPORTED_VERSION,
+  load,
+  type EditorProject,
+  type Project,
+  type Segment,
+} from "@openworld-moments/contracts";
+
+import { editCaptions, type CaptionOperation } from "./captions";
+import { editAudio, type AudioOperation } from "./editorAudio";
 
 export type EditorCommand =
+  | { kind: "captions"; operation: CaptionOperation }
+  | { kind: "audio"; operation: AudioOperation }
+  | { kind: "caption-settings"; settings: NonNullable<Project["caption_settings"]> }
   | { kind: "add"; segment: Segment; index: number }
   | { kind: "trim"; id: string; source_in_ms: number; source_out_ms: number }
   | { kind: "split"; id: string; at_ms: number; new_id: string }
@@ -90,6 +103,20 @@ export function applyCommand(document: EditorProject, command: EditorCommand): E
     return value;
   };
   switch (command.kind) {
+    case "captions":
+    case "audio":
+    case "caption-settings": {
+      if (command.kind === "captions") p.captions = editCaptions(p.captions, command.operation);
+      else if (command.kind === "audio")
+        p.audio = editAudio(
+          p.audio,
+          command.operation,
+          segments.reduce((n, s) => n + length(s), 0),
+        );
+      else p.caption_settings = copy(command.settings);
+      out.schema_version = p.schema_version = formatVersion(SUPPORTED_VERSION);
+      return copy(load("editor-project", out));
+    }
     case "add":
       integer(command.index);
       if (command.index < 0 || command.index > segments.length)

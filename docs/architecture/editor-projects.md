@@ -170,3 +170,7 @@ Fast-check generates 150 deterministic sequences of up to 60 commands (seed
 `0x21`), validates each state and round-trips each command and the full history.
 Shared TS/Python fixtures cover portable schema and semantic boundaries. No new
 visual UI or real-game media is needed for this model milestone.
+
+## M23 caption and audio extension
+
+Contracts 1.17 add optional caption settings without changing model version or earlier invariants. Explicit caption/audio commands, current-preview behavior and sidecar serialization are documented in [captions and audio](./captions-and-audio.md). Existing retiming carries their timed data through edits.

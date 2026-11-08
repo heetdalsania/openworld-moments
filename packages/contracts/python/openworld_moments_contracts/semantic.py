@@ -79,6 +79,8 @@ def _profile(doc: Document) -> Iterable[str]:
 
 
 def _project(doc: Document) -> Iterable[str]:
+    if "caption_settings" in doc:
+        yield from _region("caption_settings.region", doc["caption_settings"]["region"])
     for t, track in enumerate(doc["tracks"]):
         for s, seg in enumerate(track["segments"]):
             path = f"tracks[{t}].segments[{s}]"

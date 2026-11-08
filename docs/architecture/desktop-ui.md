@@ -193,3 +193,7 @@ Supporting modules:
 
 M15 adds the profile calibration routes and two native export commands described
 in [Profile calibration](./profile-calibration.md#patch-format-and-api).
+
+## M23 caption and audio panels
+
+`CaptionPanel` and `AudioPanel` extend the project editor. Every change uses M21 commands/undo/autosave. Native `caption_export` opens an explicit exclusive-create SRT/VTT save dialog; it accepts no destination path from the webview. See [captions and audio](./captions-and-audio.md) for fields, shortcuts, preview limits, sidecars and validation.

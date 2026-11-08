@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import re
 import secrets
 import shutil
@@ -32,7 +33,13 @@ MEDIA = re.compile(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifacts", type=Path, required=True)
+    parser.add_argument(
+        "--captions",
+        action="store_true",
+        help="M23: seed a transcript with the M18 test double; no real recognition",
+    )
     args = parser.parse_args()
+    prefix = "m23" if args.captions else "m22"
     args.artifacts.mkdir(parents=True, exist_ok=True)
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
@@ -135,6 +142,50 @@ def main() -> None:
                 sid = api("GET", "/v1/sessions?limit=200")[0]["id"]
                 for aid in ids:
                     finish(api("POST", f"/v1/assets/{aid}/derived", {"proxy_policy": "always"}))
+                if args.captions:
+                    from openworld_moments.derived.service import DerivedMedia
+                    from openworld_moments.ids import new_id
+                    from openworld_moments.media.tools import MediaTools
+                    from openworld_moments.storage import Database
+                    from openworld_moments.transcripts.service import Transcriber
+                    from openworld_moments.transcripts.whisper import Engine, sha256_file
+
+                    tests = Path(__file__).parent
+                    fake = tests / "transcripts" / "fake_whisper.py"
+                    database = Database.open(root / "library" / "database.sqlite3")
+                    tools = MediaTools()
+                    transcriber = Transcriber(
+                        database,
+                        tools,
+                        DerivedMedia(database, tools),
+                        engine=lambda cancel: Engine(
+                            (sys.executable, str(fake)), fake, "1.7.6", sha256_file(fake)
+                        ),
+                    )
+                    model = root / "synthetic-model.bin"
+                    model.write_bytes(b"lmgg" + b"\0" * 8192)
+                    transcriber.models.install(model, "base.en", "MIT")
+                    control = root / "whisper-control.json"
+                    control.write_text(
+                        json.dumps(
+                            {
+                                "calls": str(root / "fake-calls.log"),
+                                "heartbeat": str(root / "fake-heartbeat"),
+                                "output": str(tests / "transcripts" / "whisper-full.json"),
+                            }
+                        )
+                    )
+                    previous = os.environ.get("OWM_FAKE_WHISPER")
+                    os.environ["OWM_FAKE_WHISPER"] = str(control)
+                    try:
+                        transcriber.run(
+                            {"session_id": sid, "model": "base.en"}, job_id=new_id("job")
+                        )
+                    finally:
+                        if previous is None:
+                            os.environ.pop("OWM_FAKE_WHISPER", None)
+                        else:
+                            os.environ["OWM_FAKE_WHISPER"] = previous
                 selection = api("GET", f"/v1/sessions/{sid}/project-selection")
                 api(
                     "POST",
@@ -176,6 +227,7 @@ def main() -> None:
                                 "/v1/profiles",
                                 "/v1/transcription/models",
                             }
+                            or re.fullmatch(r"/v1/profiles/[a-z0-9][a-z0-9-]*/calibration", path)
                             or re.fullmatch(rf"/v1/projects/prj_{identity}(?:/portable)?", path)
                             or re.fullmatch(
                                 rf"/v1/sessions/ses_{identity}(?:/(?:project-selection|review|overlaps|transcript))?",
@@ -298,7 +350,7 @@ window.__TAURI_INTERNALS__={{
  }}
 }};
 """
-                    ipc = args.artifacts / "m22-ipc.js"
+                    ipc = args.artifacts / f"{prefix}-ipc.js"
                     ipc.write_text(script)
                     manifest = {
                         "bridge": bridge,
@@ -306,7 +358,9 @@ window.__TAURI_INTERNALS__={{
                         "ipc": str(ipc.resolve()),
                         "assets": ids,
                     }
-                    (args.artifacts / "m22-fixture.json").write_text(json.dumps(manifest, indent=2))
+                    (args.artifacts / f"{prefix}-fixture.json").write_text(
+                        json.dumps(manifest, indent=2)
+                    )
                     print(json.dumps(manifest), flush=True)
                     with contextlib.suppress(KeyboardInterrupt):
                         server.serve_forever()

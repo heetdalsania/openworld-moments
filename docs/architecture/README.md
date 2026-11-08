@@ -42,3 +42,5 @@ Other architecture notes:
 - [Editor projects](./editor-projects.md): non-destructive commands, undo, autosave recovery, migration and portable source relinking.
 
 - [Focused editor](./focused-editor.md): project routes, trim/split/reorder commands, autosave recovery, keyboard controls, preview mapping and synthetic browser verification.
+
+- [Captions and audio](./captions-and-audio.md): source-mapped transcript copies, cue commands, safe-area warnings, sidecar serialization/native save and non-destructive gain/mute preview.

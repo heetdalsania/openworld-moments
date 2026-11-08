@@ -161,6 +161,31 @@ class GainRange(BaseModel):
     gain_db: Annotated[float, Field(ge=-60.0, le=24.0)]
 
 
+class CaptionSettings(BaseModel):
+    """
+    M23 output-frame caption placement and export intent. Defaults apply when absent; source text remains plain Unicode.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    preset: Literal["high-contrast", "compact"]
+    region: Annotated[
+        tuple[
+            common_schema.RegionItem,
+            common_schema.RegionItem,
+            common_schema.RegionItem2,
+            common_schema.RegionItem2,
+        ],
+        Field(
+            description="Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
+            title="Region",
+        ),
+    ]
+    burn_in: bool
+    sidecar: Literal["none", "srt", "vtt", "both"]
+
+
 class Crop(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -283,3 +308,4 @@ class Project(BaseModel):
     captions: list[Caption]
     overlays: list[BlurOverlay | TextOverlay]
     audio: AudioSettings
+    caption_settings: CaptionSettings | None = None

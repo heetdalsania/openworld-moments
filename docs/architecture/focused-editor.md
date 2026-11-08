@@ -1,8 +1,8 @@
 # Focused editor
 
 M22 connects the [M21 project model](./editor-projects.md) to a single-primary-track
-editor. Sources remain immutable. Captions, gain, compositing, final crops and
-rendering belong to later milestones.
+editor. Sources remain immutable. [M23 captions and audio](./captions-and-audio.md) extends
+this editor; compositing, final crops and rendering belong to later milestones.
 
 ## Routes and data flow
 
@@ -75,8 +75,8 @@ stale/rejected items are omitted. The first 50 reviewed items are inspected, wit
 that limit stated. Intersections map through source ranges into every retained
 cut. Markers seek only; they never edit events.
 
-The preview frame supports 16:9, 9:16 and square with fit/letterboxing. It explicitly
-does not represent final crops, captions, overlays or gain. Two decoders may
+The preview frame supports 16:9, 9:16 and square with fit/letterboxing. M23 adds caption placement and gain/mute preview; final crops and other overlays
+remain outside this preview. Two decoders may
 buffer during clip switches; gapless real-time playback is not guaranteed. Native
 codec support and real-game variable-rate precision require platform validation.
 

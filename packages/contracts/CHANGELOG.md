@@ -2,6 +2,15 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.17 — M23 captions and audio controls
+
+- Optional `Project.caption_settings`: high-contrast/compact preset, normalized
+  output-frame region, burn-in choice and none/SRT/VTT/both sidecar intent.
+- Region bounds match in TypeScript/Python. Legacy 1.x documents remain readable;
+  missing caption settings use desktop defaults. Model version remains 1 and no
+  SQL migration is needed. Existing captions/audio/range units are unchanged.
+- New shared valid/out-of-bounds/unknown-style fixtures; readers reject 1.18.
+
 ## 1.16 — 2026-11-07 (M21)
 
 Additive: `editor-project` wraps the existing Project with explicit editor model
