@@ -10,7 +10,6 @@ never do. See docs/architecture/render.md.
 
 from __future__ import annotations
 
-import math
 import re
 import sys
 from dataclasses import dataclass
@@ -18,10 +17,12 @@ from pathlib import Path
 from typing import Any
 
 from openworld_moments.derived.tonemap import ToneMapSettings
+from openworld_moments.privacy.blur import expression as blur_expression
+from openworld_moments.privacy.blur import pixels as blur_pixels
 from openworld_moments.render.encoders import EncoderSpec, video_args
 from openworld_moments.render.layout import FIT, fit_rect, pixels, position_expression, warnings
 
-ENGINE_VERSION = "1.1.0"
+ENGINE_VERSION = "1.2.0"
 AUDIO_RATE = 48000
 #: One FFmpeg input per segment piece; bounded for argv length (Windows: 32 767 chars).
 MAX_PIECES = 120
@@ -227,7 +228,12 @@ def build_plan(
         )
 
     blurs = [
-        {"start_ms": o["start_ms"], "end_ms": o["end_ms"], "region": list(o["region"])}
+        {
+            "start_ms": o["start_ms"],
+            "end_ms": o["end_ms"],
+            "region": list(o["region"]),
+            **({"keyframes": o["keyframes"]} if "keyframes" in o else {}),
+        }
         for o in project.get("overlays", [])
         if o["kind"] == "blur"
     ]
@@ -424,21 +430,18 @@ def compile_plan(
     )
     current = video_out
     for b, blur in enumerate(blurs):
-        x, y, w, h = blur["region"]
-        px, py = math.floor(x * width), math.floor(y * height)
-        # At least MIN_BLUR_PX, shifted (not shrunk) to stay inside the frame.
-        pw = min(width, max(MIN_BLUR_PX, round(w * width)))
-        ph = min(height, max(MIN_BLUR_PX, round(h * height)))
-        px, py = min(px, width - pw), min(py, height - ph)
+        _, _, pw, ph = blur_pixels(blur["region"], width, height)
+        px = blur_expression(blur, 0, width, pw)
+        py = blur_expression(blur, 1, height, ph)
         radius = max(1, min(pw, ph) // 4)
         chroma = max(1, min(pw, ph) // 8)
         target = "vout" if b == len(blurs) - 1 else f"vb{b}"
-        span = f"between(t,{_seconds(blur['start_ms'])},{_seconds(blur['end_ms'])})"
+        span = f"gte(t,{_seconds(blur['start_ms'])})*lt(t,{_seconds(blur['end_ms'])})"
         graph.append(
             f"[{current}]split=2[bm{b}][bs{b}];"
-            f"[bs{b}]crop=w={pw}:h={ph}:x={px}:y={py},"
+            f"[bs{b}]crop=w={pw}:h={ph}:x='{px}':y='{py}':exact=1,"
             f"boxblur=luma_radius={radius}:luma_power=3:chroma_radius={chroma}:chroma_power=3[bb{b}];"
-            f"[bm{b}][bb{b}]overlay=x={px}:y={py}:enable='{span}'[{target}]"
+            f"[bm{b}][bb{b}]overlay=x='{px}':y='{py}':eval=frame:enable='{span}'[{target}]"
         )
         current = target
     if with_audio:

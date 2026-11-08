@@ -88,7 +88,7 @@ def test_project_json_is_lossless_and_versioned(project: Fixture) -> None:
     assert doc["project_revision"] == 3 and doc["saved_at"] == "2026-11-21T11:00:00.000Z"
     saved = normalize(load("editor-project", copy.deepcopy(DOCUMENT)))
     assert doc["document"] == saved
-    assert "source_locations" not in doc and doc["extensions"] == {}
+    assert "source_locations" not in doc and doc["extensions"]["privacy_review"]["acknowledged"]
     # Forward compatibility: unknown additions live in extensions and still read.
     doc["extensions"] = {"org.example.future": {"x": 1}}
     load("project-export", doc)

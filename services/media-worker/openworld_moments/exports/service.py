@@ -35,6 +35,7 @@ from openworld_moments.exports.formats import (
     safe_filename,
 )
 from openworld_moments.ingest.library import LibraryPaths, readable_source
+from openworld_moments.privacy.service import PrivacyReviewService
 from openworld_moments.projects.service import ProjectService
 from openworld_moments.review.service import layout_info
 from openworld_moments.storage import AssetRepository, Database, NotFoundError
@@ -162,7 +163,7 @@ class Exporter:
     def _project(
         self, conn: sqlite3.Connection, project_id: str
     ) -> tuple[dict[str, Any], int, str]:
-        state = self.projects.get(project_id)
+        state = self.projects._read(conn, project_id)
         row = conn.execute(
             "SELECT saved_at FROM editor_projects WHERE project_id = ?", (project_id,)
         ).fetchone()
@@ -308,6 +309,9 @@ class Exporter:
                 conn.execute("BEGIN")
                 try:
                     document, revision, saved_at = self._project(conn, project_id)
+                    privacy_summary = PrivacyReviewService(self.database).require(
+                        conn, project_id, document, revision
+                    )
                     session_id = document["project"].get("session_id")
                     locations, path_warnings = (
                         self._locations(conn, document) if include_paths else ({}, [])
@@ -334,6 +338,7 @@ class Exporter:
                     schema_version=SCHEMA_VERSION,
                     locations=paths,
                 )
+                doc["extensions"]["privacy_review"] = privacy_summary
                 content = canonical_json(normalize(load("project-export", doc)))
                 capabilities = doc["capabilities"]
             elif fmt == "events":
@@ -351,7 +356,7 @@ class Exporter:
                     "project_id": project_id,
                     "layout_key": layout_key,
                     "event_count": len(records),
-                    "extensions": {},
+                    "extensions": {"privacy_review": privacy_summary},
                 }
                 load("event-export", header)
                 content, warnings = events_jsonl(header, records), []
@@ -392,7 +397,7 @@ class Exporter:
         except ExportError as exc:
             raise ExportFailed(exc.code, exc.message) from exc
         extension = FORMATS[fmt][0]
-        return _envelope(
+        result = _envelope(
             fmt,
             content,
             safe_filename(title, extension),
@@ -400,6 +405,9 @@ class Exporter:
             capabilities,
             bool(include_paths and paths),
         )
+
+        result["privacy_review"] = privacy_summary
+        return normalize(load("export-result", result))
 
     def render_manifest(self, render_id: str) -> dict[str, Any]:
         with contextlib.closing(self.database.connect()) as conn:

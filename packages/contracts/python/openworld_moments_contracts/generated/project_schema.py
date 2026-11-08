@@ -65,7 +65,7 @@ class Caption(BaseModel):
 
 class BlurOverlay(BaseModel):
     """
-    Privacy blur over a region for a time range.
+    Output-frame normalized privacy blur. Optional fixed-size linear translation keyframes relative to start_ms, starting at zero. region equals the first key.
     """
 
     model_config = ConfigDict(
@@ -100,6 +100,7 @@ class BlurOverlay(BaseModel):
             title="Region",
         ),
     ]
+    keyframes: Annotated[list[CropKeyframe] | None, Field(max_length=100)] = None
 
 
 class TextOverlay(BaseModel):

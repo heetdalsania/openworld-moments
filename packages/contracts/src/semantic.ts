@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  PrivacyReview,
   EventExportLine,
   ExportResult,
   ProjectExport,
@@ -151,6 +152,21 @@ function* project(doc: Project): Generator<string> {
   for (const [i, o] of doc.overlays.entries()) {
     yield* range(`overlays[${i}].end_ms`, o.start_ms, o.end_ms, true);
     yield* region(`overlays[${i}].region`, o.region);
+    if (o.kind === "blur" && o.keyframes) {
+      if (o.keyframes.length === 0 || o.keyframes[0]?.at_ms !== 0)
+        yield "blur: keyframes must start at zero";
+      let previous = -1;
+      for (const k of o.keyframes) {
+        yield* region("blur.keyframe.region", k.region);
+        if (!(previous < k.at_ms && k.at_ms < o.end_ms - o.start_ms))
+          yield "blur: keyframes must increase inside range";
+        if (k.region[2] !== o.region[2] || k.region[3] !== o.region[3])
+          yield "blur: keyframes require fixed dimensions";
+        previous = k.at_ms;
+      }
+      if (JSON.stringify(o.keyframes[0]?.region) !== JSON.stringify(o.region))
+        yield "blur: region must equal first keyframe";
+    }
   }
   for (const [i, m] of doc.audio.mute_ranges.entries()) {
     yield* range(`audio.mute_ranges[${i}].end_ms`, m.start_ms, m.end_ms, true);
@@ -775,8 +791,40 @@ function* eventExport(doc: EventExportLine): Generator<string> {
   }
 }
 
+function* privacyReview(doc: PrivacyReview): Generator<string> {
+  const ids = new Set<string>();
+  for (const f of doc.flags) {
+    yield* range("privacy.flag.end_ms", f.start_ms, f.end_ms, true);
+    if (f.region) yield* region("privacy.flag.region", f.region);
+    if (ids.has(f.id)) yield "privacy: duplicate finding";
+    ids.add(f.id);
+    const hasSource = [f.asset_id, f.source_start_ms, f.source_end_ms].filter(
+      (v) => v !== undefined,
+    ).length;
+    if (hasSource !== 0 && hasSource !== 3) yield "privacy: source range requires all fields";
+    if (f.source_start_ms !== undefined && f.source_end_ms !== undefined)
+      yield* range("privacy.source_end_ms", f.source_start_ms, f.source_end_ms, true);
+  }
+  for (const r of doc.config.ranges)
+    yield* range("privacy.spoiler.end_ms", r.start_ms, r.end_ms, true);
+  if (doc.summary.token !== doc.token) yield "privacy: summary token differs";
+  if (doc.summary.unresolved !== doc.flags.filter((f) => f.decision === "unresolved").length)
+    yield "privacy: unresolved count differs";
+  if (doc.current !== (doc.summary.acknowledged && doc.summary.unresolved === 0))
+    yield "privacy: gate state differs";
+  if (
+    doc.summary.findings.length !== doc.flags.length ||
+    doc.flags.some((f, i) => {
+      const d = doc.summary.findings[i];
+      return !d || d.id !== f.id || d.category !== f.category || d.state !== f.decision;
+    })
+  )
+    yield "privacy: summary decisions differ";
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "privacy-review": privacyReview,
   "event-export": eventExport,
   "export-result": exportResult,
   "project-export": projectExport,

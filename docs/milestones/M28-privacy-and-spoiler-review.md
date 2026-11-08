@@ -10,7 +10,7 @@ M17, M18, and M22 merged.
 
 ## Required context
 
-Read specification sections 14, 17, 18.4, and 21.4.
+Read specification sections 8.8, 14, 15.6, 17, and 21.
 
 ## In scope
 

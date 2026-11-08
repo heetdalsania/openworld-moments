@@ -109,8 +109,19 @@ def warnings(
             bottom = max(r[1] + r[3] for r in mapped_boxes)
             swept = [left, top, right - left, bottom - top]
             area = min(r[2] * r[3] for r in mapped_boxes)
+
+            def blur_envelope(overlay: dict[str, Any]) -> list[float]:
+                regions = [overlay["region"], *(k["region"] for k in overlay.get("keyframes", []))]
+                x, y = min(r[0] for r in regions), min(r[1] for r in regions)
+                return [
+                    x,
+                    y,
+                    max(r[0] + r[2] for r in regions) - x,
+                    max(r[1] + r[3] for r in regions) - y,
+                ]
+
             if any(
-                visible_fraction(o["region"], swept) * swept[2] * swept[3] / area > 0.05
+                visible_fraction(blur_envelope(o), swept) * swept[2] * swept[3] / area > 0.05
                 for o in overlays or []
             ):
                 result.append(f"Protected region {name}: a privacy blur may obscure it.")

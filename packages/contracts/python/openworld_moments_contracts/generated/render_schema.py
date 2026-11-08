@@ -7,7 +7,14 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
-from . import common_schema, error_schema, profile_schema, project_schema, render_preset_schema
+from . import (
+    common_schema,
+    error_schema,
+    privacy_review_schema,
+    profile_schema,
+    project_schema,
+    render_preset_schema,
+)
 
 
 class Fallback(BaseModel):
@@ -201,6 +208,7 @@ class BlurOverlay(BaseModel):
             title="Region",
         ),
     ]
+    keyframes: Annotated[list[project_schema.CropKeyframe] | None, Field(max_length=100)] = None
 
 
 class Note(RootModel[str]):
@@ -427,6 +435,7 @@ class RenderPlan(BaseModel):
     command: Command
     tools: Tools
     layout_profile: profile_schema.Profile | None = None
+    privacy_review: privacy_review_schema.PrivacySummary | None = None
 
 
 class RenderRecord(BaseModel):

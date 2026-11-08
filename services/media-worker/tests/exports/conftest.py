@@ -13,6 +13,7 @@ import pytest
 
 from openworld_moments.exports.service import Exporter
 from openworld_moments.storage import Database, transaction
+from tests.privacy.helpers import acknowledge
 
 SES = "ses_01JCBQ00000000000000000002"
 AST = "ast_01JCBQ00000000000000000001"
@@ -118,7 +119,12 @@ class Fixture:
             (PRJ, revision, json.dumps(document)),
         )
 
+        self.sql(
+            "UPDATE stories SET timeline_json=? WHERE id=?", (json.dumps(document["project"]), PRJ)
+        )
+
     def export(self, fmt: str, **options: Any) -> dict[str, Any]:
+        acknowledge(self.database, PRJ)
         return self.exporter.project(PRJ, fmt, **options)
 
 
@@ -219,6 +225,7 @@ def build(database: Database, media: Path) -> Fixture:
             ),
         )
     fixture.save(copy.deepcopy(DOCUMENT))
+    acknowledge(database, PRJ)
     return fixture
 
 

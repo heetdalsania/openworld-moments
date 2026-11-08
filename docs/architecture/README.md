@@ -50,3 +50,5 @@ M25 adds [vertical layouts](./vertical-layouts.md) with `vertical-1080x1920-30` 
 
 - [Open exports and manifests](./exports.md): project JSON, event JSONL, SRT/WebVTT, CSV markers, OpenTimelineIO and experimental FCPXML; render manifests, versions, privacy option, warnings and validation.
 - [Search and collections](./search.md): searchable-document views and triggers, query grammar, filters, ranking, collection rules with reasons, stale/corrupt detection and rebuild, privacy-safe clearing, 10,000-clip benchmark.
+
+- [Privacy and spoiler review](./privacy-review.md): conservative local findings, exact-range review, reversible decisions, moving blurs, mute suggestions, export gates and text deletion.

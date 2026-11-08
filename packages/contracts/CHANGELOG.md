@@ -2,6 +2,14 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.22 — M28 privacy and spoiler review
+
+- Add `privacy-review` findings/configuration/decisions and text-free gate summaries.
+- Add optional fixed-size linear privacy-blur `keyframes` to Project overlays and render IR.
+- Add optional `privacy_review` summaries to render plans, manifests and export results.
+- Project JSON and event JSONL preserve summaries under `extensions`; older 1.x documents remain valid.
+- New project exports/renders require current creator review. Caption sidecars use the gated `project_export` host command; the ungated `caption_export` command is removed.
+
 ## 1.21 — M27 open exports
 
 Additive; existing 1.20 documents remain valid.

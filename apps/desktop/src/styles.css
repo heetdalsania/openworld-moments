@@ -1589,3 +1589,40 @@ button.link {
   border-color: var(--warn);
   color: var(--warn);
 }
+
+/* M28: bounded, keyboard-readable findings and manual region controls. */
+.privacy-findings {
+  max-height: 28rem;
+  overflow: auto;
+  padding-left: 1.5rem;
+}
+.privacy-findings li {
+  padding: 0.75rem;
+  border-bottom: 1px solid currentColor;
+}
+.privacy-review label {
+  display: block;
+  margin: 0.5rem 0;
+}
+.privacy-review textarea {
+  width: 100%;
+  max-width: 36rem;
+}
+.privacy-review fieldset {
+  margin: 0.5rem 0;
+  border: 1px solid #64748b;
+}
+.privacy-review fieldset label {
+  display: inline-flex;
+  flex-direction: column;
+  margin-right: 0.75rem;
+}
+.privacy-review input[type="number"] {
+  max-width: 9rem;
+}
+.privacy-review .privacy-checklist > .check {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+}

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Caption, CaptionSettings, EditorProject } from "@openworld-moments/contracts";
 import {
   describeError,
-  exportCaptions,
+  saveProjectExport,
   getCalibration,
   getTranscript,
   listProfiles,
@@ -296,8 +296,9 @@ export function CaptionPanel({
     setError("");
     setMessage("");
     try {
-      const text = serializeCaptions(project.captions, format);
-      const saved = await exportCaptions(text, format);
+      serializeCaptions(project.captions, format);
+      await workspace.flush();
+      const { saved } = await saveProjectExport(project.id, format, false);
       setMessage(
         saved
           ? `Saved ${format.toUpperCase()} sidecar.`

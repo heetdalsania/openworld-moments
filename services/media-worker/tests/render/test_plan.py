@@ -187,8 +187,9 @@ def test_blur_regions_become_clamped_pixel_rectangles_with_time_enable() -> None
     plan = plan_for(document(segment(1, A, 0, 0, 2000), overlays=[blur]))
     graph = plan["command"]["filter_complex"]
     # A tiny region at the corner grows to the 8 px minimum and stays inside the frame.
-    assert "crop=w=8:h=8:x=1912:y=1072" in graph
-    assert "overlay=x=1912:y=1072:enable='between(t,0.500,1.500)'[vout]" in graph
+    assert "crop=w=8:h=8:" in graph
+    assert "min(1912,floor(" in graph and "min(1072,floor(" in graph
+    assert "eval=frame:enable='gte(t,0.500)*lt(t,1.500)'[vout]" in graph
     assert plan["blur_overlays"] == [{"start_ms": 500, "end_ms": 1500, "region": blur["region"]}]
 
 

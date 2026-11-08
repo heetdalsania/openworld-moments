@@ -38,6 +38,7 @@ from openworld_moments.exports.service import detector_versions
 from openworld_moments.ingest.library import LibraryPaths, readable_source
 from openworld_moments.media.process import ToolCancelled, ToolError, run_tool
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.privacy.service import PrivacyError, PrivacyReviewService
 from openworld_moments.projects.service import ProjectError, ProjectService
 from openworld_moments.redaction import Redactor
 from openworld_moments.render.encoders import CPU, ENCODERS, EncoderProbe, EncoderSpec
@@ -200,6 +201,7 @@ class Renderer:
         """Refuse a render up front when the project, preset or encoder cannot work."""
         state = self._project(params["project_id"])
         self._check_revision(state, params)
+        self._privacy(state)
         self.presets.get(params["preset_id"])
         encoder = self._encoder(params.get("encoder", CPU.id))
         self._check_sources(state)
@@ -234,6 +236,22 @@ class Renderer:
             layout_profile=self._layout_profile(state["document"]),
             review_layout=bool(params.get("review_layout", False)),
         )
+
+    def _privacy(self, state: dict[str, Any]) -> dict[str, Any]:
+        try:
+            with contextlib.closing(self.database.connect()) as conn:
+                conn.execute("BEGIN")
+                saved = self.projects._read(conn, state["document"]["project"]["id"])
+                if saved["revision"] != state["revision"] or saved["document"] != state["document"]:
+                    raise RenderError(
+                        "render.revision_changed",
+                        "The saved project changed. Review it again before rendering.",
+                    )
+                return PrivacyReviewService(self.database).require(
+                    conn, state["document"]["project"]["id"], state["document"], state["revision"]
+                )
+        except PrivacyError as exc:
+            raise RenderError(exc.code, exc.message, status=exc.status) from exc
 
     @staticmethod
     def _check_revision(state: dict[str, Any], params: Mapping[str, Any]) -> None:
@@ -429,6 +447,7 @@ class Renderer:
             report(0, 1000, "Checking clips")
             state = self._project(project_id)
             self._check_revision(state, params)
+            privacy_summary = self._privacy(state)
             self._check_sources(state)
             self._store(job_id, project_revision=state["revision"])
             preset = self.presets.get(params["preset_id"])
@@ -445,6 +464,7 @@ class Renderer:
                 layout_profile=self._layout_profile(state["document"]),
                 review_layout=bool(params.get("review_layout", False)),
             )
+            plan["privacy_review"] = privacy_summary
             self._store(job_id, plan=plan)
             free = shutil.disk_usage(self.root).free
             if free < estimate_bytes(plan) + DISK_RESERVE:
@@ -595,6 +615,7 @@ class Renderer:
                 "render_engine": plan["tools"]["render_engine"],
             },
             "output": {"sha256": digest, "size_bytes": size, "duration_ms": plan["duration_ms"]},
+            "privacy_review": plan["privacy_review"],
             "detectors": detectors,
             "profiles": profiles,
         }

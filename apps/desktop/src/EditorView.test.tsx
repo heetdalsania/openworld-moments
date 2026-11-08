@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import privacyFixture from "../../../packages/contracts/fixtures/privacy-review/valid/ignored.json";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -96,6 +97,11 @@ beforeEach(() => {
     encoders: [{ id: "libx264", label: "CPU (libx264)", kind: "cpu", available: true }],
   });
   host.route(`GET /v1/projects/${PID}/renders`, []);
+  host.route(`GET /v1/projects/${PID}/privacy-review`, () => ({
+    ...privacyFixture,
+    project_id: PID,
+    revision,
+  }));
   vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(async function (
     this: HTMLMediaElement,
   ) {
@@ -408,7 +414,7 @@ it("caption correction, mute/gain, burn-in and sidecar state survive autosave an
   expect(screen.getByLabelText("Audio at playhead").textContent).toBe("Muted");
   view.unmount();
 });
-it("sidecar save cancellation/failure preserves project and exports only explicit plain text", async () => {
+it("sidecar save uses the reviewed project export and preserves text on cancellation/failure", async () => {
   editor();
   await ready();
   fireEvent.change(screen.getByLabelText("Sidecar output"), { target: { value: "both" } });
@@ -416,15 +422,17 @@ it("sidecar save cancellation/failure preserves project and exports only explici
   let fail = false;
   let exported = "";
   invoke.mockImplementation((command: string, args?: Record<string, unknown>) => {
-    if (command === "caption_export") {
-      exported = String(args?.text);
+    if (command === "project_export") {
+      exported = String(args?.format);
+      expect(args?.projectId).toBe(PID);
+      expect(args?.includePaths).toBe(false);
       return fail
         ? Promise.reject({
             code: "caption.export_failed",
             message: "Choose a new filename",
             retryable: true,
           })
-        : Promise.resolve(false);
+        : Promise.resolve({ saved: false, warnings: [] });
     }
     return original?.(command, args);
   });
@@ -432,7 +440,7 @@ it("sidecar save cancellation/failure preserves project and exports only explici
     before = structuredClone(ws.document);
   fireEvent.click(screen.getByRole("button", { name: "Save VTT sidecar…" }));
   await screen.findByText(/Sidecar save cancelled/);
-  expect(exported).toContain("WEBVTT");
+  expect(exported).toBe("vtt");
   expect(ws.document).toEqual(before);
   fail = true;
   fireEvent.click(screen.getByRole("button", { name: "Save SRT sidecar…" }));

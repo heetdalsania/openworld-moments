@@ -39,6 +39,7 @@ from openworld_moments.render.service import RenderCancelled, Renderer, RenderFa
 from openworld_moments.render.validate import validate_output
 from openworld_moments.sessions.service import SessionService
 from openworld_moments.storage import Database
+from tests.privacy.helpers import acknowledge
 from tests.worker.conftest import wait_for
 
 TOLERANCE_MS = 100
@@ -104,6 +105,7 @@ class Studio:
                 end_ms=selection["duration_ms"] - trim_end_ms,
             ),
         )
+        acknowledge(self.database, str(state["document"]["project"]["id"]))
         return str(state["document"]["project"]["id"])
 
     def edit(self, project_id: str, change: Any) -> None:
@@ -113,6 +115,7 @@ class Studio:
         self.projects.save(
             project_id, SaveProject(expected_revision=state["revision"], document=document)
         )
+        acknowledge(self.database, project_id)
 
     def render(self, project_id: str, **params: Any) -> dict[str, Any]:
         return self.renderer.run(

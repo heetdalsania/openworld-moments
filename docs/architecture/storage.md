@@ -119,3 +119,12 @@ M21 migration `0014_editor_projects.sql` adds current and previous committed edi
 M27 migration `0017_render_manifests.sql` adds `render_jobs.manifest_json`, the canonical export manifest of each completed render, so re-exporting it is byte-stable even without the sidecar file. See [exports](./exports.md).
 
 M26 migration `0016_search_and_collections.sql` adds the derived search index (documents, source views, maintenance triggers, FTS5 with secure-delete, index state) and builds it for the existing library. It reshapes the unused 0001 `collections`/`collection_items` tables: collection IDs become `col_` IDs (existing rows keep a zero-padded form of their number), collections are `manual` or `rule`, and items may reference clips and transcript spans. Requires SQLite 3.42+ (FTS5 secure-delete). See [search](./search.md).
+
+## M28 privacy review
+
+See [privacy and spoiler review](./privacy-review.md) for the mandatory current-review
+gate on project exports and new renders, contracts 1.22, output-space moving blur
+keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
+sidecars now flush the project and use the gated `project_export` host command;
+`caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
+Migration 0018 stores review configuration/decisions without copied evidence text.

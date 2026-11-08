@@ -207,7 +207,9 @@ def main() -> None:
                         self.send_header("Content-Length", str(size))
                         self.send_header("Access-Control-Allow-Origin", "http://127.0.0.1:1420")
                         self.send_header("Access-Control-Allow-Headers", "Content-Type,Range")
-                        self.send_header("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS")
+                        self.send_header(
+                            "Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS"
+                        )
                         self.end_headers()
 
                     def do_OPTIONS(self) -> None:
@@ -231,7 +233,8 @@ def main() -> None:
                             }
                             or re.fullmatch(r"/v1/profiles/[a-z0-9][a-z0-9-]*/calibration", path)
                             or re.fullmatch(
-                                rf"/v1/projects/prj_{identity}(?:/(?:portable|renders))?", path
+                                rf"/v1/projects/prj_{identity}(?:/(?:portable|renders|privacy-review))?",
+                                path,
                             )
                             or re.fullmatch(
                                 rf"/v1/sessions/ses_{identity}(?:/(?:project-selection|review|overlaps|transcript))?",
@@ -242,13 +245,25 @@ def main() -> None:
                         )
                         write = (
                             self.command == "PUT"
-                            and re.fullmatch(rf"/v1/projects/prj_{identity}", path)
+                            and re.fullmatch(
+                                rf"/v1/projects/prj_{identity}(?:/privacy-review)?", path
+                            )
                         ) or (
                             self.command == "POST"
                             and (
                                 re.fullmatch(rf"/v1/sessions/ses_{identity}/projects", path)
                                 or re.fullmatch(rf"/v1/assets/ast_{identity}/derived", path)
-                                or re.fullmatch(rf"/v1/projects/prj_{identity}/render", path)
+                                or re.fullmatch(
+                                    rf"/v1/projects/prj_{identity}/(?:render|privacy-review|exports)",
+                                    path,
+                                )
+                            )
+                        )
+                        write = write or (
+                            self.command == "DELETE"
+                            and re.fullmatch(
+                                rf"/v1/projects/prj_{identity}/(?:privacy-review|privacy-text)",
+                                path,
                             )
                         )
                         if not (read or write) or self.headers.get("Origin") not in {
@@ -282,6 +297,9 @@ def main() -> None:
                             self.wfile.write(payload)
 
                     def do_POST(self) -> None:
+                        self.forward()
+
+                    def do_DELETE(self) -> None:
                         self.forward()
 
                     def do_PUT(self) -> None:

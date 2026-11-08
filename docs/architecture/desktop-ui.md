@@ -198,3 +198,12 @@ in [Profile calibration](./profile-calibration.md#patch-format-and-api).
 ## M23 caption and audio panels
 
 `CaptionPanel` and `AudioPanel` extend the project editor. Every change uses M21 commands/undo/autosave. Native `caption_export` opens an explicit exclusive-create SRT/VTT save dialog; it accepts no destination path from the webview. See [captions and audio](./captions-and-audio.md) for fields, shortcuts, preview limits, sidecars and validation.
+
+## M28 privacy review
+
+See [privacy and spoiler review](./privacy-review.md) for the mandatory current-review
+gate on project exports and new renders, contracts 1.22, output-space moving blur
+keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
+sidecars now flush the project and use the gated `project_export` host command;
+`caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
+Migration 0018 stores review configuration/decisions without copied evidence text.

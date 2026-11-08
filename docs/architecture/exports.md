@@ -201,3 +201,12 @@ OWM_UPDATE_GOLDENS=1 uv run --directory services/media-worker pytest tests/expor
 
 Importing third-party editor projects, and lossless transfer of effects the target
 format cannot represent.
+
+## M28 privacy review
+
+See [privacy and spoiler review](./privacy-review.md) for the mandatory current-review
+gate on project exports and new renders, contracts 1.22, output-space moving blur
+keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
+sidecars now flush the project and use the gated `project_export` host command;
+`caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
+Migration 0018 stores review configuration/decisions without copied evidence text.

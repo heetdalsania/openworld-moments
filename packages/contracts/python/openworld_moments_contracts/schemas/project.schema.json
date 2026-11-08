@@ -172,7 +172,7 @@
     },
     "BlurOverlay": {
       "title": "BlurOverlay",
-      "description": "Privacy blur over a region for a time range.",
+      "description": "Output-frame normalized privacy blur. Optional fixed-size linear translation keyframes relative to start_ms, starting at zero. region equals the first key.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "start_ms", "end_ms", "region"],
@@ -188,6 +188,13 @@
         },
         "region": {
           "$ref": "common.schema.json#/$defs/Region"
+        },
+        "keyframes": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/CropKeyframe"
+          }
         }
       }
     },

@@ -43,6 +43,8 @@ from openworld_moments.fingerprints.service import candidate_doc, fingerprints_d
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.privacy.service import PrivacyConfig, PrivacyError, PrivacyReviewService
+from openworld_moments.privacy.service import ReviewChange as PrivacyReviewChange
 from openworld_moments.projects.service import (
     ImportProject,
     ManualProject,
@@ -665,6 +667,35 @@ def create_app(
                 "render.not_found", "That render does not exist.", status=404
             ) from exc
 
+    # -- local privacy/spoiler review (M28) --------------------------------------------
+    privacy = PrivacyReviewService(engine.database)
+
+    @app.exception_handler(PrivacyError)
+    async def privacy_error(request: Request, exc: PrivacyError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=exc.status
+        )
+
+    @app.get("/v1/projects/{project_id}/privacy-review")
+    async def privacy_review(project_id: str) -> dict[str, Any]:
+        return await asyncio.to_thread(privacy.get, project_id)
+
+    @app.put("/v1/projects/{project_id}/privacy-review")
+    async def privacy_configure(project_id: str, body: PrivacyConfig) -> dict[str, Any]:
+        return await asyncio.to_thread(privacy.configure, project_id, body)
+
+    @app.post("/v1/projects/{project_id}/privacy-review")
+    async def privacy_decide(project_id: str, body: PrivacyReviewChange) -> dict[str, Any]:
+        return await asyncio.to_thread(privacy.decide, project_id, body)
+
+    @app.delete("/v1/projects/{project_id}/privacy-review")
+    async def privacy_clear(project_id: str) -> dict[str, bool]:
+        return await asyncio.to_thread(privacy.clear, project_id)
+
+    @app.delete("/v1/projects/{project_id}/privacy-text")
+    async def privacy_delete_text(project_id: str) -> dict[str, bool]:
+        return await asyncio.to_thread(privacy.delete_text, project_id)
+
     # -- open exports (M27) --------------------------------------------------------------
 
     exporter = Exporter(engine.database)
@@ -875,7 +906,8 @@ def create_app(
     @app.get("/v1/projects/{project_id}/portable")
     async def export_project(project_id: str) -> dict[str, Any]:
         try:
-            return await asyncio.to_thread(projects.export, project_id)
+            result = await asyncio.to_thread(exporter.project, project_id, "project")
+            return dict(json.loads(result["content"])["document"])
         except NotFoundError as exc:
             raise project_missing() from exc
 

@@ -70,6 +70,9 @@
     "includes_paths": {
       "type": "boolean",
       "description": "True only when the user explicitly asked for absolute source locations."
+    },
+    "privacy_review": {
+      "$ref": "privacy-review.schema.json#/$defs/PrivacySummary"
     }
   },
   "$defs": {

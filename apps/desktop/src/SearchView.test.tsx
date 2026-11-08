@@ -181,6 +181,9 @@ describe("search view", () => {
     const box = screen.getByRole("searchbox");
     expect(document.activeElement).toBe(box);
     await user.type(box, "wanted");
+    // This fixture also returns rows for the initial empty query. Wait for the
+    // debounced requested query so a later response cannot replace focused rows.
+    await waitFor(() => expect(host.posts("/v1/search").at(-1)).toMatchObject({ query: "wanted" }));
     const links = within(await screen.findByRole("list", { name: "Results" })).getAllByRole("link");
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(links[0]);

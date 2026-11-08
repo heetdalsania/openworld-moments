@@ -321,6 +321,10 @@ def test_http_manual_save_portable_and_error_contracts(library: Any) -> None:
         state = response.json()
         pid = state["document"]["project"]["id"]
         assert client.get(f"/v1/projects/{pid}").status_code == 200
+        assert client.get(f"/v1/projects/{pid}/portable").status_code == 409
+        from tests.privacy.helpers import acknowledge
+
+        acknowledge(db, pid)
         portable = client.get(f"/v1/projects/{pid}/portable").json()
         assert client.post("/v1/projects/import", json={"document": portable}).status_code == 201
         state["document"]["project"]["title"] = "Saved"

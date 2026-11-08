@@ -117,6 +117,21 @@ def _project(doc: Document) -> Iterable[str]:
             f"overlays[{i}].end_ms", overlay["start_ms"], overlay["end_ms"], strict=True
         )
         yield from _region(f"overlays[{i}].region", overlay["region"])
+        if overlay["kind"] == "blur" and "keyframes" in overlay:
+            keys = overlay["keyframes"]
+            if not keys or keys[0]["at_ms"] != 0:
+                yield "blur: keyframes must start at zero"
+            previous = -1
+            for k in keys:
+                yield from _region("blur.keyframe.region", k["region"])
+                if not previous < k["at_ms"] < overlay["end_ms"] - overlay["start_ms"]:
+                    yield "blur: keyframes must increase inside range"
+                if k["region"][2:] != overlay["region"][2:]:
+                    yield "blur: keyframes require fixed dimensions"
+                previous = k["at_ms"]
+            if keys and keys[0]["region"] != overlay["region"]:
+                yield "blur: region must equal first keyframe"
+
     for i, mute in enumerate(doc["audio"]["mute_ranges"]):
         yield from _range(
             f"audio.mute_ranges[{i}].end_ms", mute["start_ms"], mute["end_ms"], strict=True
@@ -662,7 +677,38 @@ def _event_export(doc: Document) -> Iterable[str]:
         )
 
 
+def _privacy_review(doc: Document) -> Iterable[str]:
+    ids = set()
+    for f in doc["flags"]:
+        yield from _range("privacy.flag.end_ms", f["start_ms"], f["end_ms"], strict=True)
+        if "region" in f:
+            yield from _region("privacy.flag.region", f["region"])
+        if f["id"] in ids:
+            yield "privacy: duplicate finding"
+        ids.add(f["id"])
+        has_source = sum(k in f for k in ("asset_id", "source_start_ms", "source_end_ms"))
+        if has_source not in (0, 3):
+            yield "privacy: source range requires all fields"
+        if "source_start_ms" in f and "source_end_ms" in f:
+            yield from _range(
+                "privacy.source_end_ms", f["source_start_ms"], f["source_end_ms"], strict=True
+            )
+    for r in doc["config"]["ranges"]:
+        yield from _range("privacy.spoiler.end_ms", r["start_ms"], r["end_ms"], strict=True)
+    if doc["summary"]["token"] != doc["token"]:
+        yield "privacy: summary token differs"
+    if doc["summary"]["unresolved"] != sum(f["decision"] == "unresolved" for f in doc["flags"]):
+        yield "privacy: unresolved count differs"
+    if doc["current"] != (doc["summary"]["acknowledged"] and doc["summary"]["unresolved"] == 0):
+        yield "privacy: gate state differs"
+    if doc["summary"]["findings"] != [
+        dict(id=f["id"], category=f["category"], state=f["decision"]) for f in doc["flags"]
+    ]:
+        yield "privacy: summary decisions differ"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "privacy-review": _privacy_review,
     "event-export": _event_export,
     "export-result": _export_result,
     "project-export": _project_export,

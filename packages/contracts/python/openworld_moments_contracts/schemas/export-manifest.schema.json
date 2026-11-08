@@ -201,6 +201,9 @@
           }
         }
       }
+    },
+    "privacy_review": {
+      "$ref": "privacy-review.schema.json#/$defs/PrivacySummary"
     }
   }
 }
