@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -191,8 +192,36 @@ def run_tool(
     return ToolResult(proc.returncode, b"".join(chunks), tail.text())
 
 
+def _kill_tree(pid: int) -> None:
+    """Kill the tool and anything it started.
+
+    Package-manager installs (Chocolatey, Scoop) run FFmpeg through a shim that starts
+    the real binary as a child; killing only the shim leaves that child encoding and
+    holding its output files open (seen on Windows CI after a cancelled render).
+    """
+    if sys.platform == "win32":
+        taskkill = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32" / "taskkill.exe"
+        with contextlib.suppress(OSError, subprocess.SubprocessError):
+            subprocess.run(  # noqa: S603 - fixed system binary, numeric PID argument
+                [str(taskkill), "/T", "/F", "/PID", str(pid)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=_KILL_WAIT_S,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                check=False,
+            )
+    else:
+        # start_new_session made the tool a process-group leader with the same ID.
+        with contextlib.suppress(OSError):
+            os.killpg(pid, signal.SIGKILL)
+
+
 def _kill(proc: subprocess.Popen[bytes]) -> None:
-    """Kill and reap. FFprobe has no cleanup to do, so there is no polite phase."""
+    """Kill the tool's process tree and reap it. There is no polite phase: callers
+    discard partial output, and FFmpeg/FFprobe have no cleanup worth waiting for."""
+    if proc.poll() is None:
+        _kill_tree(proc.pid)
     with contextlib.suppress(OSError):  # already exited
         proc.kill()
     with contextlib.suppress(subprocess.TimeoutExpired):  # pragma: no cover

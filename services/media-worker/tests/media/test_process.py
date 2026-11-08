@@ -143,3 +143,38 @@ def test_cancel_while_streaming() -> None:
     script = "import time\nwhile True:\n    print('tick', flush=True)\n    time.sleep(0.01)"
     with pytest.raises(ToolCancelled):
         run_tool([PY, "-c", script], timeout_s=30, cancel=cancel, on_stdout=stop)
+
+
+SHIM = """
+import subprocess, sys, time
+# Like a package-manager shim: start the real tool as a child and wait for it.
+child = subprocess.Popen([sys.executable, "-c", sys.argv[1], sys.argv[2]])
+child.wait()
+"""
+TOOL = """
+import sys, time
+with open(sys.argv[1], "a", encoding="ascii") as out:  # held open, like an encoder's output
+    while True:
+        out.write("x")
+        out.flush()
+        time.sleep(0.02)
+"""
+
+
+def test_cancel_kills_tools_started_through_a_shim(tmp_path: Path) -> None:
+    output = tmp_path / "render.mp4"
+    cancel = threading.Event()
+    threading.Timer(0.8, cancel.set).start()
+    with pytest.raises(ToolCancelled):
+        run_tool([sys.executable, "-c", SHIM, TOOL, str(output)], timeout_s=30, cancel=cancel)
+    # The grandchild is gone: the file stops growing and can be deleted (Windows refuses
+    # to delete a file another process still has open).
+    deadline = time.monotonic() + 5
+    while True:
+        size = output.stat().st_size
+        time.sleep(0.3)
+        if output.stat().st_size == size:
+            break
+        assert time.monotonic() < deadline, "the tool started by the shim kept running"
+    assert size > 0
+    output.unlink()

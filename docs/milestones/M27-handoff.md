@@ -109,7 +109,15 @@
   - **Rejected events** are excluded from markers but kept in JSONL.
   - **Saving through the host** (fixed extension, plain filename, exclusive create);
     the web view never supplies a path or the content.
-- Known limitations:
+- Prerequisite defect repaired (outside M27's scope, called out per AGENTS.md):
+  - **Problem:** cancelling a media tool killed only the process we started. Windows
+    CI's FFmpeg is a Chocolatey shim that starts the real `ffmpeg.exe` as a child, so
+    a cancelled render kept encoding and held its staging files open. M24's
+    cancellation test failed intermittently, and the 5 s cleanup retry only hid it.
+  - **Fix:** `media/process.py` now kills the whole tree: the process group on POSIX,
+    and `taskkill /T /F` from System32 on Windows.
+  - **Test:** a regression test starts a tool through a shim and fails without the
+    fix.
   - **FCPXML:** experimental; millisecond times may not be frame-aligned; no Apple DTD
     validation offline; not tested in Final Cut Pro.
   - **OTIO:** not yet opened in a third-party editor (DaVinci Resolve, Premiere,
