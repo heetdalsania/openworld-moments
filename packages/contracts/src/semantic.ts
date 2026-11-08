@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  Collection,
+  SearchIndexStatus,
+  SearchResult,
+  SearchResults,
   StoryCandidate,
   StoryCandidates,
   EvaluationManifest,
@@ -628,8 +632,118 @@ function* renderEncoders(doc: RenderEncoders): Generator<string> {
   }
 }
 
+const ID_FIELD = {
+  clip: "asset_id",
+  session: "session_id",
+  event: "event_id",
+  transcript: "transcript_id",
+  project: "project_id",
+} as const;
+
+function* searchResult(path: string, item: SearchResult): Generator<string> {
+  const [prefix, ident] = [
+    item.key.slice(0, item.key.indexOf(":")),
+    item.key.slice(item.key.indexOf(":") + 1),
+  ];
+  if (prefix !== item.kind) yield `${path}.key: must start with the result kind`;
+  const field = ID_FIELD[item.kind];
+  if (String(item[field] ?? "") !== ident) yield `${path}.${field}: must match the key`;
+  if (item.range) {
+    yield* range(`${path}.range.end_ms`, item.range.start_ms, item.range.end_ms);
+    if ((item.range.timebase === "clip") !== (item.kind === "clip")) {
+      yield `${path}.range.timebase: clip results use clip time; others session time`;
+    }
+  }
+  if (item.source_range) {
+    yield* range(
+      `${path}.source_range.end_ms`,
+      item.source_range.start_ms,
+      item.source_range.end_ms,
+    );
+    if (item.source_range.asset_id !== item.asset_id) {
+      yield `${path}.source_range.asset_id: must match the result clip`;
+    }
+  }
+}
+
+function* page(
+  doc: { offset: number; total: number; items: SearchResult[] },
+  limit: number,
+): Generator<string> {
+  if (doc.items.length > limit) yield "items: more items than the page limit";
+  if (doc.items.length > 0 && doc.offset + doc.items.length > doc.total) {
+    yield "total: smaller than offset plus items on this page";
+  }
+  const keys = doc.items.map((i) => i.key);
+  if (new Set(keys).size !== keys.length) yield "items: each result appears once";
+  for (const [i, item] of doc.items.entries()) yield* searchResult(`items[${i}]`, item);
+}
+
+function* searchResults(doc: SearchResults): Generator<string> {
+  yield* page(doc, doc.limit);
+  for (const [i, item] of doc.items.entries()) {
+    if (item.reasons !== undefined || item.item_id !== undefined) {
+      yield `items[${i}]: only collection items carry reasons or item IDs`;
+    }
+  }
+  for (const [name, facets] of Object.entries(doc.facets)) {
+    const values = (facets as { value: string }[]).map((f) => f.value);
+    if (new Set(values).size !== values.length) yield `facets.${name}: each value appears once`;
+    for (const [j, facet] of (facets as { count: number }[]).entries()) {
+      if (facet.count > doc.total) yield `facets.${name}[${j}].count: cannot exceed total`;
+    }
+  }
+}
+
+function* searchIndex(doc: SearchIndexStatus): Generator<string> {
+  const reasons: string[] = doc.reasons;
+  if ((doc.status === "current") !== (reasons.length === 0)) {
+    yield "reasons: a current index has no reasons; any other status has one";
+  }
+  if ((doc.status === "corrupt") !== reasons.includes("full_text_corrupt")) {
+    yield "status: corrupt exactly when the full-text index failed its check";
+  }
+  if (reasons.includes("full_text_corrupt") && !doc.checked) {
+    yield "checked: corruption is only reported by a full check";
+  }
+  if ((doc.index_version !== doc.expected_version) !== reasons.includes("version_changed")) {
+    yield "reasons: version_changed exactly when the index version differs";
+  }
+}
+
+function* collection(doc: Collection): Generator<string> {
+  yield* page(doc, 100);
+  if (doc.kind === "manual" && doc.rule !== undefined) {
+    yield "rule: only rule-based collections have a rule";
+  }
+  if (doc.kind === "rule" && doc.item_count !== undefined) {
+    yield "item_count: rule-based collections have no stored items";
+  }
+  for (const [i, item] of doc.items.entries()) {
+    if (doc.kind === "rule") {
+      if (item.reasons === undefined) {
+        yield `items[${i}].reasons: rule-based items explain why they matched`;
+      }
+      if (item.item_id !== undefined) {
+        yield `items[${i}].item_id: rule-based collections have no stored items`;
+      }
+    } else {
+      if (item.reasons !== undefined) yield `items[${i}].reasons: manual items were added by hand`;
+      if (item.item_id === undefined || item.added_at === undefined) {
+        yield `items[${i}]: manual items carry item_id and added_at`;
+      }
+    }
+  }
+  if (doc.kind === "manual" && doc.item_count !== doc.total) {
+    yield "total: must equal item_count for a manual collection";
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  collection,
+  search: searchResults,
+  "search-index": searchIndex,
   "story-candidate": storyCandidate,
   "story-candidates": storyCandidates,
   evaluation,

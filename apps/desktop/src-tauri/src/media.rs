@@ -92,6 +92,22 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "projects", id, "render"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "projects", id, "renders"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "renders", id]) => is_id(id, "job_") && query.is_none(),
+        // M26: local search, derived index maintenance and collections. No paths or SQL.
+        ("POST", ["", "v1", "search"]) => query.is_none(),
+        ("GET", ["", "v1", "search", "index"]) => query.is_none() || query == Some("check=true"),
+        ("DELETE", ["", "v1", "search", "index"]) => query.is_none(),
+        ("POST", ["", "v1", "search", "index", "rebuild"]) => query.is_none(),
+        ("GET" | "POST", ["", "v1", "collections"]) => query.is_none(),
+        ("GET", ["", "v1", "collections", id]) => is_id(id, "col_"),
+        ("PUT" | "DELETE", ["", "v1", "collections", id])
+        | ("POST", ["", "v1", "collections", id, "items"]) => is_id(id, "col_") && query.is_none(),
+        ("DELETE", ["", "v1", "collections", id, "items", item]) => {
+            is_id(id, "col_")
+                && (1..=12).contains(&item.len())
+                && item.bytes().all(|b| b.is_ascii_digit())
+                && !item.starts_with('0')
+                && query.is_none()
+        }
         // Sessions (M11-M13).
         ("GET", ["", "v1", "sessions"]) => true,
         ("POST", ["", "v1", "sessions", "recompute" | "align" | "merge"]) => query.is_none(),
@@ -312,6 +328,7 @@ mod tests {
     const ASSET: &str = "ast_01JCBQ00000000000000000001";
     const JOB: &str = "job_01JCBQ00000000000000000021";
     const SESSION: &str = "ses_01JCBQ00000000000000000002";
+    const COLLECTION: &str = "col_01JCBQ00000000000000000061";
 
     #[test]
     fn only_listed_routes_are_allowed() {
@@ -336,6 +353,22 @@ mod tests {
             ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/renders"),
             ("GET", &format!("/v1/renders/{JOB}")),
+            ("POST", "/v1/search"),
+            ("GET", "/v1/search/index"),
+            ("GET", "/v1/search/index?check=true"),
+            ("DELETE", "/v1/search/index"),
+            ("POST", "/v1/search/index/rebuild"),
+            ("GET", "/v1/collections"),
+            ("POST", "/v1/collections"),
+            ("GET", &format!("/v1/collections/{COLLECTION}")),
+            (
+                "GET",
+                &format!("/v1/collections/{COLLECTION}?offset=50&limit=50"),
+            ),
+            ("PUT", &format!("/v1/collections/{COLLECTION}")),
+            ("DELETE", &format!("/v1/collections/{COLLECTION}")),
+            ("POST", &format!("/v1/collections/{COLLECTION}/items")),
+            ("DELETE", &format!("/v1/collections/{COLLECTION}/items/42")),
             ("PUT", "/v1/projects/prj_01JCBQ00000000000000000003"),
             (
                 "GET",
@@ -437,6 +470,25 @@ mod tests {
             ("GET", "/v1/render/encoders?refresh=1"),
             ("GET", "/v1/renders/prj_01JCBQ00000000000000000003"),
             ("DELETE", &format!("/v1/renders/{JOB}")),
+            ("GET", "/v1/renders"),
+            ("GET", "/v1/search"),
+            ("POST", "/v1/search?query=x"),
+            ("GET", "/v1/search/index?check=1"),
+            ("PUT", "/v1/search/index"),
+            ("GET", "/v1/search/index/rebuild"),
+            ("POST", "/v1/search/index/rebuild?force=true"),
+            ("DELETE", "/v1/collections"),
+            ("GET", "/v1/collections/col_bad"),
+            ("GET", &format!("/v1/collections/{SESSION}")),
+            ("PUT", &format!("/v1/collections/{COLLECTION}?name=x")),
+            ("GET", &format!("/v1/collections/{COLLECTION}/items")),
+            ("DELETE", &format!("/v1/collections/{COLLECTION}/items/0")),
+            ("DELETE", &format!("/v1/collections/{COLLECTION}/items/012")),
+            ("DELETE", &format!("/v1/collections/{COLLECTION}/items/x1")),
+            (
+                "DELETE",
+                &format!("/v1/collections/{COLLECTION}/items/1234567890123"),
+            ),
             ("GET", "/v1/renders"),
             ("GET", "/v1/sessions/ses_bad"),
             (

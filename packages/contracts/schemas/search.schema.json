@@ -1,0 +1,420 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/search.schema.json",
+  "title": "SearchResults",
+  "description": "A page of local full-text search results with facets (M26). Nothing leaves the computer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "query",
+    "filters",
+    "offset",
+    "limit",
+    "total",
+    "items",
+    "facets",
+    "index_status",
+    "took_ms"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "query": {
+      "title": "ParsedSearchQuery",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "terms", "ignored"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "terms": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "string",
+            "maxLength": 260
+          }
+        },
+        "ignored": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        }
+      }
+    },
+    "filters": {
+      "$ref": "#/$defs/SearchFilters"
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/SearchResult"
+      }
+    },
+    "facets": {
+      "title": "SearchFacets",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "event_type", "review_state", "source_kind"],
+      "properties": {
+        "kind": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/Facet"
+          }
+        },
+        "event_type": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/Facet"
+          }
+        },
+        "review_state": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/Facet"
+          }
+        },
+        "source_kind": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/Facet"
+          }
+        }
+      }
+    },
+    "index_status": {
+      "enum": ["current", "stale", "rebuilding", "cleared"]
+    },
+    "took_ms": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "$defs": {
+    "SearchKind": {
+      "title": "SearchKind",
+      "enum": ["clip", "session", "event", "transcript", "project"]
+    },
+    "ReviewState": {
+      "title": "SearchReviewState",
+      "enum": ["unreviewed", "confirmed", "corrected", "rejected"]
+    },
+    "SourceKind": {
+      "title": "SearchSourceKind",
+      "enum": ["xbox", "playstation", "obs", "capture_card", "phone_upload", "other"]
+    },
+    "SearchFilters": {
+      "title": "SearchFilters",
+      "description": "Structured filters. Lists match any of their values; different fields must all match. Confidence, date and duration filters only match documents that have that value.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/SearchKind"
+          }
+        },
+        "session_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 50,
+          "items": {
+            "$ref": "common.schema.json#/$defs/SessionId"
+          }
+        },
+        "source_kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 6,
+          "items": {
+            "$ref": "#/$defs/SourceKind"
+          }
+        },
+        "event_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 50,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+            "maxLength": 128
+          }
+        },
+        "review_states": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/ReviewState"
+          }
+        },
+        "min_confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "occurred_from": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "occurred_to": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "min_duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800000
+        },
+        "max_duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800000
+        }
+      }
+    },
+    "SearchRequest": {
+      "title": "SearchRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "filters": {
+          "$ref": "#/$defs/SearchFilters"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      }
+    },
+    "TextSegment": {
+      "title": "TextSegment",
+      "description": "A run of result text; match marks words that matched. Rendered as text, never HTML.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "match"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "match": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Facet": {
+      "title": "SearchFacet",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "count"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "MatchReason": {
+      "title": "MatchReason",
+      "description": "Why an item matched one criterion of a collection rule.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion", "detail"],
+      "properties": {
+        "criterion": {
+          "enum": [
+            "text",
+            "kind",
+            "session",
+            "source",
+            "event_type",
+            "review_state",
+            "confidence",
+            "date",
+            "duration"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        }
+      }
+    },
+    "SearchResult": {
+      "title": "SearchResult",
+      "description": "One matching item with the exact supporting time range. Event and transcript ranges are in unique session time; clip ranges are in clip time.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "kind", "title", "snippet", "matched_in"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^(clip|session|event|transcript|project):[A-Za-z0-9_]+$",
+          "maxLength": 64
+        },
+        "kind": {
+          "$ref": "#/$defs/SearchKind"
+        },
+        "title": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/TextSegment"
+          }
+        },
+        "snippet": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/TextSegment"
+          }
+        },
+        "matched_in": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 2,
+          "items": {
+            "enum": [
+              "file name",
+              "title",
+              "label",
+              "speaker",
+              "text",
+              "on-screen text",
+              "spoken text"
+            ]
+          }
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/$defs/SessionId"
+        },
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "event_id": {
+          "$ref": "common.schema.json#/$defs/EventId"
+        },
+        "transcript_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "project_id": {
+          "$ref": "common.schema.json#/$defs/ProjectId"
+        },
+        "range": {
+          "title": "ResultRange",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timebase", "start_ms", "end_ms"],
+          "properties": {
+            "timebase": {
+              "enum": ["session", "clip"]
+            },
+            "start_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            },
+            "end_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            }
+          }
+        },
+        "source_range": {
+          "title": "SourceRange",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["asset_id", "start_ms", "end_ms"],
+          "properties": {
+            "asset_id": {
+              "$ref": "common.schema.json#/$defs/AssetId"
+            },
+            "start_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            },
+            "end_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            }
+          }
+        },
+        "occurred_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "duration_ms": {
+          "$ref": "common.schema.json#/$defs/DurationMs"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "event_type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+          "maxLength": 128
+        },
+        "confidence": {
+          "$ref": "common.schema.json#/$defs/Confidence"
+        },
+        "review_state": {
+          "$ref": "#/$defs/ReviewState"
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/MatchReason"
+          }
+        },
+        "item_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "added_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
+      }
+    }
+  }
+}

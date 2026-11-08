@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/collection.schema.json",
+  "title": "Collection",
+  "description": "A manual or rule-based collection with one page of items (M26). Rule-based items explain why they matched.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "kind",
+    "created_at",
+    "updated_at",
+    "offset",
+    "total",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/CollectionId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "kind": {
+      "enum": ["manual", "rule"]
+    },
+    "rule": {
+      "$ref": "#/$defs/CollectionRule"
+    },
+    "item_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "search.schema.json#/$defs/SearchResult"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "rule"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["rule"],
+        "properties": {
+          "rule": true
+        }
+      },
+      "else": {
+        "required": ["item_count"],
+        "properties": {
+          "item_count": true
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "CollectionRule": {
+      "title": "CollectionRule",
+      "description": "A saved search (rule grammar version 1): the search query language plus SearchFilters, evaluated live against the index.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "query", "filters"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "filters": {
+          "$ref": "search.schema.json#/$defs/SearchFilters"
+        }
+      }
+    },
+    "CollectionSummary": {
+      "title": "CollectionSummary",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "created_at", "updated_at"],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/CollectionId"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "kind": {
+          "enum": ["manual", "rule"]
+        },
+        "rule": {
+          "$ref": "#/$defs/CollectionRule"
+        },
+        "item_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "created_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        },
+        "updated_at": {
+          "$ref": "common.schema.json#/$defs/UtcTimestamp"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "rule"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["rule"],
+            "properties": {
+              "rule": true
+            }
+          },
+          "else": {
+            "required": ["item_count"],
+            "properties": {
+              "item_count": true
+            }
+          }
+        }
+      ]
+    },
+    "CollectionCreate": {
+      "title": "CollectionCreate",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "rule": {
+          "$ref": "#/$defs/CollectionRule"
+        }
+      }
+    },
+    "CollectionUpdate": {
+      "title": "CollectionUpdate",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "rule": {
+          "$ref": "#/$defs/CollectionRule"
+        }
+      }
+    },
+    "CollectionItemRef": {
+      "title": "CollectionItemRef",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "$ref": "search.schema.json#/$defs/SearchKind"
+        },
+        "id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^(ast|ses|evt|prj)_[0-9A-HJKMNP-TV-Z]{26}$"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+}

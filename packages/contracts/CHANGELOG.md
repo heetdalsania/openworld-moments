@@ -2,6 +2,27 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.20 — M26 search and collections
+
+Additive; existing 1.19 documents remain valid.
+
+- New `search` contract (`SearchResults`): parsed query (terms and ignored items),
+  filters, page, results and facets, index status and timing. `SearchResult` carries
+  a `<kind>:<id>` key, `{text, match}` title/snippet segments (never markup), the
+  matched fields, IDs, the exact `range` (session or clip time), an optional source
+  range and document metadata. `$defs` add `SearchRequest`, `SearchFilters`,
+  `TextSegment`, `SearchFacet` and `MatchReason`.
+- New `search-index` contract (`SearchIndexStatus`): index version, status
+  (current, stale, rebuilding, cleared, corrupt), reasons, per-kind counts and
+  whether a full check ran.
+- New `collection` contract (`Collection`): manual or rule-based, with one page of
+  results; rule items carry reasons, manual items carry item IDs. `$defs` add
+  `CollectionRule` (grammar version 1), `CollectionSummary`, `CollectionCreate`,
+  `CollectionUpdate` and `CollectionItemRef`. Common adds `CollectionId` (`col_`).
+- Shared cross-field rules: keys match kind and ID, ordered ranges, clip time only
+  for clips, page and facet bounds, reasons only on rule items, status/reason
+  consistency. Migration 0016 adds the search index and reshapes collections.
+
 ## 1.19 — M25 vertical layouts
 
 - Optional `Segment.vertical_crop` layout version 1: independent fit/fixed/keyed

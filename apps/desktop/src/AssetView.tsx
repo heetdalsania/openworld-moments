@@ -118,7 +118,7 @@ function Details({ asset }: { asset: MediaAsset }) {
 }
 
 /** One asset: playback (proxy or original), derived-media status, details. */
-export function AssetView({ id }: { id: string }) {
+export function AssetView({ id, at }: { id: string; at?: number }) {
   const asset = useQuery(`assets:${id}`, () => getAsset(id));
   const derived = useQuery(`derived:${id}`, () => getDerived(id));
   const { jobs, loaded: jobsLoaded } = useJobs();
@@ -205,6 +205,10 @@ export function AssetView({ id }: { id: string }) {
             src={mediaUrl(id, active)}
             aria-label={`${data.original_name}, ${active === "proxy" ? "playback copy" : "original file"}`}
             onError={() => setPlayErrorFor(active)}
+            onLoadedMetadata={(e) => {
+              // Opened from a search result: start at the matching moment.
+              if (at !== undefined) e.currentTarget.currentTime = at / 1000;
+            }}
           />
         ) : (
           <div className="player-empty" role="status">

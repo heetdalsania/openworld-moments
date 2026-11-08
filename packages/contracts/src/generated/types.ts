@@ -28,6 +28,78 @@ export type ScalarValue = string | number | boolean | null;
  */
 export type CorrelationId = string;
 /**
+ * A manual or rule-based collection with one page of items (M26). Rule-based items explain why they matched.
+ */
+export type Collection = {
+  schema_version: string;
+  id: CollectionId;
+  name: string;
+  kind: "manual" | "rule";
+  rule?: CollectionRule;
+  item_count?: number;
+  created_at: UtcTimestamp;
+  updated_at: UtcTimestamp;
+  offset: number;
+  total: number;
+  /**
+   * @maxItems 100
+   */
+  items: SearchResult[];
+};
+/**
+ * Collection ID ('col_' + ULID).
+ */
+export type CollectionId = string;
+/**
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "SearchKind".
+ */
+export type SearchKind = "clip" | "session" | "event" | "transcript" | "project";
+/**
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "SourceKind".
+ */
+export type SearchSourceKind =
+  "xbox" | "playstation" | "obs" | "capture_card" | "phone_upload" | "other";
+/**
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "ReviewState".
+ */
+export type SearchReviewState = "unreviewed" | "confirmed" | "corrected" | "rejected";
+/**
+ * Probability-like score in [0, 1].
+ */
+export type Confidence = number;
+/**
+ * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
+ */
+export type UtcTimestamp = string;
+/**
+ * Opaque project ID: 'prj_' + ULID.
+ */
+export type ProjectId = string;
+/**
+ * Position on a media or session timeline in integer milliseconds from its start.
+ */
+export type TimelineMs = number;
+/**
+ * Non-negative duration in integer milliseconds.
+ */
+export type DurationMs = number;
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "CollectionSummary".
+ */
+export type CollectionSummary = {
+  id: CollectionId;
+  name: string;
+  kind: "manual" | "rule";
+  rule?: CollectionRule;
+  item_count?: number;
+  created_at: UtcTimestamp;
+  updated_at: UtcTimestamp;
+};
+/**
  * 'auto': a proxy only when the policy finds a reason. 'always': a proxy for every asset.
  *
  * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
@@ -48,22 +120,10 @@ export type Sha256 = string;
  */
 export type Sha2561 = string;
 /**
- * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
- */
-export type UtcTimestamp = string;
-/**
- * Position on a media or session timeline in integer milliseconds from its start.
- */
-export type TimelineMs = number;
-/**
  * This interface was referenced by `AssetDerivedMedia`'s JSON-Schema
  * via the `definition` "DerivedOutcome".
  */
 export type DerivedOutcome = "generated" | "cached" | "not_needed" | "not_applicable";
-/**
- * Opaque project ID: 'prj_' + ULID.
- */
-export type ProjectId = string;
 /**
  * Opaque timeline segment ID: 'seg_' + ULID.
  */
@@ -79,10 +139,6 @@ export type Region = [x: number, y: number, width: number, height: number];
  * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
  */
 export type SemVer = string;
-/**
- * Probability-like score in [0, 1].
- */
-export type Confidence = number;
 /**
  * One piece of support for an event. Discriminated by 'kind'. Embedded in events.
  */
@@ -114,10 +170,6 @@ export type ImportMode = "reference" | "managed";
  * Opaque job ID: 'job_' + ULID.
  */
 export type JobId = string;
-/**
- * Non-negative duration in integer milliseconds.
- */
-export type DurationMs = number;
 /**
  * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
  */
@@ -242,6 +294,7 @@ export type UtcTimestamp4 = string;
 
 export interface ContractsBundle {
   analysis?: AnalysisResult;
+  collection?: Collection;
   "derived-media"?: AssetDerivedMedia;
   "editor-project"?: EditorProject;
   error?: ErrorInfo;
@@ -264,6 +317,8 @@ export interface ContractsBundle {
   "render-encoders"?: RenderEncoders;
   "render-preset"?: RenderPreset;
   render?: RenderRecord;
+  "search-index"?: SearchIndexStatus;
+  search?: SearchResults;
   session?: Session;
   "speech-models"?: SpeechModels;
   "story-candidate"?: StoryCandidate;
@@ -325,6 +380,253 @@ export interface AnalysisRequest {
    */
   locale?: string;
   force?: boolean;
+}
+/**
+ * A saved search (rule grammar version 1): the search query language plus SearchFilters, evaluated live against the index.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "CollectionRule".
+ */
+export interface CollectionRule {
+  version: 1;
+  query: string;
+  filters: SearchFilters;
+}
+/**
+ * Structured filters. Lists match any of their values; different fields must all match. Confidence, date and duration filters only match documents that have that value.
+ *
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "SearchFilters".
+ */
+export interface SearchFilters {
+  /**
+   * @maxItems 5
+   */
+  kinds?:
+    | []
+    | [SearchKind]
+    | [SearchKind, SearchKind]
+    | [SearchKind, SearchKind, SearchKind]
+    | [SearchKind, SearchKind, SearchKind, SearchKind]
+    | [SearchKind, SearchKind, SearchKind, SearchKind, SearchKind];
+  /**
+   * @maxItems 50
+   */
+  session_ids?: SessionId[];
+  /**
+   * @maxItems 6
+   */
+  source_kinds?:
+    | []
+    | [SearchSourceKind]
+    | [SearchSourceKind, SearchSourceKind]
+    | [SearchSourceKind, SearchSourceKind, SearchSourceKind]
+    | [SearchSourceKind, SearchSourceKind, SearchSourceKind, SearchSourceKind]
+    | [SearchSourceKind, SearchSourceKind, SearchSourceKind, SearchSourceKind, SearchSourceKind]
+    | [
+        SearchSourceKind,
+        SearchSourceKind,
+        SearchSourceKind,
+        SearchSourceKind,
+        SearchSourceKind,
+        SearchSourceKind
+      ];
+  /**
+   * @maxItems 50
+   */
+  event_types?: string[];
+  /**
+   * @maxItems 4
+   */
+  review_states?:
+    | []
+    | [SearchReviewState]
+    | [SearchReviewState, SearchReviewState]
+    | [SearchReviewState, SearchReviewState, SearchReviewState]
+    | [SearchReviewState, SearchReviewState, SearchReviewState, SearchReviewState];
+  min_confidence?: Confidence;
+  occurred_from?: UtcTimestamp;
+  occurred_to?: UtcTimestamp;
+  min_duration_ms?: number;
+  max_duration_ms?: number;
+}
+/**
+ * One matching item with the exact supporting time range. Event and transcript ranges are in unique session time; clip ranges are in clip time.
+ *
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "SearchResult".
+ */
+export interface SearchResult {
+  key: string;
+  kind: SearchKind;
+  /**
+   * @maxItems 200
+   */
+  title: TextSegment[];
+  /**
+   * @maxItems 200
+   */
+  snippet: TextSegment[];
+  /**
+   * @maxItems 2
+   */
+  matched_in:
+    | []
+    | ["file name" | "title" | "label" | "speaker" | "text" | "on-screen text" | "spoken text"]
+    | [
+        "file name" | "title" | "label" | "speaker" | "text" | "on-screen text" | "spoken text",
+        "file name" | "title" | "label" | "speaker" | "text" | "on-screen text" | "spoken text"
+      ];
+  session_id?: SessionId;
+  asset_id?: AssetId;
+  event_id?: EventId;
+  transcript_id?: number;
+  project_id?: ProjectId;
+  range?: ResultRange;
+  source_range?: SourceRange;
+  occurred_at?: UtcTimestamp;
+  duration_ms?: DurationMs;
+  source_kind?: SearchSourceKind;
+  event_type?: string;
+  confidence?: Confidence;
+  review_state?: SearchReviewState;
+  /**
+   * @minItems 1
+   * @maxItems 12
+   */
+  reasons?:
+    | [MatchReason]
+    | [MatchReason, MatchReason]
+    | [MatchReason, MatchReason, MatchReason]
+    | [MatchReason, MatchReason, MatchReason, MatchReason]
+    | [MatchReason, MatchReason, MatchReason, MatchReason, MatchReason]
+    | [MatchReason, MatchReason, MatchReason, MatchReason, MatchReason, MatchReason]
+    | [MatchReason, MatchReason, MatchReason, MatchReason, MatchReason, MatchReason, MatchReason]
+    | [
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason
+      ]
+    | [
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason
+      ]
+    | [
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason
+      ]
+    | [
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason
+      ]
+    | [
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason,
+        MatchReason
+      ];
+  item_id?: number;
+  added_at?: UtcTimestamp;
+}
+/**
+ * A run of result text; match marks words that matched. Rendered as text, never HTML.
+ *
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "TextSegment".
+ */
+export interface TextSegment {
+  text: string;
+  match: boolean;
+}
+export interface ResultRange {
+  timebase: "session" | "clip";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+}
+export interface SourceRange {
+  asset_id: AssetId;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+}
+/**
+ * Why an item matched one criterion of a collection rule.
+ *
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "MatchReason".
+ */
+export interface MatchReason {
+  criterion:
+    | "text"
+    | "kind"
+    | "session"
+    | "source"
+    | "event_type"
+    | "review_state"
+    | "confidence"
+    | "date"
+    | "duration";
+  detail: string;
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "CollectionCreate".
+ */
+export interface CollectionCreate {
+  name: string;
+  rule?: CollectionRule;
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "CollectionUpdate".
+ */
+export interface CollectionUpdate {
+  name?: string;
+  rule?: CollectionRule;
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "CollectionItemRef".
+ */
+export interface CollectionItemRef {
+  kind: SearchKind;
+  id: string | number;
 }
 /**
  * Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under library/derived/<asset-id>/; 'path' is relative to the library folder. Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.
@@ -3138,6 +3440,1101 @@ export interface RenderRequest {
    * Refuse if the saved revision changed after review.
    */
   expected_revision?: number;
+}
+/**
+ * Health of the derived search index (M26). The index is rebuildable from canonical records at any time.
+ */
+export interface SearchIndexStatus {
+  schema_version: string;
+  index_version: number;
+  expected_version: number;
+  status: "current" | "stale" | "rebuilding" | "cleared" | "corrupt";
+  /**
+   * @maxItems 5
+   */
+  reasons:
+    | []
+    | [
+        | "version_changed"
+        | "rebuild_incomplete"
+        | "cleared"
+        | "documents_out_of_date"
+        | "full_text_corrupt"
+      ]
+    | [
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        )
+      ]
+    | [
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        )
+      ]
+    | [
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        )
+      ]
+    | [
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        ),
+        (
+          | "version_changed"
+          | "rebuild_incomplete"
+          | "cleared"
+          | "documents_out_of_date"
+          | "full_text_corrupt"
+        )
+      ];
+  documents: SearchDocumentCounts;
+  /**
+   * Whether every document and the full-text index were verified, not only counted.
+   */
+  checked: boolean;
+  built_at?: UtcTimestamp;
+}
+export interface SearchDocumentCounts {
+  clip: number;
+  session: number;
+  event: number;
+  transcript: number;
+  project: number;
+}
+/**
+ * A page of local full-text search results with facets (M26). Nothing leaves the computer.
+ */
+export interface SearchResults {
+  schema_version: string;
+  query: ParsedSearchQuery;
+  filters: SearchFilters;
+  offset: number;
+  limit: number;
+  total: number;
+  /**
+   * @maxItems 100
+   */
+  items: SearchResult[];
+  facets: SearchFacets;
+  index_status: "current" | "stale" | "rebuilding" | "cleared";
+  took_ms: number;
+}
+export interface ParsedSearchQuery {
+  text: string;
+  /**
+   * @maxItems 12
+   */
+  terms:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ];
+  /**
+   * @maxItems 128
+   */
+  ignored: string[];
+}
+export interface SearchFacets {
+  /**
+   * @maxItems 20
+   */
+  kind:
+    | []
+    | [SearchFacet]
+    | [SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ];
+  /**
+   * @maxItems 20
+   */
+  event_type:
+    | []
+    | [SearchFacet]
+    | [SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ];
+  /**
+   * @maxItems 20
+   */
+  review_state:
+    | []
+    | [SearchFacet]
+    | [SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ];
+  /**
+   * @maxItems 20
+   */
+  source_kind:
+    | []
+    | [SearchFacet]
+    | [SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet, SearchFacet]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ]
+    | [
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet,
+        SearchFacet
+      ];
+}
+/**
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "Facet".
+ */
+export interface SearchFacet {
+  value: string;
+  count: number;
+}
+/**
+ * This interface was referenced by `SearchResults`'s JSON-Schema
+ * via the `definition` "SearchRequest".
+ */
+export interface SearchRequest {
+  query?: string;
+  filters?: SearchFilters;
+  offset?: number;
+  limit?: number;
 }
 /**
  * A candidate play session (spec 8.2, M11): assets grouped by source, format, and capture-time gaps, in order, with the evidence for each join. 'review_state' says who owns it: 'unreviewed' sessions are rebuilt by the 'group' job; 'corrected' (changed by the user) and 'confirmed' sessions are never touched by automatic grouping.

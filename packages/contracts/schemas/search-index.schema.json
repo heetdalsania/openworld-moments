@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/search-index.schema.json",
+  "title": "SearchIndexStatus",
+  "description": "Health of the derived search index (M26). The index is rebuildable from canonical records at any time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "index_version",
+    "expected_version",
+    "status",
+    "reasons",
+    "documents",
+    "checked"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "index_version": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "expected_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": ["current", "stale", "rebuilding", "cleared", "corrupt"]
+    },
+    "reasons": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 5,
+      "items": {
+        "enum": [
+          "version_changed",
+          "rebuild_incomplete",
+          "cleared",
+          "documents_out_of_date",
+          "full_text_corrupt"
+        ]
+      }
+    },
+    "documents": {
+      "title": "SearchDocumentCounts",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clip", "session", "event", "transcript", "project"],
+      "properties": {
+        "clip": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "session": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "event": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "transcript": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "project": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "checked": {
+      "type": "boolean",
+      "description": "Whether every document and the full-text index were verified, not only counted."
+    },
+    "built_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    }
+  }
+}

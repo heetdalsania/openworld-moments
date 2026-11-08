@@ -47,3 +47,5 @@ Other architecture notes:
 - [Captions and audio](./captions-and-audio.md): source-mapped transcript copies, cue commands, safe-area warnings, sidecar serialization/native save and non-destructive gain/mute preview.
 
 M25 adds [vertical layouts](./vertical-layouts.md) with `vertical-1080x1920-30` and `vertical-source-fps` presets.
+
+- [Search and collections](./search.md): searchable-document views and triggers, query grammar, filters, ranking, collection rules with reasons, stale/corrupt detection and rebuild, privacy-safe clearing, 10,000-clip benchmark.

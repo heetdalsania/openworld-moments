@@ -7,7 +7,7 @@ import os
 import time
 
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-PREFIXES = frozenset({"ast", "ses", "evt", "job", "prj", "seg", "cor"})
+PREFIXES = frozenset({"ast", "ses", "evt", "job", "prj", "seg", "cor", "col"})
 
 
 def new_ulid(timestamp_ms: int | None = None) -> str:

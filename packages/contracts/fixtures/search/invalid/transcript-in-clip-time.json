@@ -1,0 +1,133 @@
+{
+  "description": "Only clip results use clip time",
+  "expect": "semantic",
+  "message_contains": "timebase",
+  "document": {
+    "schema_version": "1.20",
+    "query": {
+      "text": "wanted here",
+      "terms": ["wanted", "here"],
+      "ignored": []
+    },
+    "filters": {
+      "kinds": ["event", "transcript"]
+    },
+    "offset": 0,
+    "limit": 25,
+    "total": 2,
+    "items": [
+      {
+        "key": "event:evt_01JCBQ00000000000000000003",
+        "kind": "event",
+        "title": [
+          {
+            "text": "openworld.",
+            "match": false
+          },
+          {
+            "text": "wanted",
+            "match": true
+          },
+          {
+            "text": "_level_changed",
+            "match": false
+          }
+        ],
+        "snippet": [
+          {
+            "text": "WANTED",
+            "match": true
+          },
+          {
+            "text": " level rising",
+            "match": false
+          }
+        ],
+        "matched_in": ["label", "on-screen text"],
+        "session_id": "ses_01JCBQ00000000000000000002",
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "event_id": "evt_01JCBQ00000000000000000003",
+        "range": {
+          "timebase": "session",
+          "start_ms": 823400,
+          "end_ms": 824100
+        },
+        "occurred_at": "2026-11-20T10:14:22Z",
+        "duration_ms": 700,
+        "source_kind": "xbox",
+        "event_type": "openworld.wanted_level_changed",
+        "confidence": 0.97,
+        "review_state": "confirmed"
+      },
+      {
+        "key": "transcript:2",
+        "kind": "transcript",
+        "title": [],
+        "snippet": [
+          {
+            "text": "Over ",
+            "match": false
+          },
+          {
+            "text": "here",
+            "match": true
+          },
+          {
+            "text": "!",
+            "match": false
+          }
+        ],
+        "matched_in": ["spoken text"],
+        "session_id": "ses_01JCBQ00000000000000000002",
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "transcript_id": 2,
+        "range": {
+          "timebase": "clip",
+          "start_ms": 1000,
+          "end_ms": 1700
+        },
+        "source_range": {
+          "asset_id": "ast_01JCBQ00000000000000000001",
+          "start_ms": 1000,
+          "end_ms": 1700
+        },
+        "occurred_at": "2026-11-20T10:14:22Z",
+        "duration_ms": 700,
+        "source_kind": "xbox",
+        "confidence": 0.915
+      }
+    ],
+    "facets": {
+      "kind": [
+        {
+          "value": "event",
+          "count": 1
+        },
+        {
+          "value": "transcript",
+          "count": 1
+        }
+      ],
+      "event_type": [
+        {
+          "value": "openworld.wanted_level_changed",
+          "count": 1
+        }
+      ],
+      "review_state": [
+        {
+          "value": "confirmed",
+          "count": 1
+        }
+      ],
+      "source_kind": [
+        {
+          "value": "xbox",
+          "count": 2
+        }
+      ]
+    },
+    "index_status": "current",
+    "took_ms": 3.2
+  }
+}

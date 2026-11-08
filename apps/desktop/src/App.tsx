@@ -12,8 +12,9 @@ import { JobCenter } from "./JobCenter";
 import { isActive, useJobFeed, useJobs } from "./jobs";
 import { LibraryView } from "./LibraryView";
 import { PhoneImport } from "./PhoneImport";
-import { type Route, routeHref, useRoute } from "./route";
+import { navigate, type Route, routeHref, useRoute } from "./route";
 import { SessionsView } from "./SessionsView";
+import { SearchView } from "./SearchView";
 import { SessionView } from "./SessionView";
 import { WatchedFolders } from "./WatchedFolders";
 import type { WatchedFolderView } from "./watched";
@@ -148,6 +149,29 @@ export function App() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, []);
+  // "/" or Ctrl/Cmd+K opens Search from anywhere except while typing.
+  useEffect(() => {
+    const open = (event: globalThis.KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        Boolean(target?.isContentEditable);
+      const slash =
+        event.key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const command = event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey);
+      if (!slash && !command) return;
+      event.preventDefault();
+      if (window.location.hash === routeHref({ view: "search" })) {
+        document.getElementById("search-input")?.focus();
+      } else {
+        navigate({ view: "search" });
+      }
+    };
+    window.addEventListener("keydown", open);
+    return () => window.removeEventListener("keydown", open);
+  }, []);
   const worker = useWorkerStatus();
   const info = useHostInfo();
   const ready = worker?.status === "ready";
@@ -183,6 +207,9 @@ export function App() {
           </NavLink>
           <NavLink route={{ view: "projects" }} current={route}>
             Projects
+          </NavLink>
+          <NavLink route={{ view: "search" }} current={route}>
+            Search
           </NavLink>
           <NavLink route={{ view: "settings" }} current={route}>
             Settings
@@ -221,7 +248,13 @@ export function App() {
                 <p role="status">The library opens once the media worker is running.</p>
               </section>
             ))}
-          {route.view === "asset" && ready && <AssetView key={route.id} id={route.id} />}
+          {route.view === "asset" && ready && (
+            <AssetView
+              key={route.id}
+              id={route.id}
+              {...(route.at !== undefined ? { at: route.at } : {})}
+            />
+          )}
           {route.view === "sessions" &&
             (ready ? (
               <SessionsView />
@@ -231,11 +264,18 @@ export function App() {
                 <p role="status">Sessions open once the media worker is running.</p>
               </section>
             ))}
-          {route.view === "session" && ready && <SessionView key={route.id} id={route.id} />}
+          {route.view === "session" && ready && (
+            <SessionView
+              key={route.id}
+              id={route.id}
+              {...(route.at !== undefined ? { at: route.at } : {})}
+            />
+          )}
           {route.view === "projects" && <ProjectsView workerReady={ready} />}
           {route.view === "project" && (
             <EditorView key={route.id} id={route.id} workerReady={ready} />
           )}
+          {route.view === "search" && <SearchView workerReady={ready} />}
           {route.view === "calibration" && ready && <CalibrationView />}
           {route.view === "settings" && <SettingsView workerReady={ready} />}
           {route.view === "phone" &&

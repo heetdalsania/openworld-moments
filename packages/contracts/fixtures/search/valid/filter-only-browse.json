@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.20",
+  "query": {
+    "text": "!!! ***",
+    "terms": [],
+    "ignored": ["!!!", "***"]
+  },
+  "filters": {},
+  "offset": 0,
+  "limit": 25,
+  "total": 1,
+  "items": [
+    {
+      "key": "clip:ast_01JCBQ00000000000000000001",
+      "kind": "clip",
+      "title": [
+        {
+          "text": "Capture 2026-11-20 03-14-22.mp4",
+          "match": false
+        }
+      ],
+      "snippet": [],
+      "matched_in": [],
+      "session_id": "ses_01JCBQ00000000000000000002",
+      "asset_id": "ast_01JCBQ00000000000000000001",
+      "range": {
+        "timebase": "clip",
+        "start_ms": 0,
+        "end_ms": 30030
+      },
+      "source_range": {
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "start_ms": 0,
+        "end_ms": 30030
+      },
+      "occurred_at": "2026-11-20T10:14:22Z",
+      "duration_ms": 30030,
+      "source_kind": "xbox"
+    }
+  ],
+  "facets": {
+    "kind": [
+      {
+        "value": "clip",
+        "count": 1
+      }
+    ],
+    "event_type": [],
+    "review_state": [],
+    "source_kind": [
+      {
+        "value": "xbox",
+        "count": 1
+      }
+    ]
+  },
+  "index_status": "stale",
+  "took_ms": 3.2
+}

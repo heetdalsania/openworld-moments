@@ -52,6 +52,12 @@
       "type": "string",
       "pattern": "^cor_[0-9A-HJKMNP-TV-Z]{26}$"
     },
+    "CollectionId": {
+      "title": "CollectionId",
+      "description": "Collection ID ('col_' + ULID).",
+      "type": "string",
+      "pattern": "^col_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
     "Slug": {
       "title": "Slug",
       "description": "Lowercase identifier for profiles, presets, detectors, and regions.",
@@ -90,8 +96,14 @@
       "additionalProperties": false,
       "required": ["num", "den"],
       "properties": {
-        "num": { "type": "integer", "minimum": 1 },
-        "den": { "type": "integer", "minimum": 1 }
+        "num": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "den": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "Confidence": {
@@ -107,10 +119,26 @@
       "type": "array",
       "tsType": "[x: number, y: number, width: number, height: number]",
       "prefixItems": [
-        { "type": "number", "minimum": 0, "maximum": 1 },
-        { "type": "number", "minimum": 0, "maximum": 1 },
-        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
-        { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
       ],
       "items": false,
       "minItems": 4,
@@ -134,8 +162,12 @@
       "additionalProperties": false,
       "required": ["start_ms", "end_ms"],
       "properties": {
-        "start_ms": { "$ref": "#/$defs/TimelineMs" },
-        "end_ms": { "$ref": "#/$defs/TimelineMs" }
+        "start_ms": {
+          "$ref": "#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "#/$defs/TimelineMs"
+        }
       }
     }
   }

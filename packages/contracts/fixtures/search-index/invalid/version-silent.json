@@ -1,0 +1,21 @@
+{
+  "description": "A version change is reported",
+  "expect": "semantic",
+  "message_contains": "version_changed",
+  "document": {
+    "schema_version": "1.20",
+    "index_version": 0,
+    "expected_version": 1,
+    "status": "stale",
+    "reasons": ["documents_out_of_date"],
+    "documents": {
+      "clip": 2,
+      "session": 1,
+      "event": 2,
+      "transcript": 2,
+      "project": 1
+    },
+    "checked": true,
+    "built_at": "2026-11-21T12:00:00.000Z"
+  }
+}

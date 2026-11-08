@@ -31,6 +31,8 @@ from openworld_moments_contracts import SUPPORTED_VERSION, ContractVersionError,
         "1.16",
         "1.17",
         "1.18",
+        "1.19",
+        "1.20",
     ],
 )
 def test_supported_versions_pass(version: str) -> None:
@@ -46,7 +48,7 @@ def test_supported_versions_pass(version: str) -> None:
         ({"schema_version": "1"}, "malformed"),
         ({"schema_version": "01.0"}, "malformed"),
         ({"schema_version": "0.9"}, "older than the supported 1.x"),
-        ({"schema_version": "1.20"}, "reads up to 1.19"),
+        ({"schema_version": "1.21"}, "reads up to 1.20"),
         ({"schema_version": "2.0"}, "newer OpenWorld Moments"),
     ],
 )

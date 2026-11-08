@@ -36,6 +36,7 @@ const LABELS: Record<string, string> = {
   story: "Suggest stories",
   transcribe: "Transcribe speech",
   render: "Render video",
+  index: "Rebuild search index",
   diagnostic: "Diagnostic",
 };
 
@@ -51,6 +52,7 @@ const STATE_LABELS: Record<string, string> = {
   grouping: "Grouping",
   analyzing: "Working",
   transcribing: "Transcribing",
+  indexing: "Indexing",
   rendering: "Rendering",
   ready: "Done",
   failed: "Failed",
@@ -131,6 +133,14 @@ export function upsertJob(job: Job): void {
   }
   if (previous?.state !== job.state && job.kind === "transcribe" && !isActive(job)) {
     invalidate("transcript:");
+  }
+  // Searchable text changes when indexing, transcription, analysis or imports finish.
+  if (
+    previous?.state !== job.state &&
+    !isActive(job) &&
+    ["index", "transcribe", "analyze", "import", "group"].includes(job.kind)
+  ) {
+    invalidate("search", "collection");
   }
 }
 
