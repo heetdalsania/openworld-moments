@@ -77,6 +77,12 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
                     .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
                 && query.is_none()
         }
+        // M21: editor documents only; no filesystem paths or renderer commands.
+        ("POST", ["", "v1", "projects", "import"]) => query.is_none(),
+        ("GET" | "PUT", ["", "v1", "projects", id]) => is_id(id, "prj_") && query.is_none(),
+        ("GET", ["", "v1", "projects", id, "portable"]) => is_id(id, "prj_") && query.is_none(),
+        ("POST", ["", "v1", "sessions", id, "projects"]) => is_id(id, "ses_") && query.is_none(),
+        ("POST", ["", "v1", "projects", id, "relink"]) => is_id(id, "prj_") && query.is_none(),
         // Sessions (M11-M13).
         ("GET", ["", "v1", "sessions"]) => true,
         ("POST", ["", "v1", "sessions", "recompute" | "align" | "merge"]) => query.is_none(),
@@ -311,6 +317,15 @@ mod tests {
             ("POST", &format!("/v1/jobs/{JOB}/retry")),
             ("GET", "/v1/jobs?limit=200"),
             ("GET", "/v1/capabilities"),
+            ("POST", "/v1/projects/import"),
+            ("POST", &format!("/v1/sessions/{SESSION}/projects")),
+            ("GET", "/v1/projects/prj_01JCBQ00000000000000000003"),
+            ("PUT", "/v1/projects/prj_01JCBQ00000000000000000003"),
+            (
+                "GET",
+                "/v1/projects/prj_01JCBQ00000000000000000003/portable",
+            ),
+            ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/relink"),
             ("GET", "/v1/sessions?limit=200"),
             ("GET", &format!("/v1/sessions/{SESSION}")),
             ("GET", &format!("/v1/sessions/{SESSION}/overlaps")),
@@ -362,6 +377,12 @@ mod tests {
                 &format!("/v1/sessions/{SESSION}/stories/prj_bad/decision"),
             ),
             ("DELETE", &format!("/v1/sessions/{SESSION}/stories")),
+            ("PUT", "/v1/projects/prj_bad"),
+            ("GET", "/v1/projects/prj_01JCBQ00000000000000000003?path=x"),
+            ("DELETE", "/v1/projects/prj_01JCBQ00000000000000000003"),
+            ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
+            ("POST", "/v1/projects/import?confirm=true"),
+            ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/relink"),
             (
                 "GET",
                 &format!("/v1/sessions/{SESSION}/stories/prj_01JCBQ00000000000000000003/decision"),

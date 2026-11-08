@@ -2,6 +2,17 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.16 — 2026-11-07 (M21)
+
+Additive: `editor-project` wraps the existing Project with explicit editor model
+version 1, aspect/profile layout reference and portable SHA-256 source bindings.
+The new envelope enforces single-track contiguous timing, source containment,
+unique segment IDs, bounded annotations and ordered crop keyframes in both SDKs.
+Project gains optional audio gain ranges and a text overlay variant; older 1.x
+Project documents remain readable. Legacy projects migrate explicitly on editor
+open and commit on first save. Migration 0014 stores transactional autosave and
+recovery snapshots. See [editor projects](../../docs/architecture/editor-projects.md).
+
 ## 1.15 — 2026-11-07 (M20)
 
 Additive: `story-candidate` (versioned deterministic windows, source-event revisions,

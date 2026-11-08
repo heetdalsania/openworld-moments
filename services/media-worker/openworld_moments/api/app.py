@@ -41,6 +41,14 @@ from openworld_moments.detectors.profiles import ProfileCatalog, ProfileError
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
+from openworld_moments.projects.service import (
+    ImportProject,
+    ManualProject,
+    ProjectError,
+    ProjectService,
+    RelinkProject,
+    SaveProject,
+)
 from openworld_moments.review.service import (
     EventReviewService,
     ManualEvent,
@@ -607,6 +615,59 @@ def create_app(
         except NotFoundError as exc:
             raise session_missing(session_id) from exc
         return dict(result)
+
+    projects = ProjectService(engine.database)
+
+    @app.exception_handler(ProjectError)
+    async def project_error(request: Request, exc: ProjectError) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=exc.status
+        )
+
+    def project_missing() -> ProjectError:
+        return ProjectError("project.not_found", "Project or selected source not found.", 404)
+
+    @app.get("/v1/projects/{project_id}")
+    async def get_project(project_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.get, project_id)
+        except NotFoundError as exc:
+            raise project_missing() from exc
+
+    @app.put("/v1/projects/{project_id}")
+    async def save_project(project_id: str, body: SaveProject) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.save, project_id, body)
+        except NotFoundError as exc:
+            raise project_missing() from exc
+
+    @app.post("/v1/projects/{project_id}/relink")
+    async def relink_project(project_id: str, body: RelinkProject) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.relink, project_id, body)
+        except NotFoundError as exc:
+            raise project_missing() from exc
+
+    @app.get("/v1/projects/{project_id}/portable")
+    async def export_project(project_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.export, project_id)
+        except NotFoundError as exc:
+            raise project_missing() from exc
+
+    @app.post("/v1/projects/import", status_code=201)
+    async def import_project(body: ImportProject) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.import_document, body)
+        except NotFoundError as exc:
+            raise project_missing() from exc
+
+    @app.post("/v1/sessions/{session_id}/projects", status_code=201)
+    async def manual_project(session_id: str, body: ManualProject) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.create, session_id, body)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
 
     stories = StoryService(engine.database)
 

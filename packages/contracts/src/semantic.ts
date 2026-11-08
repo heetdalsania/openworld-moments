@@ -20,10 +20,13 @@ import type {
   JobEvent,
   Profile,
   Project,
+  EditorProject,
   Region,
   RenderPreset,
   WatchedFolder,
 } from "./generated/types.ts";
+
+import { checkVersion } from "./versioning.ts";
 
 const EPSILON = 1e-9;
 
@@ -123,6 +126,66 @@ function* project(doc: Project): Generator<string> {
   for (const [i, m] of doc.audio.mute_ranges.entries()) {
     yield* range(`audio.mute_ranges[${i}].end_ms`, m.start_ms, m.end_ms, true);
   }
+  for (const [i, gain] of (doc.audio.gain_ranges ?? []).entries()) {
+    yield* range(`audio.gain_ranges[${i}].end_ms`, gain.start_ms, gain.end_ms, true);
+  }
+}
+
+function* editorProject(doc: EditorProject): Generator<string> {
+  const p = doc.project;
+  checkVersion("project", p);
+  yield* project(p);
+  if (p.tracks.length !== 1) {
+    yield "project.tracks: editor requires one primary track";
+    return;
+  }
+  const sources = new Map(doc.sources.map((s) => [s.asset_id, s]));
+  if (sources.size !== doc.sources.length) yield "sources: duplicate asset ID";
+  const segments = p.tracks[0]?.segments ?? [];
+  if (segments.length > 4096) yield "project.segments: limit 4096";
+  let position = 0;
+  const ids = new Set<string>();
+  for (const s of segments) {
+    const length = s.source_out_ms - s.source_in_ms;
+    if (ids.has(s.id)) yield "project.segments: duplicate segment ID";
+    ids.add(s.id);
+    if (s.timeline_start_ms !== position)
+      yield "project.segments: primary track must be contiguous from zero";
+    position += length;
+    const source = sources.get(s.asset_id);
+    if (!source || s.source_out_ms > source.duration_ms)
+      yield "project.segments: source binding missing or range exceeds source";
+    const keys = s.crop.keyframes;
+    if (keys.length > 1000) yield "project.crop: limit 1000 keyframes";
+    let last = -1;
+    for (const k of keys) {
+      if (!(last < k.at_ms && k.at_ms < length))
+        yield "project.crop: keyframes must increase inside segment";
+      last = k.at_ms;
+    }
+    if (s.crop.mode === "manual" && keys[0]?.at_ms !== 0)
+      yield "project.crop: manual crop needs a keyframe at zero";
+  }
+  if (position > Number.MAX_SAFE_INTEGER) yield "project: timeline exceeds safe integer range";
+  for (const [name, items] of [
+    ["captions", p.captions],
+    ["overlays", p.overlays],
+    ["mute_ranges", p.audio.mute_ranges],
+    ["gain_ranges", p.audio.gain_ranges ?? []],
+  ] as const) {
+    if (items.length > 10000) yield `project.${name}: limit 10000`;
+    for (const item of items) {
+      if (!(0 <= item.start_ms && item.start_ms < item.end_ms && item.end_ms <= position))
+        yield `project.${name}: range outside timeline`;
+    }
+    if (name === "gain_ranges") {
+      const ordered = [...items].sort((a, b) => a.start_ms - b.start_ms);
+      if (ordered.some((b, i) => (ordered[i - 1]?.end_ms ?? 0) > b.start_ms))
+        yield "project.gain_ranges: overlapping gain ranges";
+    }
+  }
+  if ((doc.layout.profile_id !== undefined) !== (doc.layout.profile_version !== undefined))
+    yield "layout: profile ID and version must be supplied together";
 }
 
 function* renderPreset(doc: RenderPreset): Generator<string> {
@@ -521,6 +584,7 @@ const RULES: Record<string, (doc: any) => Iterable<string>> = {
       r ? [...region(`regions.${name}`, r)] : [],
     ),
   project,
+  "editor-project": editorProject,
   "render-preset": renderPreset,
   "export-manifest": exportManifest,
   import: importResult,

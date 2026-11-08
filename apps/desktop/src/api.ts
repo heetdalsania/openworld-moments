@@ -281,3 +281,48 @@ export function analyzeSession(id: string, profileId: string): Promise<Job> {
   return call("POST", `/v1/sessions/${id}/analyze`, { profile_id: profileId, force: true });
 }
 export type { EventReview, EventReviewItem };
+
+// -- editor document persistence (M21; visual editor follows in M22) --------------------
+export interface ProjectState {
+  document: import("@openworld-moments/contracts").EditorProject;
+  revision: number;
+  recovery: import("@openworld-moments/contracts").EditorProject | null;
+  sources?: { asset_id: string; state: "missing" | "mismatch" | "available_unverified" }[];
+}
+export const getProject = (id: string): Promise<ProjectState> => call("GET", `/v1/projects/${id}`);
+export const saveProject = (
+  document: ProjectState["document"],
+  expectedRevision: number,
+): Promise<ProjectState> =>
+  call("PUT", `/v1/projects/${document.project.id}`, {
+    document,
+    expected_revision: expectedRevision,
+  });
+export const createProject = (
+  sessionId: string,
+  selection: { title: string; layout_key: string; start_ms: number; end_ms: number },
+): Promise<ProjectState> => call("POST", `/v1/sessions/${sessionId}/projects`, selection);
+export const exportProject = (id: string): Promise<ProjectState["document"]> =>
+  call("GET", `/v1/projects/${id}/portable`);
+export const importProject = (
+  document: ProjectState["document"],
+  bindings: Record<string, string> = {},
+  confirmReplacements: string[] = [],
+): Promise<ProjectState> =>
+  call("POST", "/v1/projects/import", {
+    document,
+    bindings,
+    confirm_replacements: confirmReplacements,
+  });
+
+export const relinkProject = (
+  id: string,
+  expectedRevision: number,
+  bindings: Record<string, string>,
+  confirmReplacements: string[] = [],
+): Promise<ProjectState> =>
+  call("POST", `/v1/projects/${id}/relink`, {
+    expected_revision: expectedRevision,
+    bindings,
+    confirm_replacements: confirmReplacements,
+  });

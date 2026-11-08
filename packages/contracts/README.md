@@ -39,6 +39,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 | Analysis result | `analysis.schema.json` | `AnalysisResult` | `generated.analysis_schema.AnalysisResult` | M14 |
 | Profile patch | `profile-patch.schema.json` | `ProfilePatch` | `generated.profile_patch_schema.ProfilePatch` | M15 |
 | Profile | `profile.schema.json` | `Profile` (including optional `WantedSettings`/`OcrSettings`) | `generated.profile_schema.Profile` | M14–M16 |
+| Editor project | `editor-project.schema.json` | `EditorProject` | `generated.editor_project_schema.EditorProject` | M21, M22, M24 |
 | Project (EDL) | `project.schema.json` | `Project` | `generated.project_schema.Project` | M21 |
 | Render preset | `render-preset.schema.json` | `RenderPreset` | `generated.render_preset_schema.RenderPreset` | M24 |
 | Export manifest | `export-manifest.schema.json` | `ExportManifest` | `generated.export_manifest_schema.ExportManifest` | M24, M27 |
@@ -82,3 +83,5 @@ fixture suites check this.
 M19 adds review and evaluation contracts at schema version 1.14; see [event review](../../docs/architecture/event-review.md) and [local evaluation](../../docs/evaluation/README.md).
 
 M20 adds `story-candidate` and `story-candidates`; see [story engine](../../docs/architecture/stories.md). The `story` job kind generates candidates without editing source media.
+
+M21 adds `editor-project`, text overlays and optional gain ranges at 1.16; see [editor model](../../docs/architecture/editor-projects.md) for strict editor invariants and explicit legacy migration.
