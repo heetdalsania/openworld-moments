@@ -144,7 +144,7 @@
   - **M29** (Windows packaging) must bundle SQLite 3.42+ with FTS5.
   - **M31** (accessibility) should include the Search screen and shortcut in
     onboarding.
-- Pull request: PR_LINK
+- Pull request: [#32](https://github.com/heetdalsania/openworld-moments/pull/32)
 - Screenshots, reports, or artifacts:
   - [Search and collections](../architecture/search.md) (document contract,
     grammar, ranking, rules, rebuild, privacy and benchmark table).
