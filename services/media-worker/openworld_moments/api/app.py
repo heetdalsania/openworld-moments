@@ -627,6 +627,20 @@ def create_app(
     def project_missing() -> ProjectError:
         return ProjectError("project.not_found", "Project or selected source not found.", 404)
 
+    @app.get("/v1/projects")
+    async def list_projects(
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0, le=100000),
+    ) -> dict[str, Any]:
+        return await asyncio.to_thread(projects.page, limit=limit, offset=offset)
+
+    @app.get("/v1/sessions/{session_id}/project-selection")
+    async def project_selection(session_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(projects.selection, session_id)
+        except NotFoundError as exc:
+            raise session_missing(session_id) from exc
+
     @app.get("/v1/projects/{project_id}")
     async def get_project(project_id: str) -> dict[str, Any]:
         try:

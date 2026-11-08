@@ -24,6 +24,8 @@ export interface TimelineMember {
 }
 
 export interface Segment {
+  /** Editor cut identity; sessions continue to use their unique asset ID. */
+  key?: string;
   index: number;
   assetId: string;
   /** First and end (exclusive) source time played, ms. */
@@ -134,7 +136,7 @@ export function toVirtual(
   const segment = timeline.segments[index];
   if (!segment) return null;
   const t = Math.round(sourceMs);
-  if (t < 0 || t > segment.sourceOutMs) return null;
+  if (t < 0 || t > segment.sourceOutMs || (segment.key && t < segment.sourceInMs)) return null;
   if (t >= segment.sourceInMs) {
     return { virtualMs: segment.virtualStartMs + (t - segment.sourceInMs), exact: true };
   }

@@ -403,3 +403,39 @@ def test_unmapped_portable_sources_require_explicit_binding_even_with_matching_l
     linked = service.relink(pid, RelinkProject(expected_revision=1, bindings={ids[0]: ids[0]}))
     assert "requires_relink" not in linked["document"]["sources"][0]
     assert service.get(pid)["sources"][0]["state"] == "available_unverified"
+
+
+# M22: the focused editor's additive discovery/selection surface.
+def test_project_browser_and_current_selection_metadata(library: Any) -> None:
+    db, sid, _, _ = library
+    service = ProjectService(db)
+    assert service.page() == {"items": [], "total": 0, "offset": 0}
+    selection = service.selection(sid)
+    assert selection["duration_ms"] == 120000 and len(selection["layout_key"]) == 64
+    state = create(db, sid)
+    page = service.page(limit=1)
+    assert page["total"] == 1 and page["items"][0]["id"] == state["document"]["project"]["id"]
+    assert page["items"][0]["revision"] == 1
+    assert set(page["items"][0]) == {"id", "title", "session_id", "updated_at", "revision"}
+    assert service.page(limit=1, offset=1)["items"] == []
+    for limit, offset in [(0, 0), (101, 0), (1, -1), (1, 100001)]:
+        with pytest.raises(ProjectError):
+            service.page(limit=limit, offset=offset)
+
+
+def test_editor_discovery_http_bounds_and_missing_session(library: Any) -> None:
+    db, sid, _, _ = library
+    settings = ApiSettings(
+        token="test-token", allowed_hosts=frozenset({"testserver"}), require_loopback_peer=False
+    )
+    with TestClient(
+        create_app(JobEngine(db, {}), settings), headers={"Authorization": "Bearer test-token"}
+    ) as client:
+        assert client.get("/v1/projects?offset=0&limit=50").json()["items"] == []
+        assert client.get("/v1/projects?limit=101").status_code == 422
+        assert client.get("/v1/projects?offset=-1").status_code == 422
+        assert client.get(f"/v1/sessions/{sid}/project-selection").json()["duration_ms"] == 120000
+        assert (
+            client.get("/v1/sessions/ses_00000000000000000000000000/project-selection").status_code
+            == 404
+        )

@@ -64,13 +64,19 @@ Routes are hash-based, so reloading the window returns to the same screen.
 | `#/asset/<id>` | `AssetView` | Player with a playback-copy / original choice, waveform, clickable filmstrip, playback-media status with Rebuild / Try again, file details, and a missing-original notice |
 | `#/sessions` | `SessionsView` | Candidate sessions (M11) with played duration, hidden repeated footage, state, and grouping confidence; group, find repeated footage, and merge ([session timeline](./session-timeline.md)) |
 | `#/session/<id>` | `SessionView` | The session as one continuous timeline (M13): two-element player, track with boundaries, thumbnails, waveforms, and hidden-overlap markers, reveal toggle, keyboard controls, and per-clip corrections ([session timeline](./session-timeline.md)); the `TranscriptPanel` (M18) with its privacy notice, engine/model guidance, transcribe/rebuild, two-step delete and timed lines that seek the player ([transcription](./transcription.md)) |
+| `#/projects` | `ProjectsView` | Paged saved projects and retained unsaved drafts ([focused editor](./focused-editor.md)) |
+| `#/project/<id>` | `EditorView` | Source-mapped preview, cut inspector and track, command-only editing, undo/redo, autosave/recovery and read-only event context ([focused editor](./focused-editor.md)) |
 | `#/calibration` | `CalibrationView` | Profile defaults, local ROI overrides, frame capture, crop and built-in preview, media-free patch import/export ([calibration](./profile-calibration.md)) |
 | `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
 | `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |
 
+The session screen also offers manual range-to-project creation (`CreateProject`).
+Project metadata endpoints and save semantics are documented in the
+[focused editor](./focused-editor.md) and [model](./editor-projects.md) guides.
+
 Global, in `App.tsx`:
 
-- **Navigation:** Library, Sessions, and Settings. Other spec 10.1 sections arrive with
+- **Navigation:** Library, Sessions, Projects, and Settings. Other spec 10.1 sections arrive with
   their milestones.
 - **Import:** opens `ImportPanel`. Choose files or folders, or drop them onto the
   window, then choose reference (the default, remembered) or managed.
@@ -126,7 +132,7 @@ Supporting modules:
 - **Keyboard:** every primary control is a native link, button, or form field.
   Tab order:
   1. Skip to content;
-  2. Library, Sessions, and Settings;
+  2. Library, Sessions, Projects, and Settings;
   3. Import and Background jobs;
   4. view controls;
   5. clip cards.

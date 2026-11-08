@@ -240,7 +240,11 @@ export class SessionPlayer {
     const segment = this.segment;
     const sourceMs = this.elements[this.active].currentTime * 1000;
     this.timeline = timeline;
-    const index = segment ? indexOf(timeline, segment.assetId) : -1;
+    const index = segment?.key
+      ? timeline.segments.findIndex((s) => s.key === segment.key)
+      : segment
+        ? indexOf(timeline, segment.assetId)
+        : -1;
     const same = timeline.segments[index];
     if (
       same &&
@@ -250,6 +254,11 @@ export class SessionPlayer {
     ) {
       // Still visible in the same clip: stay on it, even at its very end.
       this.place(same, sourceMs);
+      return;
+    }
+    if (same && segment?.key) {
+      // Editor trims remove source time rather than hiding a session overlap.
+      this.place(same, Math.max(same.sourceInMs, Math.min(same.sourceOutMs, sourceMs)));
       return;
     }
     // Now hidden (or the clip left the session): the same moment elsewhere, else the start.
