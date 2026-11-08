@@ -42,6 +42,9 @@ derived/
 # ...but not the worker's derived-media source package (M08).
 !services/media-worker/openworld_moments/derived/
 exports/
+# ...but not the worker's open-format export package and its tests (M27).
+!services/media-worker/openworld_moments/exports/
+!services/media-worker/tests/exports/
 models/
 media-fixtures/
 logs/
