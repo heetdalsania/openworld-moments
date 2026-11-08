@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  EventExportLine,
+  ExportResult,
+  ProjectExport,
   Collection,
   SearchIndexStatus,
   SearchResult,
@@ -739,8 +742,44 @@ function* collection(doc: Collection): Generator<string> {
   }
 }
 
+const PATH_FORMATS = new Set(["project", "otio", "fcpxml"]);
+
+function* exportResult(doc: ExportResult): Generator<string> {
+  if ((doc.stability === "experimental") !== (doc.format === "fcpxml")) {
+    yield "stability: FCPXML is experimental; every other format is stable";
+  }
+  if (doc.includes_paths && !PATH_FORMATS.has(doc.format)) {
+    yield "includes_paths: only project, OTIO and FCPXML exports may carry paths";
+  }
+}
+
+function* projectExport(doc: ProjectExport): Generator<string> {
+  const known = new Set(doc.document.sources.map((s) => s.asset_id));
+  const seen = new Set<string>();
+  for (const [i, location] of (doc.source_locations ?? []).entries()) {
+    if (!known.has(location.asset_id)) {
+      yield `source_locations[${i}].asset_id: not a source of the document`;
+    }
+    if (seen.has(location.asset_id)) {
+      yield `source_locations[${i}].asset_id: each source appears once`;
+    }
+    seen.add(location.asset_id);
+  }
+}
+
+function* eventExport(doc: EventExportLine): Generator<string> {
+  if (doc.record !== "event") return;
+  yield* range("effective.end_ms", doc.effective.start_ms, doc.effective.end_ms);
+  for (const [i, span] of (doc.project_ranges ?? []).entries()) {
+    yield* range(`project_ranges[${i}].end_ms`, span.start_ms, span.end_ms, true);
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "event-export": eventExport,
+  "export-result": exportResult,
+  "project-export": projectExport,
   collection,
   search: searchResults,
   "search-index": searchIndex,

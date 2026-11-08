@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/heetdalsania/openworld-moments/contracts/export-manifest.schema.json",
   "title": "ExportManifest",
-  "description": "Reproducibility record written next to an export (spec 8.9.3). Contains no footage, transcripts, or user paths.",
+  "description": "Reproducibility record written next to an export (spec 8.9.3): source hashes, segments, preset, encoder, tool, detector and profile versions. Contains no footage, transcripts, or user paths.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,10 +15,19 @@
     "detectors"
   ],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
-    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "app_version": { "$ref": "common.schema.json#/$defs/SemVer" },
-    "project_id": { "$ref": "common.schema.json#/$defs/ProjectId" },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "app_version": {
+      "$ref": "common.schema.json#/$defs/SemVer"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/ProjectId"
+    },
     "sources": {
       "type": "array",
       "minItems": 1,
@@ -28,8 +37,14 @@
         "additionalProperties": false,
         "required": ["sha256", "original_name"],
         "properties": {
-          "sha256": { "$ref": "common.schema.json#/$defs/Sha256" },
-          "original_name": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          "sha256": {
+            "$ref": "common.schema.json#/$defs/Sha256"
+          },
+          "original_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
         }
       }
     },
@@ -43,9 +58,16 @@
         "additionalProperties": false,
         "required": ["source", "in_ms", "out_ms"],
         "properties": {
-          "source": { "type": "integer", "minimum": 0 },
-          "in_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-          "out_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" }
+          "source": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "in_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          },
+          "out_ms": {
+            "$ref": "common.schema.json#/$defs/TimelineMs"
+          }
         }
       }
     },
@@ -55,11 +77,25 @@
       "additionalProperties": false,
       "required": ["width", "height", "fps", "layout"],
       "properties": {
-        "preset_id": { "$ref": "common.schema.json#/$defs/Slug" },
-        "width": { "type": "integer", "minimum": 2, "maximum": 8192 },
-        "height": { "type": "integer", "minimum": 2, "maximum": 8192 },
-        "fps": { "$ref": "common.schema.json#/$defs/Rational" },
-        "layout": { "$ref": "common.schema.json#/$defs/Slug" }
+        "preset_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8192
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8192
+        },
+        "fps": {
+          "$ref": "common.schema.json#/$defs/Rational"
+        },
+        "layout": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        }
       }
     },
     "detectors": {
@@ -70,8 +106,12 @@
         "additionalProperties": false,
         "required": ["id", "version"],
         "properties": {
-          "id": { "$ref": "common.schema.json#/$defs/Slug" },
-          "version": { "$ref": "common.schema.json#/$defs/SemVer" }
+          "id": {
+            "$ref": "common.schema.json#/$defs/Slug"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/SemVer"
+          }
         }
       }
     },
@@ -82,9 +122,84 @@
       "additionalProperties": false,
       "required": ["tool", "tool_version", "args"],
       "properties": {
-        "tool": { "type": "string", "enum": ["ffmpeg"] },
-        "tool_version": { "type": "string", "minLength": 1, "maxLength": 100 },
-        "args": { "type": "array", "items": { "type": "string", "maxLength": 4000 } }
+        "tool": {
+          "type": "string",
+          "enum": ["ffmpeg"]
+        },
+        "tool_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        }
+      }
+    },
+    "render_id": {
+      "$ref": "common.schema.json#/$defs/JobId"
+    },
+    "project_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "encoder": {
+      "$ref": "render.schema.json#/$defs/EncoderId"
+    },
+    "tools": {
+      "title": "ManifestTools",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ffmpeg"],
+      "properties": {
+        "ffmpeg": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "render_engine": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        }
+      }
+    },
+    "output": {
+      "title": "ManifestOutput",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "size_bytes", "duration_ms"],
+      "properties": {
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "duration_ms": {
+          "$ref": "common.schema.json#/$defs/DurationMs"
+        }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "title": "ManifestProfile",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Slug"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/SemVer"
+          }
+        }
       }
     }
   }

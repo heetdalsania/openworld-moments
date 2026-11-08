@@ -116,4 +116,6 @@ M20 migration `0013_story_candidates.sql` adds immutable candidates, append-only
 
 M21 migration `0014_editor_projects.sql` adds current and previous committed editor documents with revision checks. Story EDL and autosave update atomically; legacy stories remain readable and migrate on editor open. See [editor projects](./editor-projects.md).
 
+M27 migration `0017_render_manifests.sql` adds `render_jobs.manifest_json`, the canonical export manifest of each completed render, so re-exporting it is byte-stable even without the sidecar file. See [exports](./exports.md).
+
 M26 migration `0016_search_and_collections.sql` adds the derived search index (documents, source views, maintenance triggers, FTS5 with secure-delete, index state) and builds it for the existing library. It reshapes the unused 0001 `collections`/`collection_items` tables: collection IDs become `col_` IDs (existing rows keep a zero-padded form of their number), collections are `manual` or `rule`, and items may reference clips and transcript spans. Requires SQLite 3.42+ (FTS5 secure-delete). See [search](./search.md).

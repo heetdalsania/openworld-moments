@@ -1,0 +1,37 @@
+{
+  "description": "Warning codes are namespaced",
+  "expect": "schema",
+  "message_contains": "code",
+  "document": {
+    "capabilities": [
+      "audio_gain",
+      "audio_mute",
+      "blur",
+      "captions",
+      "cuts",
+      "events",
+      "text_overlays"
+    ],
+    "content": "kind,label,start,end,start_ms,end_ms,duration_ms,detail\r\ncut,Capture 01 — Café.mp4,00:00:00.000,00:00:32.300,0,32300,32300,source 12500-44800 ms\r\ntext,Title,00:00:00.000,00:00:01.000,0,1000,1000,\"region 0,0,1,0.1\"\r\nblur,privacy blur,00:00:00.000,00:00:05.000,0,5000,5000,\"region 0,0,0.25,0.08\"\r\ngain,gain -5 dB,00:00:00.000,00:00:01.000,0,1000,1000,\r\ncaption,Here we go & <go> → 🚗,00:00:01.000,00:00:02.500,1000,2500,1500,\r\ncaption,'=SUM(A1) 你好 second line,00:00:03.000,00:00:04.250,3000,4250,1250,\r\nevent,openworld.wanted_level_changed,00:00:07.500,00:00:09.500,7500,9500,2000,\"confirmed, confidence 0.97\"\r\nmute,mute,00:00:20.000,00:00:21.000,20000,21000,1000,\r\ncut,Capture 01 — Café.mp4,00:00:32.300,00:00:43.300,32300,43300,11000,source 50000-61000 ms\r\nevent,openworld.busted,00:00:34.800,00:00:35.800,34800,35800,1000,\"corrected, confidence 0.80\"\r\n",
+    "filename": "Six-star-escape-Caf-run.csv",
+    "format": "csv",
+    "format_version": "1.0",
+    "includes_paths": false,
+    "media_type": "text/csv",
+    "schema_version": "1.21",
+    "sha256": "b577c176634d24a0feccf60468f3d828509e111409641a5c405174250224a2d6",
+    "stability": "stable",
+    "warnings": [
+      {
+        "code": "crop",
+        "count": 1,
+        "detail": "The project-wide gain is not a timed marker and is not included."
+      },
+      {
+        "code": "export.crop_not_supported",
+        "count": 2,
+        "detail": "Crop and vertical framing have no marker form and are not included."
+      }
+    ]
+  }
+}

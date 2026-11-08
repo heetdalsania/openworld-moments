@@ -2,6 +2,26 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.21 — M27 open exports
+
+Additive; existing 1.20 documents remain valid.
+
+- New `export-result` contract (`ExportResult`): format, format version, stability
+  (FCPXML experimental), filename, media type, content and its SHA-256,
+  capabilities, warnings (`export.*` codes) and whether paths are included. `$defs`
+  add `ExportWarning`, `ExportGenerator` and `ExportRequest`.
+- New `project-export` contract (`ProjectExport`, format `openworld-moments.project`
+  1.x): the portable editor document with revision, saved time, capabilities,
+  warnings, optional `source_locations` and an `extensions` object.
+- New `event-export` contract (`EventExportLine`): a JSONL header or an event record
+  with the original observation, the effective review view, timing status and
+  project ranges.
+- `export-manifest` gains optional `render_id`, `project_revision`, `encoder`,
+  `tools`, `output` and `profiles`.
+- Shared cross-field rules: FCPXML is the only experimental format; paths only in
+  project, OTIO and FCPXML; locations name document sources; ordered event ranges.
+  Migration 0017 stores each render's manifest.
+
 ## 1.20 — M26 search and collections
 
 Additive; existing 1.19 documents remain valid.

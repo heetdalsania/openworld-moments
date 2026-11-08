@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/event-export.schema.json",
+  "title": "EventExportLine",
+  "description": "One line of an event JSONL export (format openworld-moments.events 1.x). The first line is the header; each following line is one event, ordered by effective start then ID.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/EventExportHeader"
+    },
+    {
+      "$ref": "#/$defs/EventExportRecord"
+    }
+  ],
+  "$defs": {
+    "EventExportHeader": {
+      "title": "EventExportHeader",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record",
+        "schema_version",
+        "format",
+        "format_version",
+        "generator",
+        "session_id",
+        "layout_key",
+        "event_count",
+        "extensions"
+      ],
+      "properties": {
+        "record": {
+          "const": "header"
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^1\\.(0|[1-9][0-9]*)$"
+        },
+        "format": {
+          "const": "openworld-moments.events"
+        },
+        "format_version": {
+          "type": "string",
+          "pattern": "^1\\.(0|[1-9][0-9]*)$",
+          "description": "Export format version: readers accept every 1.x and ignore what they do not know inside 'extensions'."
+        },
+        "generator": {
+          "$ref": "export-result.schema.json#/$defs/ExportGenerator"
+        },
+        "session_id": {
+          "$ref": "common.schema.json#/$defs/SessionId"
+        },
+        "layout_key": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "project_id": {
+          "$ref": "common.schema.json#/$defs/ProjectId"
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Reserved for forward-compatible additions. Readers preserve and may ignore it."
+        }
+      }
+    },
+    "EventExportRecord": {
+      "title": "EventExportRecord",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record", "schema_version", "observation", "effective", "status"],
+      "properties": {
+        "record": {
+          "const": "event"
+        },
+        "schema_version": {
+          "type": "string",
+          "pattern": "^1\\.(0|[1-9][0-9]*)$"
+        },
+        "observation": {
+          "$ref": "event.schema.json",
+          "description": "The original, unmodified observation (detector, model or user)."
+        },
+        "effective": {
+          "title": "EffectiveEvent",
+          "description": "The audited human view: latest review decision, or the original when unreviewed.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "start_ms", "end_ms", "review_state", "revision"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+              "maxLength": 128
+            },
+            "start_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            },
+            "end_ms": {
+              "$ref": "common.schema.json#/$defs/TimelineMs"
+            },
+            "review_state": {
+              "enum": ["unreviewed", "confirmed", "corrected", "rejected"]
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "status": {
+          "enum": ["current", "stale", "legacy"],
+          "description": "Whether the timing still matches the session layout (M19)."
+        },
+        "project_ranges": {
+          "description": "Where the event appears in the exported project's timeline, if anywhere.",
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "common.schema.json#/$defs/TimeRange"
+          }
+        }
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ from openworld_moments.api.app import ApiSettings, create_app
 from openworld_moments.jobs.engine import JobEngine
 from openworld_moments.jobs.handlers import BUILTIN_HANDLERS, index_handler
 from openworld_moments.storage import Database
+from openworld_moments.storage.repositories import SCHEMA_VERSION
 from tests.search.conftest import Library
 from tests.worker.conftest import wait_for
 
@@ -41,7 +42,7 @@ def test_search_route_and_errors(api: tuple[TestClient, Library]) -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["schema_version"] == "1.20" and body["total"] == 1
+    assert body["schema_version"] == SCHEMA_VERSION and body["total"] == 1
     assert body["items"][0]["kind"] == "transcript"
     bad_query = client.post("/v1/search", json={"query": "h*"})
     assert bad_query.status_code == 422 and bad_query.json()["code"] == "search.prefix_too_short"

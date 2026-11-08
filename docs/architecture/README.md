@@ -48,4 +48,5 @@ Other architecture notes:
 
 M25 adds [vertical layouts](./vertical-layouts.md) with `vertical-1080x1920-30` and `vertical-source-fps` presets.
 
+- [Open exports and manifests](./exports.md): project JSON, event JSONL, SRT/WebVTT, CSV markers, OpenTimelineIO and experimental FCPXML; render manifests, versions, privacy option, warnings and validation.
 - [Search and collections](./search.md): searchable-document views and triggers, query grammar, filters, ranking, collection rules with reasons, stale/corrupt detection and rebuild, privacy-safe clearing, 10,000-clip benchmark.

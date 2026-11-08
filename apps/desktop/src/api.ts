@@ -424,3 +424,34 @@ export const addToCollection = (
 
 export const removeFromCollection = (id: string, itemId: number): Promise<{ deleted: boolean }> =>
   call("DELETE", `/v1/collections/${id}/items/${itemId}`);
+
+// -- open exports (M27) ----------------------------------------------------------------
+
+export type ExportFormat = "project" | "events" | "srt" | "vtt" | "csv" | "otio" | "fcpxml";
+export type ExportWarning = import("@openworld-moments/contracts").ExportWarning;
+export interface SavedExport {
+  saved: boolean;
+  warnings: ExportWarning[];
+}
+
+/** The host fetches the saved project's export and opens a native save dialog. Paths are
+ * included only when `includePaths` is set; the webview never names a destination. */
+export async function saveProjectExport(
+  projectId: string,
+  format: ExportFormat,
+  includePaths: boolean,
+): Promise<SavedExport> {
+  try {
+    return await invoke<SavedExport>("project_export", { projectId, format, includePaths });
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+export async function saveRenderManifest(renderId: string): Promise<SavedExport> {
+  try {
+    return await invoke<SavedExport>("render_manifest_export", { renderId });
+  } catch (error) {
+    throw toApiError(error);
+  }
+}

@@ -14,8 +14,10 @@ import {
   renderEncoders,
   renderPresets,
   renderProject,
+  saveRenderManifest,
   toApiError,
 } from "./api";
+import { OpenExports } from "./OpenExports";
 import type { EditorProject } from "@openworld-moments/contracts";
 import { isActive, upsertJob, useJobs } from "./jobs";
 import { formatDuration } from "./media";
@@ -58,6 +60,10 @@ function RenderRow({
   busy: boolean;
 }) {
   const checks = record.validation?.checks ?? [];
+  const [manifestSaved, setManifestSaved] = useState<boolean | null>(null);
+  const manifest = useAction(async () => {
+    setManifestSaved((await saveRenderManifest(record.id)).saved);
+  });
   return (
     <li className="render-row">
       <div>
@@ -104,6 +110,15 @@ function RenderRow({
           Render with the CPU encoder instead
         </button>
       )}
+      {record.status === "ready" && (
+        <button type="button" disabled={manifest.busy} onClick={() => void manifest.run()}>
+          Save manifest…
+        </button>
+      )}
+      {manifestSaved !== null && (
+        <p role="status">{manifestSaved ? "Manifest saved." : "Manifest not saved."}</p>
+      )}
+      {manifest.error && <p role="alert">{describeError(manifest.error)}</p>}
     </li>
   );
 }
@@ -288,6 +303,7 @@ export function ExportPanel({
           ))}
         </ol>
       )}
+      <OpenExports projectId={projectId} flush={flush} workerReady={workerReady} />
     </section>
   );
 }

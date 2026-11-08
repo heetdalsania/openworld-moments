@@ -39,7 +39,12 @@ def test_every_schema_is_valid_2020_12_with_matching_id() -> None:
 def test_top_level_objects_are_closed() -> None:
     for contract in CONTRACTS:
         schema = json.loads((SCHEMAS / f"{contract}.schema.json").read_text("utf-8"))
-        assert schema["additionalProperties"] is False, contract
+        if "oneOf" in schema:  # a union of records (event JSONL lines): every branch closed
+            for branch in schema["oneOf"]:
+                name = branch["$ref"].removeprefix("#/$defs/")
+                assert schema["$defs"][name]["additionalProperties"] is False, (contract, name)
+        else:
+            assert schema["additionalProperties"] is False, contract
 
 
 def test_vendored_schemas_match_sources() -> None:

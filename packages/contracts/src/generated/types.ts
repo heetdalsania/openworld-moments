@@ -140,6 +140,10 @@ export type Region = [x: number, y: number, width: number, height: number];
  */
 export type SemVer = string;
 /**
+ * One line of an event JSONL export (format openworld-moments.events 1.x). The first line is the header; each following line is one event, ordered by effective start then ID.
+ */
+export type EventExportLine = EventExportHeader | EventExportRecord;
+/**
  * One piece of support for an event. Discriminated by 'kind'. Embedded in events.
  */
 export type Evidence =
@@ -155,6 +159,17 @@ export type Evidence =
  */
 export type TimelineMs1 = number;
 /**
+ * Opaque job ID: 'job_' + ULID.
+ */
+export type JobId = string;
+/**
+ * A known FFmpeg H.264 encoder: CPU 'libx264' or a hardware encoder.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "EncoderId".
+ */
+export type EncoderId = "libx264" | "h264_videotoolbox" | "h264_nvenc" | "h264_qsv" | "h264_amf";
+/**
  * This interface was referenced by `AssetFingerprints`'s JSON-Schema
  * via the `definition` "AlgorithmVersion".
  */
@@ -167,10 +182,6 @@ export type AlgorithmVersion = number;
  */
 export type ImportMode = "reference" | "managed";
 /**
- * Opaque job ID: 'job_' + ULID.
- */
-export type JobId = string;
-/**
  * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
  */
 export type UtcTimestamp1 = string;
@@ -178,13 +189,6 @@ export type UtcTimestamp1 = string;
  * Position on a media or session timeline in integer milliseconds from its start.
  */
 export type TimelineMs2 = number;
-/**
- * A known FFmpeg H.264 encoder: CPU 'libx264' or a hardware encoder.
- *
- * This interface was referenced by `undefined`'s JSON-Schema
- * via the `definition` "EncoderId".
- */
-export type EncoderId = "libx264" | "h264_videotoolbox" | "h264_nvenc" | "h264_qsv" | "h264_amf";
 /**
  * One render of a project revision (M24): its plan, outcome, validated output, or the reason it failed. 'ready' always has a validated output; a hardware encoder failure offers an explicit CPU fallback instead of switching silently.
  */
@@ -301,10 +305,12 @@ export interface ContractsBundle {
   "evaluation-observations"?: EvaluationObservations;
   "evaluation-report"?: EvaluationReport;
   evaluation?: EvaluationManifest;
+  "event-export"?: EventExportLine;
   "event-review"?: EventReview;
-  event?: Event;
+  event?: Event1;
   evidence?: Evidence;
   "export-manifest"?: ExportManifest;
+  "export-result"?: ExportResult;
   fingerprint?: AssetFingerprints;
   import?: ImportResult;
   "job-event"?: JobEvent;
@@ -313,6 +319,7 @@ export interface ContractsBundle {
   overlap?: AssetOverlap;
   "profile-patch"?: ProfilePatch;
   profile?: Profile;
+  "project-export"?: ProjectExport;
   project?: Project;
   "render-encoders"?: RenderEncoders;
   "render-preset"?: RenderPreset;
@@ -1354,6 +1361,224 @@ export interface EvaluationInterval1 {
   start_ms: TimelineMs;
   end_ms: TimelineMs;
 }
+export interface EventExportHeader {
+  record: "header";
+  schema_version: string;
+  format: "openworld-moments.events";
+  /**
+   * Export format version: readers accept every 1.x and ignore what they do not know inside 'extensions'.
+   */
+  format_version: string;
+  generator: ExportGenerator;
+  session_id: SessionId;
+  layout_key: string;
+  event_count: number;
+  project_id?: ProjectId;
+  /**
+   * Reserved for forward-compatible additions. Readers preserve and may ignore it.
+   */
+  extensions: {};
+}
+/**
+ * This interface was referenced by `ExportResult`'s JSON-Schema
+ * via the `definition` "ExportGenerator".
+ */
+export interface ExportGenerator {
+  name: "openworld-moments";
+  version: SemVer;
+}
+export interface EventExportRecord {
+  record: "event";
+  schema_version: string;
+  observation: Event;
+  effective: EffectiveEvent;
+  /**
+   * Whether the timing still matches the session layout (M19).
+   */
+  status: "current" | "stale" | "legacy";
+  /**
+   * Where the event appears in the exported project's timeline, if anywhere.
+   *
+   * @maxItems 200
+   */
+  project_ranges?: TimeRange[];
+}
+/**
+ * The original, unmodified observation (detector, model or user).
+ */
+export interface Event {
+  schema_version: string;
+  id: EventId;
+  session_id: SessionId;
+  asset_id?: AssetId;
+  /**
+   * Namespaced dotted event type, e.g. 'openworld.wanted_level_changed'.
+   */
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  confidence: Confidence;
+  /**
+   * Event-type-specific values. Open map of scalars.
+   */
+  attributes: {
+    [k: string]: ScalarValue | undefined;
+  };
+  evidence: Evidence[];
+  /**
+   * Who produced the event. 'detector' and 'user' are observations; 'model' is a suggestion.
+   */
+  source: DetectorSource | ModelSource | UserSource;
+  review_state: "unreviewed" | "confirmed" | "corrected" | "rejected";
+}
+/**
+ * Template match inside a normalized frame region.
+ */
+export interface RegionTemplateEvidence {
+  kind: "region_template";
+  region: Region;
+  score: Confidence;
+  frame_ms?: TimelineMs1;
+}
+/**
+ * Color or shape rule satisfied inside a region.
+ */
+export interface ColorRuleEvidence {
+  kind: "color_rule";
+  region: Region;
+  score: Confidence;
+}
+/**
+ * Text recognized inside a region, constrained to a vocabulary.
+ */
+export interface OcrEvidence {
+  kind: "ocr";
+  region: Region;
+  text: string;
+  score: Confidence;
+  frame_ms?: TimelineMs;
+  /**
+   * @minItems 1
+   * @maxItems 32
+   */
+  lines?: [OcrLine, ...OcrLine[]];
+}
+/**
+ * A recognized line in upright global normalized source coordinates.
+ */
+export interface OcrLine {
+  text: string;
+  region: Region;
+  score: Confidence;
+}
+/**
+ * The state was observed consistently across this many frames.
+ */
+export interface TemporalConsistencyEvidence {
+  kind: "temporal_consistency";
+  frames: number;
+  score: Confidence;
+}
+/**
+ * Audio energy, onset, silence, or speech-activity feature in a source time range. Supporting evidence only: loudness never proves that a moment is important.
+ */
+export interface AudioEvidence {
+  kind: "audio";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  score: Confidence;
+  /**
+   * Which deterministic feature produced this evidence (M18).
+   */
+  feature?: "loudness" | "onset" | "impact" | "silence" | "speech_activity";
+  /**
+   * Representative level in dB relative to full scale (RMS over the feature's window).
+   */
+  level_dbfs?: number;
+  /**
+   * Always 'supporting': audio features corroborate other evidence; they are not highlights.
+   */
+  role?: "supporting";
+}
+/**
+ * Transcribed speech matching a phrase.
+ */
+export interface TranscriptEvidence {
+  kind: "transcript";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  text: string;
+  score: Confidence;
+}
+/**
+ * A sampled frame a model looked at when proposing a suggestion.
+ */
+export interface ModelFrameEvidence {
+  kind: "model_frame";
+  frame_ms: TimelineMs;
+  label: string;
+  score: Confidence;
+}
+/**
+ * Deterministic detector observation.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "DetectorSource".
+ *
+ * This interface was referenced by `Event1`'s JSON-Schema
+ * via the `definition` "DetectorSource".
+ */
+export interface DetectorSource {
+  kind: "detector";
+  detector_id: Slug;
+  detector_version: SemVer;
+  profile_id?: Slug;
+  profile_version?: SemVer;
+  input_key?: Sha256;
+  tool_versions?: {
+    [k: string]: string | undefined;
+  };
+}
+/**
+ * Model suggestion. Must reference the sampled frames it is based on.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "ModelSource".
+ *
+ * This interface was referenced by `Event1`'s JSON-Schema
+ * via the `definition` "ModelSource".
+ */
+export interface ModelSource {
+  kind: "model";
+  model_id: string;
+  prompt_version: SemVer;
+  /**
+   * @minItems 1
+   */
+  sampled_frames_ms: [TimelineMs, ...TimelineMs[]];
+}
+/**
+ * Event created or marked manually by the user.
+ *
+ * This interface was referenced by `Event`'s JSON-Schema
+ * via the `definition` "UserSource".
+ *
+ * This interface was referenced by `Event1`'s JSON-Schema
+ * via the `definition` "UserSource".
+ */
+export interface UserSource {
+  kind: "user";
+}
+/**
+ * The audited human view: latest review decision, or the original when unreviewed.
+ */
+export interface EffectiveEvent {
+  type: string;
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  review_state: "unreviewed" | "confirmed" | "corrected" | "rejected";
+  revision: number;
+}
 export interface EventReview {
   schema_version: string;
   session_id: SessionId;
@@ -1368,8 +1593,8 @@ export interface EventReview {
   items: EventReviewItem[];
 }
 export interface EventReviewItem {
-  original: Event;
-  effective: Event;
+  original: Event1;
+  effective: Event1;
   revision: number;
   status: "current" | "superseded" | "stale" | "legacy";
   /**
@@ -1606,7 +1831,7 @@ export interface EventReviewItem {
 /**
  * A time-ranged observation or suggestion about gameplay. Observations come from deterministic detectors or the user; suggestions come from models and stay suggestions until reviewed (spec 8.4.1, 8.4.6).
  */
-export interface Event {
+export interface Event1 {
   schema_version: string;
   id: EventId;
   session_id: SessionId;
@@ -1631,135 +1856,6 @@ export interface Event {
   source: DetectorSource | ModelSource | UserSource;
   review_state: "unreviewed" | "confirmed" | "corrected" | "rejected";
 }
-/**
- * Template match inside a normalized frame region.
- */
-export interface RegionTemplateEvidence {
-  kind: "region_template";
-  region: Region;
-  score: Confidence;
-  frame_ms?: TimelineMs1;
-}
-/**
- * Color or shape rule satisfied inside a region.
- */
-export interface ColorRuleEvidence {
-  kind: "color_rule";
-  region: Region;
-  score: Confidence;
-}
-/**
- * Text recognized inside a region, constrained to a vocabulary.
- */
-export interface OcrEvidence {
-  kind: "ocr";
-  region: Region;
-  text: string;
-  score: Confidence;
-  frame_ms?: TimelineMs;
-  /**
-   * @minItems 1
-   * @maxItems 32
-   */
-  lines?: [OcrLine, ...OcrLine[]];
-}
-/**
- * A recognized line in upright global normalized source coordinates.
- */
-export interface OcrLine {
-  text: string;
-  region: Region;
-  score: Confidence;
-}
-/**
- * The state was observed consistently across this many frames.
- */
-export interface TemporalConsistencyEvidence {
-  kind: "temporal_consistency";
-  frames: number;
-  score: Confidence;
-}
-/**
- * Audio energy, onset, silence, or speech-activity feature in a source time range. Supporting evidence only: loudness never proves that a moment is important.
- */
-export interface AudioEvidence {
-  kind: "audio";
-  start_ms: TimelineMs;
-  end_ms: TimelineMs;
-  score: Confidence;
-  /**
-   * Which deterministic feature produced this evidence (M18).
-   */
-  feature?: "loudness" | "onset" | "impact" | "silence" | "speech_activity";
-  /**
-   * Representative level in dB relative to full scale (RMS over the feature's window).
-   */
-  level_dbfs?: number;
-  /**
-   * Always 'supporting': audio features corroborate other evidence; they are not highlights.
-   */
-  role?: "supporting";
-}
-/**
- * Transcribed speech matching a phrase.
- */
-export interface TranscriptEvidence {
-  kind: "transcript";
-  start_ms: TimelineMs;
-  end_ms: TimelineMs;
-  text: string;
-  score: Confidence;
-}
-/**
- * A sampled frame a model looked at when proposing a suggestion.
- */
-export interface ModelFrameEvidence {
-  kind: "model_frame";
-  frame_ms: TimelineMs;
-  label: string;
-  score: Confidence;
-}
-/**
- * Deterministic detector observation.
- *
- * This interface was referenced by `Event`'s JSON-Schema
- * via the `definition` "DetectorSource".
- */
-export interface DetectorSource {
-  kind: "detector";
-  detector_id: Slug;
-  detector_version: SemVer;
-  profile_id?: Slug;
-  profile_version?: SemVer;
-  input_key?: Sha256;
-  tool_versions?: {
-    [k: string]: string | undefined;
-  };
-}
-/**
- * Model suggestion. Must reference the sampled frames it is based on.
- *
- * This interface was referenced by `Event`'s JSON-Schema
- * via the `definition` "ModelSource".
- */
-export interface ModelSource {
-  kind: "model";
-  model_id: string;
-  prompt_version: SemVer;
-  /**
-   * @minItems 1
-   */
-  sampled_frames_ms: [TimelineMs, ...TimelineMs[]];
-}
-/**
- * Event created or marked manually by the user.
- *
- * This interface was referenced by `Event`'s JSON-Schema
- * via the `definition` "UserSource".
- */
-export interface UserSource {
-  kind: "user";
-}
 export interface EventDecision {
   revision: number;
   state: "unreviewed" | "confirmed" | "corrected" | "rejected";
@@ -1769,7 +1865,7 @@ export interface EventDecision {
   created_at: UtcTimestamp;
 }
 /**
- * Reproducibility record written next to an export (spec 8.9.3). Contains no footage, transcripts, or user paths.
+ * Reproducibility record written next to an export (spec 8.9.3): source hashes, segments, preset, encoder, tool, detector and profile versions. Contains no footage, transcripts, or user paths.
  */
 export interface ExportManifest {
   schema_version: string;
@@ -1789,6 +1885,15 @@ export interface ExportManifest {
   render: ManifestRender;
   detectors: ManifestDetector[];
   command?: ManifestCommand;
+  render_id?: JobId;
+  project_revision?: number;
+  encoder?: EncoderId;
+  tools?: ManifestTools;
+  output?: ManifestOutput;
+  /**
+   * @maxItems 100
+   */
+  profiles?: ManifestProfile[];
 }
 export interface ManifestSource {
   sha256: Sha256;
@@ -1824,6 +1929,63 @@ export interface ManifestCommand {
   tool: "ffmpeg";
   tool_version: string;
   args: string[];
+}
+export interface ManifestTools {
+  ffmpeg: string;
+  render_engine?: SemVer;
+}
+export interface ManifestOutput {
+  sha256: Sha256;
+  size_bytes: number;
+  duration_ms: DurationMs;
+}
+export interface ManifestProfile {
+  id: Slug;
+  version: SemVer;
+}
+/**
+ * One open-format export (M27): content plus what the format carries and every warning about what it cannot.
+ */
+export interface ExportResult {
+  schema_version: string;
+  format: "project" | "events" | "srt" | "vtt" | "csv" | "otio" | "fcpxml" | "manifest";
+  format_version: string;
+  stability: "stable" | "experimental";
+  filename: string;
+  media_type: string;
+  content: string;
+  sha256: Sha256;
+  /**
+   * @maxItems 32
+   */
+  capabilities: string[];
+  /**
+   * @maxItems 200
+   */
+  warnings: ExportWarning[];
+  /**
+   * True only when the user explicitly asked for absolute source locations.
+   */
+  includes_paths: boolean;
+}
+/**
+ * Something the format cannot represent. Exports never drop data silently.
+ *
+ * This interface was referenced by `ExportResult`'s JSON-Schema
+ * via the `definition` "ExportWarning".
+ */
+export interface ExportWarning {
+  code: string;
+  detail: string;
+  count?: number;
+}
+/**
+ * This interface was referenced by `ExportResult`'s JSON-Schema
+ * via the `definition` "ExportRequest".
+ */
+export interface ExportRequest {
+  format: "project" | "events" | "srt" | "vtt" | "csv" | "otio" | "fcpxml";
+  include_paths?: boolean;
 }
 /**
  * Identity and similarity fingerprints of one asset (spec 8.1.4, M06). 'sha256' is exact identity. 'fast_hash' screens for exact duplicates cheaply. 'frames' and 'audio' cover bounded head and tail windows for duplicate candidates and overlap alignment (M12). Every fingerprint names its algorithm and version; rows written by an older version are stale and recomputed by the 'fingerprint' backfill job.
@@ -2731,6 +2893,41 @@ export interface LocalePack {
    * Installed Tesseract language ID; never a path or download URL.
    */
   ocr_language?: string;
+}
+/**
+ * Versioned, self-contained project export (format openworld-moments.project 1.x): the portable editor document plus provenance. Paths appear only in source_locations, and only when explicitly requested.
+ */
+export interface ProjectExport {
+  schema_version: string;
+  format: "openworld-moments.project";
+  /**
+   * Export format version: readers accept every 1.x and ignore what they do not know inside 'extensions'.
+   */
+  format_version: string;
+  generator: ExportGenerator;
+  project_revision: number;
+  saved_at: UtcTimestamp;
+  /**
+   * @maxItems 32
+   */
+  capabilities: string[];
+  /**
+   * @maxItems 200
+   */
+  warnings: ExportWarning[];
+  document: EditorProject;
+  /**
+   * @maxItems 1000
+   */
+  source_locations?: SourceLocation[];
+  /**
+   * Reserved for forward-compatible additions. Readers preserve and may ignore it.
+   */
+  extensions: {};
+}
+export interface SourceLocation {
+  asset_id: AssetId;
+  path: string;
 }
 /**
  * H.264 encoders and whether each passed a real test encode with this FFmpeg (spec 11.3). Brand or GPU presence alone never makes an encoder available.

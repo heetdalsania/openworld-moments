@@ -25,6 +25,7 @@ from openworld_moments_contracts import load
 
 from openworld_moments.api.app import ApiSettings, create_app
 from openworld_moments.derived.service import DerivedMedia
+from openworld_moments.exports.service import Exporter
 from openworld_moments.ids import new_id
 from openworld_moments.ingest.importer import Importer
 from openworld_moments.jobs.engine import JobEngine
@@ -178,11 +179,26 @@ def test_golden_single_segment_is_exact_validated_and_preserves_the_source(
     output = studio.output(record)
     assert output.is_file() and record["output"]["size_bytes"] == output.stat().st_size
     assert hashlib.sha256(output.read_bytes()).hexdigest() == record["output"]["sha256"]
-    manifest = json.loads(
-        (studio.renderer.root / record["output"]["manifest_relative_path"]).read_text()
-    )
+    sidecar = (studio.renderer.root / record["output"]["manifest_relative_path"]).read_text()
+    manifest = json.loads(sidecar)
     load("export-manifest", manifest)
     assert manifest["segments"] == [{"source": 0, "in_ms": 700, "out_ms": 4700}]
+    # M27: hashes, revision, encoder, tool versions and preset; re-export is byte-stable.
+    assert manifest["render_id"] == record["id"] and manifest["project_revision"] == 1
+    assert manifest["encoder"] == "libx264" and manifest["render"]["preset_id"]
+    assert manifest["tools"]["ffmpeg"] == record["plan"]["tools"]["ffmpeg"]
+    assert manifest["output"] == {
+        "sha256": record["output"]["sha256"],
+        "size_bytes": record["output"]["size_bytes"],
+        "duration_ms": 4000,
+    }
+    assert manifest["sources"][0]["sha256"] == hashlib.sha256(clip.read_bytes()).hexdigest()
+    exported = Exporter(studio.database).render_manifest(record["id"])
+    assert (
+        exported["content"]
+        == sidecar
+        == Exporter(studio.database).render_manifest(record["id"])["content"]
+    )
     assert str(tmp_path) not in json.dumps(manifest) and str(tmp_path) not in json.dumps(record)
     probe = record["validation"]["probe"]
     assert probe["video"]["codec"] == "h264" and probe["video"]["profile"] == "High"

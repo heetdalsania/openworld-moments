@@ -113,9 +113,66 @@ class ManifestCommand(BaseModel):
     args: list[Arg]
 
 
+class ManifestTools(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    ffmpeg: Annotated[str, Field(max_length=200, min_length=1)]
+    render_engine: Annotated[
+        str | None,
+        Field(
+            description="Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.",
+            pattern="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$",
+            title="SemVer",
+        ),
+    ] = None
+
+
+class ManifestOutput(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    sha256: Annotated[
+        str,
+        Field(
+            description="Lowercase hex SHA-256 digest.", pattern="^[0-9a-f]{64}$", title="Sha256"
+        ),
+    ]
+    size_bytes: Annotated[int, Field(ge=1)]
+    duration_ms: Annotated[
+        int,
+        Field(
+            description="Non-negative duration in integer milliseconds.", ge=0, title="DurationMs"
+        ),
+    ]
+
+
+class ManifestProfile(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[
+        str,
+        Field(
+            description="Lowercase identifier for profiles, presets, detectors, and regions.",
+            max_length=64,
+            pattern="^[a-z0-9]+(?:[-_][a-z0-9]+)*$",
+            title="Slug",
+        ),
+    ]
+    version: Annotated[
+        str,
+        Field(
+            description="Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.",
+            pattern="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$",
+            title="SemVer",
+        ),
+    ]
+
+
 class ExportManifest(BaseModel):
     """
-    Reproducibility record written next to an export (spec 8.9.3). Contains no footage, transcripts, or user paths.
+    Reproducibility record written next to an export (spec 8.9.3): source hashes, segments, preset, encoder, tool, detector and profile versions. Contains no footage, transcripts, or user paths.
     """
 
     model_config = ConfigDict(
@@ -163,3 +220,22 @@ class ExportManifest(BaseModel):
             title="ManifestCommand",
         ),
     ] = None
+    render_id: Annotated[
+        str | None,
+        Field(
+            description="Opaque job ID: 'job_' + ULID.",
+            pattern="^job_[0-9A-HJKMNP-TV-Z]{26}$",
+            title="JobId",
+        ),
+    ] = None
+    project_revision: Annotated[int | None, Field(ge=0)] = None
+    encoder: Annotated[
+        Literal["libx264", "h264_videotoolbox", "h264_nvenc", "h264_qsv", "h264_amf"] | None,
+        Field(
+            description="A known FFmpeg H.264 encoder: CPU 'libx264' or a hardware encoder.",
+            title="EncoderId",
+        ),
+    ] = None
+    tools: Annotated[ManifestTools | None, Field(title="ManifestTools")] = None
+    output: Annotated[ManifestOutput | None, Field(title="ManifestOutput")] = None
+    profiles: Annotated[list[ManifestProfile] | None, Field(max_length=100)] = None

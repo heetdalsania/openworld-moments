@@ -267,6 +267,84 @@ describe("export panel", () => {
     expect(screen.getByRole("alert").textContent).toContain("was not kept");
   });
 
+  it("saves open-format exports of the saved revision through the host (M27)", async () => {
+    const user = userEvent.setup();
+    const calls: { command: string; args: Record<string, unknown> | undefined }[] = [];
+    const original = invoke.getMockImplementation();
+    invoke.mockImplementation((command: string, args?: Record<string, unknown>) => {
+      if (command === "project_export" || command === "render_manifest_export") {
+        calls.push({ command, args });
+        if ((args as { format?: string } | undefined)?.format === "csv") {
+          return Promise.resolve({ saved: false, warnings: [] });
+        }
+        return Promise.resolve({
+          saved: true,
+          warnings: [
+            {
+              code: "export.blur_not_supported",
+              detail: "Privacy blur regions are not applied; they are kept in the metadata.",
+              count: 2,
+            },
+          ],
+        });
+      }
+      return original?.(command, args);
+    });
+    renders = [readyRecord()];
+    const order: string[] = [];
+    const flush = vi.fn(() => {
+      order.push("flush");
+      return Promise.resolve();
+    });
+    panel(project(), flush);
+    const format = await screen.findByRole("combobox", { name: "Format" });
+    // Paths are opt-in and only offered where a format can reference media.
+    await user.selectOptions(format, "otio");
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Include file locations (full paths on this computer)",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save export…" }));
+    expect(order).toEqual(["flush"]);
+    expect(calls.at(-1)).toEqual({
+      command: "project_export",
+      args: { projectId: PID, format: "otio", includePaths: true },
+    });
+    expect(await screen.findByText("Export saved.")).toBeTruthy();
+    const warnings = screen.getByRole("list", { name: "Export warnings" });
+    expect(warnings.textContent).toContain("Privacy blur regions are not applied");
+    expect(warnings.textContent).toContain("(2)");
+    // Caption and marker formats never carry paths, even if the box was ticked before.
+    await user.selectOptions(format, "csv");
+    expect(screen.queryByRole("checkbox", { name: /Include file locations/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save export…" }));
+    expect(calls.at(-1)?.args).toEqual({ projectId: PID, format: "csv", includePaths: false });
+    expect(await screen.findByText("Export not saved.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save manifest…" }));
+    expect(calls.at(-1)).toEqual({ command: "render_manifest_export", args: { renderId: JOB } });
+    expect(await screen.findByText("Manifest saved.")).toBeTruthy();
+  });
+
+  it("explains a refused export", async () => {
+    const user = userEvent.setup();
+    const original = invoke.getMockImplementation();
+    invoke.mockImplementation((command: string, args?: Record<string, unknown>) => {
+      if (command === "project_export") {
+        return Promise.reject({
+          code: "export.captions_invalid",
+          message: "Caption files need valid millisecond ranges.",
+          retryable: false,
+        });
+      }
+      return original?.(command, args);
+    });
+    panel();
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Format" }), "srt");
+    await user.click(screen.getByRole("button", { name: "Save export…" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("valid millisecond ranges");
+  });
+
   it("refreshes the list when a render job finishes and explains refused requests", async () => {
     const user = userEvent.setup();
     host.route(`POST /v1/projects/${PID}/render`, () => {
