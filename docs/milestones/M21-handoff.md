@@ -29,7 +29,7 @@
   command/autosave tests **12 passed**. Windows/Linux mypy passed (152 worker source
   files); native macOS arm64 production build passed. Existing >500 kB chunk warning
   remains. Staged-file audit found no private paths, secrets, media, models,
-  databases or build outputs. Hosted CI is recorded in the PR before owner handoff.
+  databases or build outputs. Hosted CI is recorded in [PR #27](https://github.com/heetdalsania/openworld-moments/pull/27) before owner handoff.
 - Decisions made: Strict finalized editor rules live in a new envelope so legacy
   1.x Project documents stay readable. Explicit migration preserves all existing
   edits and refuses unsupported layouts. Commands ripple one primary track;
@@ -56,5 +56,4 @@
 - Screenshots, reports, or artifacts: No visual UI change, so no screenshots.
   Architecture and migration policy: [editor projects](../architecture/editor-projects.md).
   Executable shared fixtures: `packages/contracts/fixtures/editor-project/`.
-  Property test seed `0x21`, 150 sequences of up to 60 commands. Hosted CI and PR
-  links are added on handoff; the PR remains unmerged for owner review.
+  Property test seed `0x21`, 150 sequences of up to 60 commands. [PR #27](https://github.com/heetdalsania/openworld-moments/pull/27) and its [CI checks](https://github.com/heetdalsania/openworld-moments/pull/27/checks) record hosted validation; the PR remains unmerged for owner review.
