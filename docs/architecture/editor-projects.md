@@ -114,7 +114,7 @@ explicit model migration; applied SQL migrations stay immutable.
 `available_unverified`. Unavailable sources never delete or shorten edits. The
 last state means current path/size and stored metadata are available; it is **not**
 a fresh full-content verification. Consumers must gate preview/render on source
-identity, and M24 must verify referenced originals and refuse `requires_relink` bindings before rendering. M05's existing verified
+identity. M24 does verify every referenced original with a full SHA-256 and refuses `requires_relink`, missing and mismatched bindings before rendering ([render engine](./render.md)). M05's existing verified
 file relink can restore an original asset path without changing the EDL.
 
 Portable export is exactly the validated envelope. Import creates a new project

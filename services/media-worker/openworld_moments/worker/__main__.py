@@ -40,6 +40,7 @@ from openworld_moments.jobs.handlers import build_handlers
 from openworld_moments.logs import configure_logging
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.redaction import Redactor
+from openworld_moments.render.service import Renderer
 from openworld_moments.storage import Database, StorageError
 from openworld_moments.transcripts.service import Transcriber
 
@@ -179,16 +180,25 @@ def main(argv: list[str] | None = None) -> int:
     derived.paths.clean_staging()
     transcriber = Transcriber(database, tools, derived)
     transcriber.clean_staging()
+    renderer = Renderer(database, tools)
+    renderer.clean_staging()
     app = create_app(
         JobEngine(
             database,
-            build_handlers(tools, database=database, derived=derived, transcriber=transcriber),
+            build_handlers(
+                tools,
+                database=database,
+                derived=derived,
+                transcriber=transcriber,
+                renderer=renderer,
+            ),
         ),
         settings,
         on_ready=on_ready,
         capabilities=tools.capabilities,
         derived=derived,
         transcriber=transcriber,
+        renderer=renderer,
     )
     config = uvicorn.Config(
         app,

@@ -141,3 +141,12 @@ claims voice-chat/music separation; the mixed-audio warning is always visible.
   [WebVTT specification](https://www.w3.org/TR/webvtt1/),
   [media-element audio sources](https://developer.mozilla.org/en-US/docs/Web/API/MediaElementAudioSourceNode),
   [gain nodes](https://developer.mozilla.org/en-US/docs/Web/API/GainNode).
+
+## Rendering (M24)
+
+The M24 renderer compiles the stored intervals exactly: project gain applies outside
+gain ranges, each range applies inside it, and mute is applied last, all at 10 ms
+resolution. Caption burn-in and text overlays are recorded in the render plan but not
+drawn yet. A render of a project that asks for them requires an explicit "render
+without text" choice, and the plan lists them in `omitted`. Sidecars stay the M23
+native export. See [render engine](./render.md).

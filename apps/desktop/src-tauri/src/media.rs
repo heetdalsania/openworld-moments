@@ -87,6 +87,11 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("GET", ["", "v1", "projects", id, "portable"]) => is_id(id, "prj_") && query.is_none(),
         ("POST", ["", "v1", "sessions", id, "projects"]) => is_id(id, "ses_") && query.is_none(),
         ("POST", ["", "v1", "projects", id, "relink"]) => is_id(id, "prj_") && query.is_none(),
+        // M24: renders write only inside the library; the UI never names an output path.
+        ("GET", ["", "v1", "render", "presets" | "encoders"]) => query.is_none(),
+        ("POST", ["", "v1", "projects", id, "render"]) => is_id(id, "prj_") && query.is_none(),
+        ("GET", ["", "v1", "projects", id, "renders"]) => is_id(id, "prj_") && query.is_none(),
+        ("GET", ["", "v1", "renders", id]) => is_id(id, "job_") && query.is_none(),
         // Sessions (M11-M13).
         ("GET", ["", "v1", "sessions"]) => true,
         ("POST", ["", "v1", "sessions", "recompute" | "align" | "merge"]) => query.is_none(),
@@ -326,6 +331,11 @@ mod tests {
             ("GET", &format!("/v1/sessions/{SESSION}/project-selection")),
             ("POST", &format!("/v1/sessions/{SESSION}/projects")),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003"),
+            ("GET", "/v1/render/presets"),
+            ("GET", "/v1/render/encoders"),
+            ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
+            ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/renders"),
+            ("GET", &format!("/v1/renders/{JOB}")),
             ("PUT", "/v1/projects/prj_01JCBQ00000000000000000003"),
             (
                 "GET",
@@ -392,7 +402,6 @@ mod tests {
             ),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003?path=x"),
             ("DELETE", "/v1/projects/prj_01JCBQ00000000000000000003"),
-            ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
             ("POST", "/v1/projects/import?confirm=true"),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/relink"),
             (
@@ -418,6 +427,17 @@ mod tests {
             ("DELETE", &format!("/v1/sessions/{SESSION}")),
             ("PUT", &format!("/v1/sessions/{SESSION}/overlaps/{SESSION}")),
             ("POST", "/v1/sessions/recompute?max_gap_ms=1"),
+            (
+                "POST",
+                "/v1/projects/prj_01JCBQ00000000000000000003/render?output=/tmp/x.mp4",
+            ),
+            ("POST", "/v1/projects/prj_bad/render"),
+            ("PUT", "/v1/render/presets"),
+            ("POST", "/v1/render/presets"),
+            ("GET", "/v1/render/encoders?refresh=1"),
+            ("GET", "/v1/renders/prj_01JCBQ00000000000000000003"),
+            ("DELETE", &format!("/v1/renders/{JOB}")),
+            ("GET", "/v1/renders"),
             ("GET", "/v1/sessions/ses_bad"),
             (
                 "DELETE",

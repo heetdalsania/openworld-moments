@@ -348,3 +348,26 @@ export const projectSelection = (
 /** Explicit native save dialog; no webview-supplied destination path. */
 export const exportCaptions = (text: string, format: "srt" | "vtt"): Promise<boolean> =>
   invoke("caption_export", { text, format });
+
+// -- rendering (M24) -------------------------------------------------------------------
+export type RenderPreset = import("@openworld-moments/contracts").RenderPreset;
+export type RenderRecord = import("@openworld-moments/contracts").RenderRecord;
+export type RenderEncoders = import("@openworld-moments/contracts").RenderEncoders;
+
+export interface RenderOptions {
+  preset_id: string;
+  encoder?: string;
+  omit_text?: boolean;
+}
+
+export const renderPresets = (): Promise<RenderPreset[]> => call("GET", "/v1/render/presets");
+
+/** Encoders that passed a real test encode with this FFmpeg; others carry a reason. */
+export const renderEncoders = (): Promise<RenderEncoders> => call("GET", "/v1/render/encoders");
+
+/** Renders the project's last saved revision into the library. */
+export const renderProject = (id: string, options: RenderOptions): Promise<Job> =>
+  call("POST", `/v1/projects/${id}/render`, options);
+
+export const projectRenders = (id: string): Promise<RenderRecord[]> =>
+  call("GET", `/v1/projects/${id}/renders`);

@@ -9,6 +9,8 @@ import type {
   AssetDerivedMedia,
   AssetOverlap,
   Session,
+  RenderEncoders,
+  RenderRecord,
   SpeechModels,
   Transcript,
   TranscriptionResult,
@@ -563,6 +565,50 @@ function* storyCandidates(doc: StoryCandidates): Generator<string> {
   }
 }
 
+function* renderRecord(doc: RenderRecord): Generator<string> {
+  const plan = doc.plan;
+  if (plan) {
+    for (const [i, source] of plan.sources.entries()) {
+      if (source.index !== i) yield `plan.sources[${i}].index: sources are numbered in order`;
+    }
+    let expected = 0;
+    for (const [i, seg] of plan.segments.entries()) {
+      const path = `plan.segments[${i}]`;
+      if (seg.source >= plan.sources.length) yield `${path}.source: no such source`;
+      yield* range(`${path}.out_ms`, seg.in_ms, seg.out_ms, true);
+      if (seg.timeline_start_ms !== expected) {
+        yield `${path}.timeline_start_ms: segments are contiguous from zero`;
+      }
+      expected += seg.out_ms - seg.in_ms;
+      if (seg.crop.mode === "manual" && seg.crop.region === undefined) {
+        yield `${path}.crop.region: required for a manual crop`;
+      }
+    }
+    if (expected !== plan.duration_ms) {
+      yield "plan.duration_ms: must equal the sum of segment durations";
+    }
+  }
+  if (doc.status === "ready" && !doc.validation?.passed) {
+    yield "validation.passed: a ready render has passed validation";
+  }
+  if (doc.status !== "failed" && doc.fallback !== undefined) {
+    yield "fallback: only a failed render offers a fallback";
+  }
+}
+
+function* renderEncoders(doc: RenderEncoders): Generator<string> {
+  const ids = doc.encoders.map((e) => e.id);
+  if (new Set(ids).size !== ids.length) yield "encoders: each encoder appears once";
+  for (const [i, encoder] of doc.encoders.entries()) {
+    if ((encoder.id === "libx264") !== (encoder.kind === "cpu")) {
+      yield `encoders[${i}].kind: libx264 is the CPU encoder; others are hardware`;
+    }
+    if (!encoder.available && encoder.reason === undefined) {
+      yield `encoders[${i}].reason: required when unavailable`;
+    }
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
   "story-candidate": storyCandidate,
@@ -573,6 +619,8 @@ const RULES: Record<string, (doc: any) => Iterable<string>> = {
   transcript,
   transcription,
   "speech-models": speechModels,
+  render: renderRecord,
+  "render-encoders": renderEncoders,
   overlap,
   session,
   "derived-media": derivedMedia,

@@ -1,0 +1,152 @@
+{
+  "description": "A ready render always carries its validation",
+  "expect": "schema",
+  "document": {
+    "schema_version": "1.18",
+    "id": "job_01JCBQ00000000000000000041",
+    "project_id": "prj_01JCBQ00000000000000000005",
+    "project_revision": 3,
+    "status": "ready",
+    "preset_id": "horizontal-1080p30",
+    "encoder": "libx264",
+    "created_at": "2026-11-08T10:00:00Z",
+    "finished_at": "2026-11-08T10:00:20Z",
+    "progress": 1,
+    "plan": {
+      "plan_version": 1,
+      "preset": {
+        "schema_version": "1.18",
+        "id": "horizontal-1080p30",
+        "display_name": "Horizontal 1080p, 30 fps",
+        "width": 1920,
+        "height": 1080,
+        "fps": {
+          "num": 30,
+          "den": 1
+        },
+        "video": {
+          "codec": "h264",
+          "crf": 20
+        },
+        "audio": {
+          "codec": "aac",
+          "bitrate_kbps": 192,
+          "sample_rate_hz": 48000
+        }
+      },
+      "encoder": {
+        "id": "libx264",
+        "kind": "cpu"
+      },
+      "output": {
+        "width": 1920,
+        "height": 1080,
+        "fps": {
+          "num": 30,
+          "den": 1
+        },
+        "audio": true
+      },
+      "duration_ms": 5000,
+      "sources": [
+        {
+          "index": 0,
+          "asset_id": "ast_01JCBQ00000000000000000001",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "original_name": "クリップ é.mp4",
+          "audio": true,
+          "tone_mapped": false
+        },
+        {
+          "index": 1,
+          "asset_id": "ast_01JCBQ00000000000000000002",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "original_name": "Part 2.mov",
+          "audio": false,
+          "tone_mapped": true
+        }
+      ],
+      "segments": [
+        {
+          "source": 0,
+          "in_ms": 1000,
+          "out_ms": 3500,
+          "timeline_start_ms": 0,
+          "frames": 75,
+          "samples": 120000,
+          "crop": {
+            "mode": "fit"
+          }
+        },
+        {
+          "source": 1,
+          "in_ms": 0,
+          "out_ms": 2500,
+          "timeline_start_ms": 2500,
+          "frames": 75,
+          "samples": 120000,
+          "crop": {
+            "mode": "manual",
+            "region": [0.1, 0.1, 0.8, 0.8]
+          }
+        }
+      ],
+      "audio": {
+        "gain_db": -3,
+        "gain_ranges": [
+          {
+            "start_ms": 0,
+            "end_ms": 1000,
+            "gain_db": 6
+          }
+        ],
+        "mute_ranges": [
+          {
+            "start_ms": 4000,
+            "end_ms": 4500
+          }
+        ]
+      },
+      "blur_overlays": [
+        {
+          "start_ms": 500,
+          "end_ms": 2000,
+          "region": [0, 0, 0.25, 0.08]
+        }
+      ],
+      "omitted": ["text_overlays"],
+      "notes": ["Text overlays were left out at your request."],
+      "command": {
+        "argv": [
+          "-hide_banner",
+          "-nostdin",
+          "-ss",
+          "1.000",
+          "-t",
+          "3.500",
+          "-i",
+          "{source:0}",
+          "-filter_complex_script",
+          "{workdir}/graph.txt",
+          "-map",
+          "[vout]",
+          "-map",
+          "[aout]",
+          "{output}"
+        ],
+        "filter_complex": "[0:v:0]setpts=PTS-STARTPTS[v0]"
+      },
+      "tools": {
+        "ffmpeg": "7.1.1",
+        "render_engine": "1.0.0"
+      }
+    },
+    "output": {
+      "relative_path": "renders/prj_01JCBQ00000000000000000005/job_01JCBQ00000000000000000041.mp4",
+      "manifest_relative_path": "renders/prj_01JCBQ00000000000000000005/job_01JCBQ00000000000000000041.manifest.json",
+      "size_bytes": 1234567,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "duration_ms": 5000
+    }
+  }
+}

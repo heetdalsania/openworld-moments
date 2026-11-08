@@ -285,12 +285,13 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M21 | Complete | [#27](https://github.com/heetdalsania/openworld-moments/pull/27) | — | Arun Velkumar | Contracts 1.16 editor model, pure reversible commands, transactional autosave/recovery (0014), source relink and portable JSON, manual session selection; shared fixtures, property tests and process-crash validation. See [handoff](./docs/milestones/M21-handoff.md). |
 | M22 | Complete | [#28](https://github.com/heetdalsania/openworld-moments/pull/28) | — | Arun Velkumar | Focused keyboard-accessible editor, M21 commands, retained autosave drafts/recovery, source-mapped playback and read-only context; synthetic Chromium and native worker E2E. See [handoff](./docs/milestones/M22-handoff.md). |
 | M23 | Complete | [#29](https://github.com/heetdalsania/openworld-moments/pull/29) | — | Arun Velkumar | Contracts 1.17 caption settings, pure caption/audio commands, transcript source mapping, safe-area/protected-region preview, Unicode SRT/VTT and explicit native save, gain/mute preview and recovery. See [handoff](./docs/milestones/M23-handoff.md). |
-| M24 | Ready | — | — | — | M04 and M21 complete. |
-| M25 | See dependency graph | — | — | — | — |
+| M24 | Complete | [#30](https://github.com/heetdalsania/openworld-moments/pull/30) | — | Arun Velkumar | Render IR (plan_version 1) compiled to argv-only FFmpeg graphs from saved editor revisions; full SHA-256 source verification; exact cumulative frame/sample trims (goldens exact, budget ±100 ms); fit/fill/manual crop keyframes, privacy blur, gain/mute ranges, HDR LUT tone map; text overlays/burn-in an explicit-omission hook; probed hardware encoders with quality notes and explicit CPU fallback; progress, cancellation, disk preflight, FFprobe/decode/black validation, atomic completion and manifest; contracts 1.18, migration 0015, editor Export panel |
+| M25 | Ready | — | — | — | M14, M22 and M24 complete. |
 | M26 | Ready | — | — | — | M02, M09 and M19 complete. |
-| M27 | See dependency graph | — | — | — | — |
+| M27 | Ready | — | — | — | M21 and M24 complete. |
 | M28 | Ready | — | — | — | M17, M18 and M22 complete. |
-| M29–M39 | See dependency graph | — | — | — | — |
+| M29 | Ready | — | — | — | M03, M08 and M24 complete. |
+| M30–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 

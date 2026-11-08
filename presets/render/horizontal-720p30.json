@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.18",
+  "id": "horizontal-720p30",
+  "display_name": "Horizontal 720p, 30 fps (smaller files)",
+  "width": 1280,
+  "height": 720,
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "video": {
+    "codec": "h264",
+    "crf": 23
+  },
+  "audio": {
+    "codec": "aac",
+    "bitrate_kbps": 160,
+    "sample_rate_hz": 48000
+  }
+}

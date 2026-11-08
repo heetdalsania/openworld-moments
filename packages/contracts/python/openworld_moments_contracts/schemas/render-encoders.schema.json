@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/render-encoders.schema.json",
+  "title": "RenderEncoders",
+  "description": "H.264 encoders and whether each passed a real test encode with this FFmpeg (spec 11.3). Brand or GPU presence alone never makes an encoder available.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "ffmpeg_version", "encoders"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "ffmpeg_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "encoders": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "title": "EncoderStatus",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "kind", "available"],
+        "properties": {
+          "id": {
+            "$ref": "render.schema.json#/$defs/EncoderId"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "kind": {
+            "enum": ["cpu", "hardware"]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "quality_note": {
+            "type": "string",
+            "maxLength": 300
+          }
+        }
+      }
+    }
+  }
+}
