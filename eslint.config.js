@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
+      "output/playwright/**",
+      ".playwright-cli/**",
       "**/target/**",
       "**/gen/**",
       "**/node_modules/**",

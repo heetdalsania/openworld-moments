@@ -40,3 +40,5 @@ Other architecture notes:
 - [Story engine](./stories.md): deterministic narrative windows, speech boundaries, score components, candidate decisions and project handoff.
 
 - [Editor projects](./editor-projects.md): non-destructive commands, undo, autosave recovery, migration and portable source relinking.
+
+- [Focused editor](./focused-editor.md): project routes, trim/split/reorder commands, autosave recovery, keyboard controls, preview mapping and synthetic browser verification.

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 export type Route =
   | { view: "library" }
+  | { view: "projects" }
+  | { view: "project"; id: string }
   | { view: "asset"; id: string }
   | { view: "settings" }
   | { view: "calibration" }
@@ -11,10 +13,14 @@ export type Route =
   | { view: "sessions" }
   | { view: "session"; id: string };
 
+const PROJECT = /^#\/project\/(prj_[0-9A-HJKMNP-TV-Z]{26})$/;
 const ASSET = /^#\/asset\/(ast_[0-9A-HJKMNP-TV-Z]{26})$/;
 const SESSION = /^#\/session\/(ses_[0-9A-HJKMNP-TV-Z]{26})$/;
 
 export function parseRoute(hash: string): Route {
+  const project = PROJECT.exec(hash);
+  if (project?.[1]) return { view: "project", id: project[1] };
+  if (hash === "#/projects") return { view: "projects" };
   const asset = ASSET.exec(hash);
   if (asset?.[1]) return { view: "asset", id: asset[1] };
   if (hash === "#/calibration") return { view: "calibration" };
@@ -28,6 +34,10 @@ export function parseRoute(hash: string): Route {
 
 export function routeHref(route: Route): string {
   switch (route.view) {
+    case "projects":
+      return "#/projects";
+    case "project":
+      return `#/project/${route.id}`;
     case "library":
       return "#/library";
     case "asset":

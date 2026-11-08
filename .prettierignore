@@ -18,3 +18,7 @@ LICENSES/
 # Generated contract outputs (drift-checked by `pnpm contracts:check` instead)
 packages/contracts/src/generated/
 packages/contracts/python/
+
+# Local browser validation artifacts
+output/playwright/
+.playwright-cli/

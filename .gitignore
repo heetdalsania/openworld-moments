@@ -68,3 +68,7 @@ logs/
 *.deb
 *.rpm
 
+
+# Local browser validation artifacts
+output/playwright/
+.playwright-cli/

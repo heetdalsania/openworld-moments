@@ -132,6 +132,29 @@ class ProjectService:
         self.database = database
         self.library = LibraryPaths.for_database(database.path)
 
+    def page(self, *, limit: int = 50, offset: int = 0) -> dict[str, Any]:
+        if not 1 <= limit <= 100 or not 0 <= offset <= 100000:
+            raise ProjectError("project.invalid_page", "Invalid project page.")
+        with contextlib.closing(self.database.connect()) as conn:
+            conn.execute("BEGIN")
+            try:
+                total = conn.execute("SELECT count(*) FROM stories").fetchone()[0]
+                rows = conn.execute(
+                    "SELECT s.id,s.title,s.session_id,s.updated_at,"
+                    "coalesce(e.revision,0) AS revision "
+                    "FROM stories s LEFT JOIN editor_projects e ON e.project_id=s.id "
+                    "ORDER BY s.updated_at DESC,s.id LIMIT ? OFFSET ?",
+                    (limit, offset),
+                ).fetchall()
+                return {"items": [dict(r) for r in rows], "total": total, "offset": offset}
+            finally:
+                conn.execute("ROLLBACK")
+
+    def selection(self, session_id: str) -> dict[str, Any]:
+        with contextlib.closing(self.database.connect()) as conn:
+            key, duration = layout_info(conn, session_id)
+            return {"layout_key": key, "duration_ms": duration}
+
     @staticmethod
     def _read(conn: sqlite3.Connection, project_id: str) -> dict[str, Any]:
         row = conn.execute(

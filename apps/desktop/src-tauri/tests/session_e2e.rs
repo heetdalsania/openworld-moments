@@ -366,3 +366,120 @@ async fn group_align_reorder_and_override() {
         );
     }
 }
+
+/// M22: the editor's real-worker/host persistence path. Component and Chromium
+/// tests apply the M21 commands; this test verifies the resulting documents through
+/// the exact allow-listed routes and a native worker stop/start.
+#[tokio::test(flavor = "multi_thread")]
+async fn editor_create_trim_split_reorder_and_reopen() {
+    let Some(ffmpeg) = ffmpeg() else {
+        return;
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let sources = make_clips(&ffmpeg, dir.path());
+    let before: Vec<Vec<u8>> = sources.iter().map(|p| std::fs::read(p).unwrap()).collect();
+    let supervisor = Supervisor::new(SupervisorConfig::new(
+        worker_command(),
+        dir.path().join("library"),
+    ));
+    supervisor.start().await.unwrap();
+    let import = ui(
+        &supervisor,
+        "POST",
+        "/v1/imports",
+        Some(json!({"paths":sources,"mode":"reference","recursive":false})),
+    )
+    .await;
+    finished(&supervisor, import).await;
+    let group = ui(
+        &supervisor,
+        "POST",
+        "/v1/sessions/recompute",
+        Some(json!({})),
+    )
+    .await;
+    finished(&supervisor, group).await;
+    let sessions = ui(&supervisor, "GET", "/v1/sessions?limit=200", None).await;
+    let sid = sessions[0]["id"].as_str().unwrap();
+    let selection = ui(
+        &supervisor,
+        "GET",
+        &format!("/v1/sessions/{sid}/project-selection"),
+        None,
+    )
+    .await;
+    let state = ui(&supervisor,"POST",&format!("/v1/sessions/{sid}/projects"),Some(json!({"title":"Focused edit","layout_key":selection["layout_key"],"start_ms":5000,"end_ms":25000}))).await;
+    let id = state["document"]["project"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let path = format!("/v1/projects/{id}");
+    let mut document = state["document"].clone();
+    assert_eq!(
+        document["project"]["tracks"][0]["segments"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    // Trim: ripple the following segment, preserving original source bounds.
+    let source_end = document["project"]["tracks"][0]["segments"][0]["source_out_ms"]
+        .as_i64()
+        .unwrap();
+    document["project"]["tracks"][0]["segments"][0]["source_in_ms"] = json!(6000);
+    document["project"]["tracks"][0]["segments"][1]["timeline_start_ms"] = json!(source_end - 6000);
+    let trimmed = ui(
+        &supervisor,
+        "PUT",
+        &path,
+        Some(json!({"document":document,"expected_revision":1})),
+    )
+    .await;
+    assert_eq!(trimmed["revision"], 2);
+    document = trimmed["document"].clone();
+    let segments = document["project"]["tracks"][0]["segments"]
+        .as_array_mut()
+        .unwrap();
+    let mut right = segments[0].clone();
+    right["id"] = json!("seg_01JCBQ00000000000000000099");
+    right["source_in_ms"] = json!(7000);
+    right["timeline_start_ms"] = json!(1000);
+    segments[0]["source_out_ms"] = json!(7000);
+    segments.insert(1, right);
+    let split = ui(
+        &supervisor,
+        "PUT",
+        &path,
+        Some(json!({"document":document,"expected_revision":2})),
+    )
+    .await;
+    assert_eq!(split["revision"], 3);
+    document = split["document"].clone();
+    let segments = document["project"]["tracks"][0]["segments"]
+        .as_array_mut()
+        .unwrap();
+    segments.swap(0, 1);
+    segments[0]["timeline_start_ms"] = json!(0);
+    segments[1]["timeline_start_ms"] = json!(source_end - 7000);
+    let ordered = ui(
+        &supervisor,
+        "PUT",
+        &path,
+        Some(json!({"document":document,"expected_revision":3})),
+    )
+    .await;
+    assert_eq!(ordered["revision"], 4);
+    assert_eq!(ordered["recovery"], split["document"]);
+    supervisor.stop().await;
+    supervisor.start().await.unwrap();
+    let reopened = ui(&supervisor, "GET", &path, None).await;
+    assert_eq!(reopened["document"], ordered["document"]);
+    assert_eq!(reopened["revision"], 4);
+    let page = ui(&supervisor, "GET", "/v1/projects?limit=50&offset=0", None).await;
+    assert_eq!(page["items"][0]["id"], id);
+    assert_eq!(page["items"][0]["title"], "Focused edit");
+    supervisor.stop().await;
+    for (path, original) in sources.iter().zip(before) {
+        assert_eq!(std::fs::read(path).unwrap(), original);
+    }
+}

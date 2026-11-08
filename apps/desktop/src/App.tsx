@@ -3,6 +3,9 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useState } from "react";
 import { type AppInfo, fetchAppInfo } from "./appInfo";
 import { CalibrationView } from "./CalibrationView";
+import { EditorView } from "./EditorView";
+import { ProjectsView } from "./ProjectsView";
+import { hasUnsavedProjects } from "./projectWorkspace";
 import { AssetView } from "./AssetView";
 import { ImportPanel } from "./ImportPanel";
 import { JobCenter } from "./JobCenter";
@@ -114,6 +117,7 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
 function NavLink({ route, current, children }: { route: Route; current: Route; children: string }) {
   const active =
     current.view === route.view ||
+    (route.view === "projects" && current.view === "project") ||
     (route.view === "library" && current.view === "asset") ||
     (route.view === "sessions" && current.view === "session") ||
     (route.view === "settings" && current.view === "calibration");
@@ -137,6 +141,13 @@ function WorkerBanner({ worker }: { worker: WorkerStatus | null }) {
 
 export function App() {
   const route = useRoute();
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedProjects()) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
   const worker = useWorkerStatus();
   const info = useHostInfo();
   const ready = worker?.status === "ready";
@@ -151,7 +162,14 @@ export function App() {
 
   return (
     <div className="app">
-      <a className="skip" href="#main">
+      <a
+        className="skip"
+        href="#main"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main")?.focus();
+        }}
+      >
         Skip to content
       </a>
       <header className="topbar">
@@ -162,6 +180,9 @@ export function App() {
           </NavLink>
           <NavLink route={{ view: "sessions" }} current={route}>
             Sessions
+          </NavLink>
+          <NavLink route={{ view: "projects" }} current={route}>
+            Projects
           </NavLink>
           <NavLink route={{ view: "settings" }} current={route}>
             Settings
@@ -211,6 +232,10 @@ export function App() {
               </section>
             ))}
           {route.view === "session" && ready && <SessionView key={route.id} id={route.id} />}
+          {route.view === "projects" && <ProjectsView workerReady={ready} />}
+          {route.view === "project" && (
+            <EditorView key={route.id} id={route.id} workerReady={ready} />
+          )}
           {route.view === "calibration" && ready && <CalibrationView />}
           {route.view === "settings" && <SettingsView workerReady={ready} />}
           {route.view === "phone" &&

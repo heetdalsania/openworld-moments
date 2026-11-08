@@ -283,10 +283,14 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M19 | Complete | [#25](https://github.com/heetdalsania/openworld-moments/pull/25) | — | Arun Velkumar | Immutable observation snapshots and append-only review decisions, timeline markers/evidence/manual corrections, deterministic local holdout metrics and privacy-minimized compatibility reports; contracts 1.14, migration 0012. See [handoff](./docs/milestones/M19-handoff.md). |
 | M20 | Complete | [#26](https://github.com/heetdalsania/openworld-moments/pull/26) | — | Arun Velkumar | `owm-story` 1.0.0 deterministic windows/beats, exact event revisions/source ranges, speech/scene/silence boundaries, duration presets/alternatives and decomposed scores; audited candidate decisions and preserved regeneration, CLI/API jobs; contracts 1.15, migration 0013. See [handoff](./docs/milestones/M20-handoff.md). |
 | M21 | Complete | [#27](https://github.com/heetdalsania/openworld-moments/pull/27) | — | Arun Velkumar | Contracts 1.16 editor model, pure reversible commands, transactional autosave/recovery (0014), source relink and portable JSON, manual session selection; shared fixtures, property tests and process-crash validation. See [handoff](./docs/milestones/M21-handoff.md). |
-| M22 | Ready | — | — | — | M09 and M21 complete. |
-| M23 | See dependency graph | — | — | — | — |
+| M22 | Complete | PR pending | — | Arun Velkumar | Focused keyboard-accessible editor, M21 commands, retained autosave drafts/recovery, source-mapped playback and read-only context; synthetic Chromium and native worker E2E. See [handoff](./docs/milestones/M22-handoff.md). |
+| M23 | Ready | — | — | — | M18 and M22 complete. |
 | M24 | Ready | — | — | — | M04 and M21 complete. |
-| M25–M39 | See dependency graph | — | — | — | — |
+| M25 | See dependency graph | — | — | — | — |
+| M26 | Ready | — | — | — | M02, M09 and M19 complete. |
+| M27 | See dependency graph | — | — | — | — |
+| M28 | Ready | — | — | — | M17, M18 and M22 complete. |
+| M29–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 

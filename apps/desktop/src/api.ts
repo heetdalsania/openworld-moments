@@ -326,3 +326,21 @@ export const relinkProject = (
     bindings,
     confirm_replacements: confirmReplacements,
   });
+
+export interface ProjectPage {
+  items: {
+    id: string;
+    title: string;
+    session_id: string | null;
+    updated_at: string;
+    revision: number;
+  }[];
+  total: number;
+  offset: number;
+}
+export const listProjects = (offset = 0): Promise<ProjectPage> =>
+  call("GET", `/v1/projects?offset=${offset}&limit=50`);
+export const projectSelection = (
+  id: string,
+): Promise<{ layout_key: string; duration_ms: number }> =>
+  call("GET", `/v1/sessions/${id}/project-selection`);

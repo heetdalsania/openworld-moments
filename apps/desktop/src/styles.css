@@ -958,3 +958,347 @@ button.link {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* M22 focused editor. Source footage stays read-only; the track is the EDL. */
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0.5rem 0;
+}
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.project-card {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.3rem;
+  background: var(--surface);
+  color: var(--fg);
+  text-decoration: none;
+}
+.project-card:hover {
+  border-color: var(--accent);
+}
+.project-card h2 {
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.project-card-icon {
+  color: var(--accent);
+  font-size: 2rem;
+}
+.editor {
+  max-width: 1440px;
+  margin: auto;
+}
+.editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.editor-heading h1 {
+  margin: 0;
+  font-size: 1.7rem;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.editor-save {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.save-status {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.save-status.saved::before {
+  content: "● ";
+  color: #319767;
+}
+.save-status.error {
+  color: var(--warn);
+}
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.7rem 0 1rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.1rem;
+}
+.editor-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.toolbar-divider {
+  height: 1.7rem;
+  border-left: 1px solid var(--line);
+}
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.editor-preview-column {
+  min-width: 0;
+}
+.editor-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #101318;
+  border: 1px solid #303644;
+  border-radius: 12px;
+  min-height: 230px;
+  padding: 1rem;
+}
+.editor-frame {
+  position: relative;
+  width: 100%;
+  max-height: 370px;
+  background: #050608;
+  overflow: hidden;
+}
+.editor-frame[data-aspect="9:16"] {
+  width: auto;
+  height: 370px;
+}
+.editor-frame[data-aspect="1:1"] {
+  width: min(100%, 370px);
+}
+.editor-frame video {
+  object-fit: contain;
+}
+.editor-frame .player-empty {
+  color: #d1d8e5;
+  padding: 1rem;
+  text-align: center;
+}
+.editor .source-time {
+  min-height: 1.5rem;
+  font-size: 0.8rem;
+}
+.editor .clock {
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+.editor .transport {
+  flex-wrap: wrap;
+}
+.position-number {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+.position-number input {
+  width: 9rem;
+}
+.cut-inspector.panel {
+  margin: 0;
+  padding: 1rem;
+}
+.cut-inspector h2 {
+  font-size: 1.1rem;
+  margin: 0.4rem 0 1rem;
+}
+.cut-inspector label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  gap: 0.25rem;
+}
+.cut-inspector input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: ew-resize;
+  margin: 0.7rem 0;
+}
+.cut-inspector input[type="number"] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+}
+.trim-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0.7rem 0;
+}
+.cut-inspector button {
+  margin: 0.2rem 0.2rem 0.2rem 0;
+}
+.split-form {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+  margin-top: 0.8rem;
+}
+.editor-timeline.panel {
+  margin: 1.5rem 0 1rem;
+}
+.editor-timeline h2 {
+  font-size: 1rem;
+}
+.editor-lane {
+  display: flex;
+  position: relative;
+  min-height: 140px;
+  padding: 0.4rem 0;
+  overflow-x: auto;
+  gap: 3px;
+  border-bottom: 1px solid var(--line);
+}
+.editor-cut {
+  position: relative;
+  min-width: 160px;
+  flex-basis: 0;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.editor-cut.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+}
+.cut-select {
+  border: none;
+  border-radius: 0;
+  padding: 0.5rem 0.55rem;
+  width: 100%;
+  display: flex;
+  align-items: start;
+  flex-direction: column;
+  text-align: left;
+  gap: 0.2rem;
+  background: transparent;
+}
+.cut-select strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  font-size: 0.85rem;
+}
+.cut-select span {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.cut-select .cut-number {
+  color: var(--accent);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+.cut-thumbnails {
+  display: flex;
+  height: 46px;
+  background: #151922;
+  overflow: hidden;
+}
+.cut-thumbnails img {
+  width: 80px;
+  height: 46px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.cut-source-range {
+  font-size: 0.7rem;
+  display: block;
+  padding: 0.3rem 0.5rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.editor-cut .segment-wave {
+  width: 100%;
+  height: 25px;
+  display: block;
+}
+.editor-lane > .track-head {
+  pointer-events: none;
+  top: 0;
+  bottom: 0;
+  height: auto;
+  border-left: 2px solid #ee9a46;
+  z-index: 2;
+}
+.editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+.create-project label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+.create-project input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  .editor-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cut-inspector.panel {
+    max-width: none;
+  }
+  .editor-heading {
+    align-items: start;
+  }
+  .editor-save {
+    flex-direction: column;
+    align-items: end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editor * {
+    scroll-behavior: auto;
+  }
+}
+.editor-track-scroll {
+  overflow-x: auto;
+}
+.editor-lane {
+  gap: 0;
+  overflow: visible;
+  box-sizing: border-box;
+}
+.editor-cut {
+  min-width: 0;
+  flex: none;
+  box-sizing: border-box;
+}
+.cut-source-range {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.editor-frame .player-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0a0d12;
+  z-index: 1;
+}
+.editor-frame {
+  max-width: calc(370px * 16 / 9);
+  max-height: none;
+}
