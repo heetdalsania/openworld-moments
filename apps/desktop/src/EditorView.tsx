@@ -28,6 +28,7 @@ import { frameMs, nearestBoundary, toSource } from "./timeline";
 import { SegmentWave } from "./TimelineWave";
 import { CaptionPanel, CaptionPreview } from "./CaptionPanel";
 import { AudioPanel } from "./AudioPanel";
+import { ExportPanel } from "./ExportPanel";
 import { audioAt, EditorAudio } from "./editorAudio";
 import type { EditorCommand } from "./editor";
 
@@ -930,6 +931,12 @@ function LoadedEditor({
           onCommand={(command: EditorCommand) => perform(() => workspace.execute(command))}
         />
       </div>
+      <ExportPanel
+        projectId={project.id}
+        document={document}
+        flush={() => workspace.flush()}
+        workerReady={workerReady}
+      />
       {showRecovery && (
         <section className="panel" aria-labelledby="recovery-heading">
           <h2 id="recovery-heading">Recovery JSON</h2>

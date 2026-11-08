@@ -35,6 +35,7 @@ const LABELS: Record<string, string> = {
   analyze: "Analyze session",
   story: "Suggest stories",
   transcribe: "Transcribe speech",
+  render: "Render video",
   diagnostic: "Diagnostic",
 };
 
@@ -50,6 +51,7 @@ const STATE_LABELS: Record<string, string> = {
   grouping: "Grouping",
   analyzing: "Working",
   transcribing: "Transcribing",
+  rendering: "Rendering",
   ready: "Done",
   failed: "Failed",
   cancelled: "Cancelled",
@@ -123,6 +125,10 @@ export function upsertJob(job: Job): void {
     invalidate("sessions");
   }
   // A transcription keeps completed clips even when it fails or is cancelled.
+  if (previous?.state !== job.state && job.kind === "render" && !isActive(job)) {
+    const projectId = (job.params as { project_id?: string } | undefined)?.project_id;
+    invalidate(projectId ? `renders:${projectId}` : "renders:");
+  }
   if (previous?.state !== job.state && job.kind === "transcribe" && !isActive(job)) {
     invalidate("transcript:");
   }

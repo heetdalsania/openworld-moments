@@ -16,7 +16,7 @@ SPDX-FileCopyrightText = "OpenWorld Moments contributors"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
-path = ["packages/contracts/**", "profiles/**"]
+path = ["packages/contracts/**", "profiles/**", "presets/render/**"]
 SPDX-FileCopyrightText = "OpenWorld Moments contributors"
 SPDX-License-Identifier = "Apache-2.0"
 

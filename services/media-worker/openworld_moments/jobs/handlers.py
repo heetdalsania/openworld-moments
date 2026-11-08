@@ -49,6 +49,8 @@ from openworld_moments.media.probe import (
     probe_file,
 )
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.render.plan import RenderError
+from openworld_moments.render.service import RenderCancelled, Renderer, RenderFailed
 from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
 from openworld_moments.storage import Database, NotFoundError
 from openworld_moments.stories.service import StoryCancelled, StoryError, StoryRequest, StoryService
@@ -412,6 +414,49 @@ def analyze_handler(analyzer: Analyzer) -> JobHandler:
 _MODEL_NAME = re.compile(r"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$")
 
 
+_PROJECT_ID = re.compile(r"^prj_[0-9A-HJKMNP-TV-Z]{26}$")
+
+
+def render_handler(renderer: Renderer) -> JobHandler:
+    def validate(params: Mapping[str, Any]) -> dict[str, Any]:
+        _reject_unknown(params, {"project_id", "preset_id", "encoder", "omit_text"})
+        pid, preset = params.get("project_id"), params.get("preset_id")
+        if not isinstance(pid, str) or not _PROJECT_ID.fullmatch(pid):
+            raise ValueError("project_id: expected a project ID")
+        if not isinstance(preset, str) or not SLUG.fullmatch(preset):
+            raise ValueError("preset_id: expected a render preset ID")
+        encoder = params.get("encoder", "libx264")
+        if not isinstance(encoder, str) or not re.fullmatch(r"[a-z0-9_]{1,40}", encoder):
+            raise ValueError("encoder: expected an encoder ID")
+        if not isinstance(params.get("omit_text", False), bool):
+            raise ValueError("omit_text: expected a boolean")
+        clean = {**params, "encoder": encoder}
+        try:
+            renderer.check_request(clean)
+        except RenderError as exc:
+            raise ValueError(exc.message) from exc
+        return clean
+
+    def run(ctx: JobContext) -> dict[str, Any]:
+        try:
+            return renderer.run(
+                ctx.params, job_id=ctx.job_id, cancel=ctx.cancel_event, progress=ctx.progress
+            )
+        except RenderCancelled as exc:
+            raise Cancelled from exc
+        except RenderFailed as exc:
+            raise JobFailure(
+                exc.error.code,
+                exc.error.message,
+                retryable=True,
+                details=exc.error.details or None,
+                result=exc.record,
+            ) from exc
+
+    # A render restarted after a worker crash starts over in a clean staging folder.
+    return JobHandler("render", run, validate, "rendering", True, 2)
+
+
 def transcribe_handler(transcriber: Transcriber) -> JobHandler:
     def validate(params: Mapping[str, Any]) -> dict[str, Any]:
         _reject_unknown(params, {"session_id", "model", "language", "force"})
@@ -545,6 +590,7 @@ def build_handlers(
     database: Database | None = None,
     derived: DerivedMedia | None = None,
     transcriber: Transcriber | None = None,
+    renderer: Renderer | None = None,
 ) -> dict[str, JobHandler]:
     """Every handler the worker serves. Import handlers need the library ``database``.
     Pass the API's ``derived`` service so jobs and cleanup share one lock."""
@@ -568,4 +614,6 @@ def build_handlers(
         handlers[speech.kind] = speech
         story = story_handler(StoryService(database))
         handlers[story.kind] = story
+        render = render_handler(renderer or Renderer(database, tools))
+        handlers[render.kind] = render
     return handlers

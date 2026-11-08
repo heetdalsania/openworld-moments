@@ -27,6 +27,8 @@ import profile from "../schemas/profile.schema.json" with { type: "json" };
 import project from "../schemas/project.schema.json" with { type: "json" };
 import renderPreset from "../schemas/render-preset.schema.json" with { type: "json" };
 import session from "../schemas/session.schema.json" with { type: "json" };
+import renderEncoders from "../schemas/render-encoders.schema.json" with { type: "json" };
+import render from "../schemas/render.schema.json" with { type: "json" };
 import speechModels from "../schemas/speech-models.schema.json" with { type: "json" };
 import transcript from "../schemas/transcript.schema.json" with { type: "json" };
 import transcription from "../schemas/transcription.schema.json" with { type: "json" };
@@ -56,6 +58,8 @@ import type {
   Project,
   RenderPreset,
   Session,
+  RenderEncoders,
+  RenderRecord,
   SpeechModels,
   Transcript,
   TranscriptionResult,
@@ -89,6 +93,8 @@ export interface ContractTypes {
   project: Project;
   "render-preset": RenderPreset;
   session: Session;
+  render: RenderRecord;
+  "render-encoders": RenderEncoders;
   "speech-models": SpeechModels;
   transcript: Transcript;
   transcription: TranscriptionResult;
@@ -121,6 +127,8 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   project: [project, true],
   "render-preset": [renderPreset, true],
   session: [session, true],
+  render: [render, true],
+  "render-encoders": [renderEncoders, true],
   "speech-models": [speechModels, true],
   transcript: [transcript, true],
   transcription: [transcription, true],

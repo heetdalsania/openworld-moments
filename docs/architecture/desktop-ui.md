@@ -26,8 +26,8 @@ Rust host ──worker://job-event, worker://resync, worker://status──▶ Re
 
   | Method | Route |
   |---|---|
-  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities`, `/v1/sessions` (query: `limit`, …), `/v1/sessions/{id}`, `/v1/sessions/{id}/overlaps`, `/v1/sessions/{id}/corrections`, `/v1/transcription/models`, `/v1/sessions/{id}/transcript` |
-  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry`, `/v1/sessions/recompute`, `/v1/sessions/align`, `/v1/sessions/merge`, `/v1/sessions/{id}/split`, `/v1/sessions/{id}/order`, `/v1/sessions/{id}/remove`, `/v1/sessions/{id}/confirm`, `/v1/sessions/{id}/transcribe` |
+  | GET | `/v1/assets` (query: `order`, `limit`, `after`, `missing`), `/v1/assets/{id}`, `/v1/assets/{id}/derived`, `/v1/jobs`, `/v1/jobs/{id}`, `/v1/imports/{id}`, `/v1/capabilities`, `/v1/sessions` (query: `limit`, …), `/v1/sessions/{id}`, `/v1/sessions/{id}/overlaps`, `/v1/sessions/{id}/corrections`, `/v1/transcription/models`, `/v1/sessions/{id}/transcript`, `/v1/render/presets`, `/v1/render/encoders`, `/v1/projects/{id}/renders`, `/v1/renders/{job_id}` |
+  | POST | `/v1/imports`, `/v1/assets/{id}/derived`, `/v1/assets/check-sources`, `/v1/jobs/{id}/cancel`, `/v1/jobs/{id}/retry`, `/v1/sessions/recompute`, `/v1/sessions/align`, `/v1/sessions/merge`, `/v1/sessions/{id}/split`, `/v1/sessions/{id}/order`, `/v1/sessions/{id}/remove`, `/v1/sessions/{id}/confirm`, `/v1/sessions/{id}/transcribe`, `/v1/projects/{id}/render` (M24; output stays in the library) |
   | PUT | `/v1/sessions/{id}/overlaps/{asset_id}` |
   | DELETE | `/v1/sessions/{id}/transcript` (derived text only, M18) |
 

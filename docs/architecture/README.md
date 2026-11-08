@@ -39,6 +39,7 @@ Other architecture notes:
 
 - [Story engine](./stories.md): deterministic narrative windows, speech boundaries, score components, candidate decisions and project handoff.
 
+- [Render engine](./render.md): render IR, argument-array FFmpeg compiler, exact trims, crop/blur/audio, HDR tone map, presets, tested hardware encoders and CPU fallback, validation thresholds, atomic completion, golden outputs.
 - [Editor projects](./editor-projects.md): non-destructive commands, undo, autosave recovery, migration and portable source relinking.
 
 - [Focused editor](./focused-editor.md): project routes, trim/split/reorder commands, autosave recovery, keyboard controls, preview mapping and synthetic browser verification.

@@ -1,0 +1,607 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/render.schema.json",
+  "title": "RenderRecord",
+  "description": "One render of a project revision (M24): its plan, outcome, validated output, or the reason it failed. 'ready' always has a validated output; a hardware encoder failure offers an explicit CPU fallback instead of switching silently.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "project_id",
+    "status",
+    "preset_id",
+    "encoder",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/JobId"
+    },
+    "project_id": {
+      "$ref": "common.schema.json#/$defs/ProjectId"
+    },
+    "project_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "enum": ["queued", "rendering", "ready", "failed", "cancelled"]
+    },
+    "preset_id": {
+      "$ref": "common.schema.json#/$defs/Slug"
+    },
+    "encoder": {
+      "$ref": "#/$defs/EncoderId"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "finished_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "progress": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "plan": {
+      "$ref": "#/$defs/RenderPlan"
+    },
+    "output": {
+      "$ref": "#/$defs/RenderOutput"
+    },
+    "validation": {
+      "$ref": "#/$defs/RenderValidation"
+    },
+    "error": {
+      "$ref": "error.schema.json"
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["encoder", "reason"],
+      "properties": {
+        "encoder": {
+          "const": "libx264"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ready"
+          }
+        }
+      },
+      "then": {
+        "required": ["plan", "output", "validation", "finished_at"],
+        "properties": {
+          "plan": {
+            "$ref": "#/$defs/RenderPlan"
+          },
+          "output": {
+            "$ref": "#/$defs/RenderOutput"
+          },
+          "validation": {
+            "$ref": "#/$defs/RenderValidation"
+          },
+          "finished_at": {
+            "$ref": "common.schema.json#/$defs/UtcTimestamp"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["failed", "cancelled"]
+          }
+        }
+      },
+      "then": {
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "$ref": "error.schema.json"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "EncoderId": {
+      "title": "EncoderId",
+      "description": "A known FFmpeg H.264 encoder: CPU 'libx264' or a hardware encoder.",
+      "enum": ["libx264", "h264_videotoolbox", "h264_nvenc", "h264_qsv", "h264_amf"]
+    },
+    "RenderPlan": {
+      "title": "RenderPlan",
+      "description": "The normalized render intermediate representation (plan_version 1). Fully determined by the project revision, preset, encoder and FFmpeg version. Contains no paths: inputs and output appear as placeholders.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_version",
+        "preset",
+        "encoder",
+        "output",
+        "duration_ms",
+        "sources",
+        "segments",
+        "audio",
+        "blur_overlays",
+        "omitted",
+        "notes",
+        "command",
+        "tools"
+      ],
+      "properties": {
+        "plan_version": {
+          "const": 1
+        },
+        "preset": {
+          "$ref": "render-preset.schema.json"
+        },
+        "encoder": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind"],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/EncoderId"
+            },
+            "kind": {
+              "enum": ["cpu", "hardware"]
+            },
+            "quality_note": {
+              "type": "string",
+              "maxLength": 300,
+              "description": "Shown before rendering when the encoder's quality scale differs from the preset's x264 settings."
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height", "fps", "audio"],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 8192,
+              "multipleOf": 2
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 8192,
+              "multipleOf": 2
+            },
+            "fps": {
+              "$ref": "common.schema.json#/$defs/Rational"
+            },
+            "audio": {
+              "type": "boolean",
+              "description": "An AAC track is written when any segment's source has audio."
+            }
+          }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["index", "asset_id", "sha256", "original_name", "audio", "tone_mapped"],
+            "properties": {
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "asset_id": {
+                "$ref": "common.schema.json#/$defs/AssetId"
+              },
+              "sha256": {
+                "$ref": "common.schema.json#/$defs/Sha256"
+              },
+              "original_name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "audio": {
+                "type": "boolean"
+              },
+              "tone_mapped": {
+                "type": "boolean",
+                "description": "HDR source tone-mapped to SDR BT.709 with the M08 LUT."
+              }
+            }
+          }
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 400,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "in_ms",
+              "out_ms",
+              "timeline_start_ms",
+              "frames",
+              "samples",
+              "crop"
+            ],
+            "properties": {
+              "source": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "in_ms": {
+                "$ref": "common.schema.json#/$defs/TimelineMs"
+              },
+              "out_ms": {
+                "$ref": "common.schema.json#/$defs/TimelineMs"
+              },
+              "timeline_start_ms": {
+                "$ref": "common.schema.json#/$defs/TimelineMs"
+              },
+              "frames": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "samples": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "crop": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["mode"],
+                "properties": {
+                  "mode": {
+                    "enum": ["fit", "fill", "safe", "manual"]
+                  },
+                  "region": {
+                    "$ref": "common.schema.json#/$defs/Region"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "audio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gain_db", "gain_ranges", "mute_ranges"],
+          "properties": {
+            "gain_db": {
+              "type": "number",
+              "minimum": -60,
+              "maximum": 24
+            },
+            "gain_ranges": {
+              "type": "array",
+              "maxItems": 500,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["start_ms", "end_ms", "gain_db"],
+                "properties": {
+                  "start_ms": {
+                    "$ref": "common.schema.json#/$defs/TimelineMs"
+                  },
+                  "end_ms": {
+                    "$ref": "common.schema.json#/$defs/TimelineMs"
+                  },
+                  "gain_db": {
+                    "type": "number",
+                    "minimum": -60,
+                    "maximum": 24
+                  }
+                }
+              }
+            },
+            "mute_ranges": {
+              "type": "array",
+              "maxItems": 500,
+              "items": {
+                "$ref": "common.schema.json#/$defs/TimeRange"
+              }
+            }
+          }
+        },
+        "blur_overlays": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["start_ms", "end_ms", "region"],
+            "properties": {
+              "start_ms": {
+                "$ref": "common.schema.json#/$defs/TimelineMs"
+              },
+              "end_ms": {
+                "$ref": "common.schema.json#/$defs/TimelineMs"
+              },
+              "region": {
+                "$ref": "common.schema.json#/$defs/Region"
+              }
+            }
+          }
+        },
+        "omitted": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["text_overlays", "burned_captions"]
+          },
+          "description": "Project content that this render explicitly leaves out because the user chose to (text rendering is a hook in M24)."
+        },
+        "notes": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "command": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["argv", "filter_complex"],
+          "properties": {
+            "argv": {
+              "type": "array",
+              "maxItems": 4000,
+              "items": {
+                "type": "string",
+                "maxLength": 100000
+              },
+              "description": "The FFmpeg argument array with '{source:N}', '{output}' and '{workdir}' placeholders; never a shell string."
+            },
+            "filter_complex": {
+              "type": "string",
+              "maxLength": 1000000
+            }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ffmpeg"],
+          "properties": {
+            "ffmpeg": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "render_engine": {
+              "$ref": "common.schema.json#/$defs/SemVer"
+            }
+          }
+        }
+      }
+    },
+    "RenderValidation": {
+      "title": "RenderValidation",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "checks", "probe", "thresholds"],
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed", "detail"],
+            "properties": {
+              "name": {
+                "enum": [
+                  "container",
+                  "duration",
+                  "video_stream",
+                  "resolution",
+                  "pixel_format",
+                  "frame_rate",
+                  "rotation",
+                  "audio_stream",
+                  "metadata",
+                  "decode_start",
+                  "decode_middle",
+                  "decode_end",
+                  "black_frames"
+                ]
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "detail": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "probe": {
+          "title": "RenderProbe",
+          "description": "FFprobe audit of the output (no paths or tags).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "duration_ms", "video_streams", "audio_streams"],
+          "properties": {
+            "format": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "video_streams": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "audio_streams": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "video": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["codec", "width", "height", "pix_fmt"],
+              "properties": {
+                "codec": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "profile": {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                "width": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "height": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pix_fmt": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "fps": {
+                  "$ref": "common.schema.json#/$defs/Rational"
+                },
+                "rotation": {
+                  "type": "integer"
+                }
+              }
+            },
+            "audio": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["codec", "channels", "sample_rate_hz"],
+              "properties": {
+                "codec": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "channels": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "sample_rate_hz": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "tags": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "description": "Container tag names kept in the output (values omitted)."
+            }
+          }
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duration_tolerance_ms", "black_luma", "source_luma"],
+          "properties": {
+            "duration_tolerance_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "black_luma": {
+              "type": "number"
+            },
+            "source_luma": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "RenderOutput": {
+      "title": "RenderOutput",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "size_bytes", "sha256", "duration_ms"],
+      "properties": {
+        "relative_path": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^renders/prj_[0-9A-HJKMNP-TV-Z]{26}/job_[0-9A-HJKMNP-TV-Z]{26}\\.mp4$",
+          "description": "Library-relative; never an absolute path."
+        },
+        "manifest_relative_path": {
+          "type": "string",
+          "maxLength": 300,
+          "pattern": "^renders/prj_[0-9A-HJKMNP-TV-Z]{26}/job_[0-9A-HJKMNP-TV-Z]{26}\\.manifest\\.json$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "common.schema.json#/$defs/Sha256"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "RenderRequest": {
+      "title": "RenderRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset_id"],
+      "properties": {
+        "preset_id": {
+          "$ref": "common.schema.json#/$defs/Slug"
+        },
+        "encoder": {
+          "$ref": "#/$defs/EncoderId"
+        },
+        "omit_text": {
+          "type": "boolean",
+          "description": "Explicitly render without text overlays and burned-in captions."
+        }
+      }
+    }
+  }
+}

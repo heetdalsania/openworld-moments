@@ -41,6 +41,7 @@ from openworld_moments.detectors.profiles import ProfileCatalog, ProfileError
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
+from openworld_moments.media.tools import MediaTools
 from openworld_moments.projects.service import (
     ImportProject,
     ManualProject,
@@ -49,6 +50,7 @@ from openworld_moments.projects.service import (
     RelinkProject,
     SaveProject,
 )
+from openworld_moments.render.service import Renderer
 from openworld_moments.review.service import (
     EventReviewService,
     ManualEvent,
@@ -258,6 +260,14 @@ class SubmitAnalysis(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class SubmitRender(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    preset_id: str
+    encoder: str | None = None
+    omit_text: bool = False
+    idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
+
+
 class SubmitTranscription(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model: str
@@ -322,6 +332,7 @@ def create_app(
     derived: DerivedMedia | None = None,
     profile_catalog: ProfileCatalog | None = None,
     transcriber: Transcriber | None = None,
+    renderer: Renderer | None = None,
 ) -> ASGIApp:
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -576,6 +587,43 @@ def create_app(
         params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
         params["session_id"] = session_id
         return await submit_job("analyze", params, body.idempotency_key, request, response)
+
+    # -- rendering (M24) -------------------------------------------------------------------
+
+    def renders() -> Renderer:
+        nonlocal renderer
+        if renderer is None:
+            renderer = Renderer(engine.database, derived.tools if derived else MediaTools())
+        return renderer
+
+    @app.get("/v1/render/presets")
+    async def render_presets() -> list[dict[str, Any]]:
+        return await asyncio.to_thread(renders().presets.all)
+
+    @app.get("/v1/render/encoders")
+    async def render_encoders() -> dict[str, Any]:
+        return await asyncio.to_thread(renders().encoder_status)
+
+    @app.post("/v1/projects/{project_id}/render", status_code=201)
+    async def render_project(
+        project_id: str, body: SubmitRender, request: Request, response: Response
+    ) -> dict[str, Any]:
+        params = body.model_dump(exclude={"idempotency_key"}, exclude_none=True)
+        params["project_id"] = project_id
+        return await submit_job("render", params, body.idempotency_key, request, response)
+
+    @app.get("/v1/projects/{project_id}/renders")
+    async def project_renders(project_id: str) -> list[dict[str, Any]]:
+        return await asyncio.to_thread(renders().for_project, project_id)
+
+    @app.get("/v1/renders/{render_id}")
+    async def get_render(render_id: str) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(renders().get, render_id)
+        except NotFoundError as exc:
+            raise EngineError(
+                "render.not_found", "That render does not exist.", status=404
+            ) from exc
 
     # -- transcription (M18) ---------------------------------------------------------------
 

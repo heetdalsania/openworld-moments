@@ -1,0 +1,30 @@
+{
+  "description": "Unavailable encoders explain why",
+  "expect": "semantic",
+  "message_contains": "reason",
+  "document": {
+    "schema_version": "1.18",
+    "ffmpeg_version": "7.1.1",
+    "encoders": [
+      {
+        "id": "libx264",
+        "label": "CPU (libx264)",
+        "kind": "cpu",
+        "available": true
+      },
+      {
+        "id": "h264_videotoolbox",
+        "label": "Apple VideoToolbox",
+        "kind": "hardware",
+        "available": true,
+        "quality_note": "VideoToolbox quality (-q:v) approximates x264 CRF."
+      },
+      {
+        "id": "h264_nvenc",
+        "label": "NVIDIA NVENC",
+        "kind": "hardware",
+        "available": false
+      }
+    ]
+  }
+}

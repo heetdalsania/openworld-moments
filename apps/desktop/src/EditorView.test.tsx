@@ -77,6 +77,25 @@ beforeEach(() => {
   }));
   host.route("GET /v1/jobs?limit=200", []);
   host.route("GET /v1/profiles", []);
+  // Export (M24): one CPU encoder and a preset; no renders yet.
+  host.route("GET /v1/render/presets", [
+    {
+      schema_version: "1.18",
+      id: "horizontal-720p30",
+      display_name: "Horizontal 720p, 30 fps",
+      width: 1280,
+      height: 720,
+      fps: { num: 30, den: 1 },
+      video: { codec: "h264", crf: 23 },
+      audio: { codec: "aac", bitrate_kbps: 160, sample_rate_hz: 48000 },
+    },
+  ]);
+  host.route("GET /v1/render/encoders", {
+    schema_version: "1.18",
+    ffmpeg_version: "7.1.1",
+    encoders: [{ id: "libx264", label: "CPU (libx264)", kind: "cpu", available: true }],
+  });
+  host.route(`GET /v1/projects/${PID}/renders`, []);
   vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(async function (
     this: HTMLMediaElement,
   ) {
@@ -122,7 +141,9 @@ it("loads a single primary track with source boundaries, filmstrip, labelled tri
   expect(screen.getByRole("status", { name: "Project save status" }).textContent).toContain(
     "Unsaved",
   );
-  expect(screen.queryByRole("button", { name: /export|render/i })).toBeNull();
+  // M24 adds rendering: the Export panel renders the saved revision.
+  expect(screen.getByRole("heading", { name: "Export" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Render" })).toBeTruthy();
 });
 it("keyboard-only numeric trim/split/reorder/remove and undo/redo are command-backed and autosave/reload", async () => {
   const user = userEvent.setup();

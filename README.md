@@ -40,6 +40,7 @@ Completed milestones:
 | M21 — Editor project model | Versioned non-destructive EDL with source bindings, pure timeline commands and undo/redo, debounced revision-checked autosave/recovery, manual session selection and portable import/export/relink ([editor model](./docs/architecture/editor-projects.md)) |
 | M22 — Focused editor UI | Projects browser and manual session-range creation; source-mapped preview, trim handles/numeric times, split/remove/reorder, undo/redo and revision-checked autosave with retained drafts and recovery; keyboard alternatives and read-only event context ([focused editor](./docs/architecture/focused-editor.md)) |
 | M23 — Captions and audio controls | Transcript-backed editable captions, Unicode SRT/VTT sidecars, caption placement/style and burn-in intent, protected-region warnings, and project/cut/range gain and mute preview with waveform shading ([captions and audio](./docs/architecture/captions-and-audio.md)) |
+| M24 — Render engine | Exports a saved project revision to a validated horizontal H.264/AAC MP4: argument-array FFmpeg graphs (no shell), verified originals, exact trims, crop/fit/fill, privacy blur, gain/mute, HDR tone mapping, tested hardware encoders with an explicit CPU fallback, progress/cancel, FFprobe and sampled-decode validation, atomic completion with a reproducibility manifest; an Export panel in the editor ([render engine](./docs/architecture/render.md), [presets](./presets/README.md)) |
 
 You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story candidates can be generated and reviewed through the local CLI/API, and manual or existing projects can be edited visually through the Projects screen, including caption correction and simple audio gain/mute. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -359,11 +360,16 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M23 adds caption correction/sidecars and non-destructive audio preview controls.
-The next milestone is [M24 — Render engine](./docs/milestones/M24-render-engine.md).
-M26 search/collections and M28 privacy review also have their prerequisites;
-M25 vertical layouts follows M24. See the [M23 handoff](./docs/milestones/M23-handoff.md)
-and [captions/audio guide](./docs/architecture/captions-and-audio.md).
+M24 renders saved projects to validated horizontal MP4s inside the library. Several
+milestones now have their prerequisites (see [MILESTONES.md](./MILESTONES.md)):
+
+- [M25 — HUD-aware vertical layouts](./docs/milestones/M25-hud-aware-vertical-layouts.md): safe crop, fit and layout keyframes on top of the M24 renderer.
+- [M27 — Open exports and manifests](./docs/milestones/M27-open-exports-and-manifests.md): JSONL, captions, OTIO and reproducibility exports, including saving renders outside the library.
+- M26 search/collections, M28 privacy review and M29 Windows packaging are also ready.
+
+Text overlays and burned-in captions are recorded but not drawn yet (an explicit
+omission hook); see the [M24 handoff](./docs/milestones/M24-handoff.md) and
+[render engine](./docs/architecture/render.md).
 
 M10 still needs its real-phone smoke test on a Windows private network. Detector
 quality remains synthetic/local; GTA profiles are unvalidated and M18 real

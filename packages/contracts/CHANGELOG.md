@@ -2,6 +2,20 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.18 — M24 render engine
+
+Additive; existing 1.17 documents remain valid.
+
+- New `render` contract (`RenderRecord`): status, preset, encoder, project revision,
+  the normalized `RenderPlan` IR (plan_version 1; argv template with placeholders,
+  no paths or user text), `RenderValidation` (checks, FFprobe audit, thresholds),
+  library-relative `RenderOutput`, error, and an explicit CPU `fallback`. A `ready`
+  record requires a passed validation; only failed records offer a fallback;
+  `omitted` may list text only, never privacy blur.
+- New `render-encoders` contract: encoders with test-encode availability, reasons and
+  quality notes. libx264 is the only CPU encoder.
+- `RenderRequest` (`preset_id`, `encoder?`, `omit_text?`) in `render.$defs`.
+
 ## 1.17 — M23 captions and audio controls
 
 - Optional `Project.caption_settings`: high-contrast/compact preset, normalized

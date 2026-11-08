@@ -487,7 +487,46 @@ def _story_candidates(doc: Document) -> Iterable[str]:
             yield "items: project ID differs from candidate"
 
 
+def _render(doc: Document) -> Iterable[str]:
+    plan = doc.get("plan")
+    if plan is not None:
+        sources = len(plan["sources"])
+        for i, source in enumerate(plan["sources"]):
+            if source["index"] != i:
+                yield f"plan.sources[{i}].index: sources are numbered in order"
+        expected = 0
+        for i, seg in enumerate(plan["segments"]):
+            path = f"plan.segments[{i}]"
+            if seg["source"] >= sources:
+                yield f"{path}.source: no such source"
+            yield from _range(f"{path}.out_ms", seg["in_ms"], seg["out_ms"], strict=True)
+            if seg["timeline_start_ms"] != expected:
+                yield f"{path}.timeline_start_ms: segments are contiguous from zero"
+            expected += seg["out_ms"] - seg["in_ms"]
+            if seg["crop"]["mode"] == "manual" and "region" not in seg["crop"]:
+                yield f"{path}.crop.region: required for a manual crop"
+        if expected != plan["duration_ms"]:
+            yield "plan.duration_ms: must equal the sum of segment durations"
+    if doc["status"] == "ready" and not doc["validation"]["passed"]:
+        yield "validation.passed: a ready render has passed validation"
+    if doc["status"] != "failed" and "fallback" in doc:
+        yield "fallback: only a failed render offers a fallback"
+
+
+def _render_encoders(doc: Document) -> Iterable[str]:
+    ids = [e["id"] for e in doc["encoders"]]
+    if len(ids) != len(set(ids)):
+        yield "encoders: each encoder appears once"
+    for i, encoder in enumerate(doc["encoders"]):
+        if (encoder["id"] == "libx264") != (encoder["kind"] == "cpu"):
+            yield f"encoders[{i}].kind: libx264 is the CPU encoder; others are hardware"
+        if not encoder["available"] and "reason" not in encoder:
+            yield f"encoders[{i}].reason: required when unavailable"
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "render": _render,
+    "render-encoders": _render_encoders,
     "story-candidate": _story_candidate,
     "story-candidates": _story_candidates,
     "evaluation": _evaluation,

@@ -127,6 +127,36 @@ export type UtcTimestamp1 = string;
  */
 export type TimelineMs2 = number;
 /**
+ * A known FFmpeg H.264 encoder: CPU 'libx264' or a hardware encoder.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "EncoderId".
+ */
+export type EncoderId = "libx264" | "h264_videotoolbox" | "h264_nvenc" | "h264_qsv" | "h264_amf";
+/**
+ * One render of a project revision (M24): its plan, outcome, validated output, or the reason it failed. 'ready' always has a validated output; a hardware encoder failure offers an explicit CPU fallback instead of switching silently.
+ */
+export type RenderRecord = {
+  schema_version: string;
+  id: JobId;
+  project_id: ProjectId;
+  project_revision?: number;
+  status: "queued" | "rendering" | "ready" | "failed" | "cancelled";
+  preset_id: Slug;
+  encoder: EncoderId;
+  created_at: UtcTimestamp;
+  finished_at?: UtcTimestamp;
+  progress?: number;
+  plan?: RenderPlan;
+  output?: RenderOutput;
+  validation?: RenderValidation;
+  error?: ErrorInfo;
+  fallback?: {
+    encoder: "libx264";
+    reason: string;
+  };
+};
+/**
  * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
  */
 export type UtcTimestamp2 = string;
@@ -231,7 +261,9 @@ export interface ContractsBundle {
   "profile-patch"?: ProfilePatch;
   profile?: Profile;
   project?: Project;
+  "render-encoders"?: RenderEncoders;
   "render-preset"?: RenderPreset;
+  render?: RenderRecord;
   session?: Session;
   "speech-models"?: SpeechModels;
   "story-candidate"?: StoryCandidate;
@@ -2361,6 +2393,74 @@ export interface LocalePack {
   ocr_language?: string;
 }
 /**
+ * H.264 encoders and whether each passed a real test encode with this FFmpeg (spec 11.3). Brand or GPU presence alone never makes an encoder available.
+ */
+export interface RenderEncoders {
+  schema_version: string;
+  ffmpeg_version: string;
+  /**
+   * @minItems 1
+   * @maxItems 10
+   */
+  encoders:
+    | [EncoderStatus]
+    | [EncoderStatus, EncoderStatus]
+    | [EncoderStatus, EncoderStatus, EncoderStatus]
+    | [EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus]
+    | [EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus]
+    | [EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus, EncoderStatus]
+    | [
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus
+      ]
+    | [
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus
+      ]
+    | [
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus
+      ]
+    | [
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus,
+        EncoderStatus
+      ];
+}
+export interface EncoderStatus {
+  id: EncoderId;
+  label: string;
+  kind: "cpu" | "hardware";
+  available: boolean;
+  reason?: string;
+  quality_note?: string;
+}
+/**
  * Export preset (spec 11.4). Presets are JSON files so users can contribute new ones.
  */
 export interface RenderPreset {
@@ -2392,6 +2492,593 @@ export interface AudioEncoding {
   codec: "aac";
   bitrate_kbps: number;
   sample_rate_hz: 44100 | 48000;
+}
+/**
+ * The normalized render intermediate representation (plan_version 1). Fully determined by the project revision, preset, encoder and FFmpeg version. Contains no paths: inputs and output appear as placeholders.
+ *
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "RenderPlan".
+ */
+export interface RenderPlan {
+  plan_version: 1;
+  preset: RenderPreset;
+  encoder: {
+    id: EncoderId;
+    kind: "cpu" | "hardware";
+    /**
+     * Shown before rendering when the encoder's quality scale differs from the preset's x264 settings.
+     */
+    quality_note?: string;
+  };
+  output: {
+    width: number;
+    height: number;
+    fps: Rational;
+    /**
+     * An AAC track is written when any segment's source has audio.
+     */
+    audio: boolean;
+  };
+  duration_ms: number;
+  /**
+   * @minItems 1
+   * @maxItems 200
+   */
+  sources: [
+    {
+      index: number;
+      asset_id: AssetId;
+      sha256: Sha256;
+      original_name: string;
+      audio: boolean;
+      /**
+       * HDR source tone-mapped to SDR BT.709 with the M08 LUT.
+       */
+      tone_mapped: boolean;
+    },
+    ...{
+      index: number;
+      asset_id: AssetId;
+      sha256: Sha256;
+      original_name: string;
+      audio: boolean;
+      /**
+       * HDR source tone-mapped to SDR BT.709 with the M08 LUT.
+       */
+      tone_mapped: boolean;
+    }[]
+  ];
+  /**
+   * @minItems 1
+   * @maxItems 400
+   */
+  segments: [
+    {
+      source: number;
+      in_ms: TimelineMs;
+      out_ms: TimelineMs;
+      timeline_start_ms: TimelineMs;
+      frames: number;
+      samples: number;
+      crop: {
+        mode: "fit" | "fill" | "safe" | "manual";
+        region?: Region;
+      };
+    },
+    ...{
+      source: number;
+      in_ms: TimelineMs;
+      out_ms: TimelineMs;
+      timeline_start_ms: TimelineMs;
+      frames: number;
+      samples: number;
+      crop: {
+        mode: "fit" | "fill" | "safe" | "manual";
+        region?: Region;
+      };
+    }[]
+  ];
+  audio: {
+    gain_db: number;
+    /**
+     * @maxItems 500
+     */
+    gain_ranges: {
+      start_ms: TimelineMs;
+      end_ms: TimelineMs;
+      gain_db: number;
+    }[];
+    /**
+     * @maxItems 500
+     */
+    mute_ranges: TimeRange[];
+  };
+  /**
+   * @maxItems 100
+   */
+  blur_overlays: {
+    start_ms: TimelineMs;
+    end_ms: TimelineMs;
+    region: Region;
+  }[];
+  /**
+   * Project content that this render explicitly leaves out because the user chose to (text rendering is a hook in M24).
+   */
+  omitted: ("text_overlays" | "burned_captions")[];
+  /**
+   * @maxItems 20
+   */
+  notes:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ];
+  command: {
+    /**
+     * The FFmpeg argument array with '{source:N}', '{output}' and '{workdir}' placeholders; never a shell string.
+     *
+     * @maxItems 4000
+     */
+    argv: string[];
+    filter_complex: string;
+  };
+  tools: {
+    ffmpeg: string;
+    render_engine?: SemVer;
+  };
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "RenderOutput".
+ */
+export interface RenderOutput {
+  /**
+   * Library-relative; never an absolute path.
+   */
+  relative_path: string;
+  manifest_relative_path?: string;
+  size_bytes: number;
+  sha256: Sha256;
+  duration_ms: number;
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "RenderValidation".
+ */
+export interface RenderValidation {
+  passed: boolean;
+  /**
+   * @minItems 1
+   */
+  checks: [
+    {
+      name:
+        | "container"
+        | "duration"
+        | "video_stream"
+        | "resolution"
+        | "pixel_format"
+        | "frame_rate"
+        | "rotation"
+        | "audio_stream"
+        | "metadata"
+        | "decode_start"
+        | "decode_middle"
+        | "decode_end"
+        | "black_frames";
+      passed: boolean;
+      detail: string;
+    },
+    ...{
+      name:
+        | "container"
+        | "duration"
+        | "video_stream"
+        | "resolution"
+        | "pixel_format"
+        | "frame_rate"
+        | "rotation"
+        | "audio_stream"
+        | "metadata"
+        | "decode_start"
+        | "decode_middle"
+        | "decode_end"
+        | "black_frames";
+      passed: boolean;
+      detail: string;
+    }[]
+  ];
+  probe: RenderProbe;
+  thresholds: {
+    duration_tolerance_ms: number;
+    black_luma: number;
+    source_luma: number;
+  };
+}
+/**
+ * FFprobe audit of the output (no paths or tags).
+ */
+export interface RenderProbe {
+  format: string;
+  duration_ms: number;
+  video_streams: number;
+  audio_streams: number;
+  video?: {
+    codec: string;
+    profile?: string;
+    width: number;
+    height: number;
+    pix_fmt: string;
+    fps?: Rational;
+    rotation?: number;
+  };
+  audio?: {
+    codec: string;
+    channels: number;
+    sample_rate_hz: number;
+  };
+  /**
+   * Container tag names kept in the output (values omitted).
+   *
+   * @maxItems 20
+   */
+  tags?:
+    | []
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string, string, string, string]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ]
+    | [
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string,
+        string
+      ];
+}
+/**
+ * This interface was referenced by `undefined`'s JSON-Schema
+ * via the `definition` "RenderRequest".
+ */
+export interface RenderRequest {
+  preset_id: Slug;
+  encoder?: EncoderId;
+  /**
+   * Explicitly render without text overlays and burned-in captions.
+   */
+  omit_text?: boolean;
 }
 /**
  * A candidate play session (spec 8.2, M11): assets grouped by source, format, and capture-time gaps, in order, with the evidence for each join. 'review_state' says who owns it: 'unreviewed' sessions are rebuilt by the 'group' job; 'corrected' (changed by the user) and 'confirmed' sessions are never touched by automatic grouping.

@@ -1418,3 +1418,18 @@ button.link {
     grid-template-columns: 1fr;
   }
 }
+
+/* Export (M24) */
+.renders {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.render-row {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
