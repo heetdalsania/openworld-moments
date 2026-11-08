@@ -92,6 +92,9 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "projects", id, "render"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "projects", id, "renders"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "renders", id]) => is_id(id, "job_") && query.is_none(),
+        // M27: open-format exports of saved data; the host saves the file itself.
+        ("POST", ["", "v1", "projects", id, "exports"]) => is_id(id, "prj_") && query.is_none(),
+        ("GET", ["", "v1", "renders", id, "manifest"]) => is_id(id, "job_") && query.is_none(),
         // M26: local search, derived index maintenance and collections. No paths or SQL.
         ("POST", ["", "v1", "search"]) => query.is_none(),
         ("GET", ["", "v1", "search", "index"]) => query.is_none() || query == Some("check=true"),
@@ -353,6 +356,11 @@ mod tests {
             ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/renders"),
             ("GET", &format!("/v1/renders/{JOB}")),
+            (
+                "POST",
+                "/v1/projects/prj_01JCBQ00000000000000000003/exports",
+            ),
+            ("GET", &format!("/v1/renders/{JOB}/manifest")),
             ("POST", "/v1/search"),
             ("GET", "/v1/search/index"),
             ("GET", "/v1/search/index?check=true"),
@@ -472,6 +480,14 @@ mod tests {
             ("DELETE", &format!("/v1/renders/{JOB}")),
             ("GET", "/v1/renders"),
             ("GET", "/v1/search"),
+            ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/exports"),
+            ("POST", "/v1/projects/prj_bad/exports"),
+            (
+                "POST",
+                "/v1/projects/prj_01JCBQ00000000000000000003/exports?path=/x",
+            ),
+            ("GET", "/v1/renders/prj_01JCBQ00000000000000000003/manifest"),
+            ("DELETE", &format!("/v1/renders/{JOB}/manifest")),
             ("POST", "/v1/search?query=x"),
             ("GET", "/v1/search/index?check=1"),
             ("PUT", "/v1/search/index"),

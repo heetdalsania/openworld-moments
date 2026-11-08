@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.10">
+  <resources>
+    <format id="r0" name="FFVideoFormatRateUndefined" frameDuration="1/30s" width="1920" height="1080" />
+    <asset id="r1" name="Capture 01 — Café.mp4" start="0s" duration="120000/1000s" hasVideo="1" hasAudio="1" format="r0" uid="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">
+      <media-rep kind="original-media" src="Capture%2001%20%E2%80%94%20Caf%C3%A9.mp4" />
+    </asset>
+  </resources>
+  <library>
+    <event name="OpenWorld Moments">
+      <project name="Six-star escape: &quot;Café&quot; run">
+        <sequence format="r0" duration="43300/1000s" tcStart="0s">
+          <spine>
+            <asset-clip ref="r1" name="Capture 01 — Café.mp4" offset="0s" start="12500/1000s" duration="32300/1000s">
+              <marker start="13500/1000s" duration="1500/1000s" value="Caption: Here we go &amp; &lt;go&gt; → 🚗" />
+              <marker start="15500/1000s" duration="1250/1000s" value="Caption: =SUM(A1) 你好 second line" />
+              <marker start="20000/1000s" duration="2000/1000s" value="openworld.wanted_level_changed" />
+            </asset-clip>
+            <asset-clip ref="r1" name="Capture 01 — Café.mp4" offset="32300/1000s" start="50000/1000s" duration="11000/1000s">
+              <marker start="52500/1000s" duration="1000/1000s" value="openworld.busted" />
+            </asset-clip>
+          </spine>
+        </sequence>
+      </project>
+    </event>
+  </library>
+</fcpxml>

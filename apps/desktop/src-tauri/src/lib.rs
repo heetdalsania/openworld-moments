@@ -59,6 +59,8 @@ pub fn run() {
             host::worker_list_jobs,
             host::worker_api,
             host::caption_export,
+            host::project_export,
+            host::render_manifest_export,
             host::calibration_export_patch,
             host::calibration_export_sample,
             host::phone_interfaces,

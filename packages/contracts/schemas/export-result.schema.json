@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/export-result.schema.json",
+  "title": "ExportResult",
+  "description": "One open-format export (M27): content plus what the format carries and every warning about what it cannot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "format",
+    "format_version",
+    "stability",
+    "filename",
+    "media_type",
+    "content",
+    "sha256",
+    "capabilities",
+    "warnings",
+    "includes_paths"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "format": {
+      "enum": ["project", "events", "srt", "vtt", "csv", "otio", "fcpxml", "manifest"]
+    },
+    "format_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20
+    },
+    "stability": {
+      "enum": ["stable", "experimental"]
+    },
+    "filename": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+    },
+    "media_type": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100
+    },
+    "content": {
+      "type": "string",
+      "maxLength": 16777216
+    },
+    "sha256": {
+      "$ref": "common.schema.json#/$defs/Sha256"
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "maxLength": 40
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/$defs/ExportWarning"
+      }
+    },
+    "includes_paths": {
+      "type": "boolean",
+      "description": "True only when the user explicitly asked for absolute source locations."
+    }
+  },
+  "$defs": {
+    "ExportWarning": {
+      "title": "ExportWarning",
+      "description": "Something the format cannot represent. Exports never drop data silently.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "detail"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^export\\.[a-z][a-z0-9_]*$",
+          "maxLength": 64
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "ExportGenerator": {
+      "title": "ExportGenerator",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "const": "openworld-moments"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/SemVer"
+        }
+      }
+    },
+    "ExportRequest": {
+      "title": "ExportRequest",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format"],
+      "properties": {
+        "format": {
+          "enum": ["project", "events", "srt", "vtt", "csv", "otio", "fcpxml"]
+        },
+        "include_paths": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

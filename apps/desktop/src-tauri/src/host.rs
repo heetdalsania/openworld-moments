@@ -432,6 +432,110 @@ pub async fn caption_export(app: AppHandle, text: String, format: String) -> Res
     calibration_save(app, text.into_bytes(), name, ext).await.map_err(|_| json!({"code":"caption.export_failed","message":"Choose a new filename with the expected extension. Existing files are never replaced.","retryable":true}))
 }
 
+/// Extension the saved file must have for each M27 export format (fixed by the host).
+pub fn export_extension(format: &str) -> Option<&'static str> {
+    match format {
+        "project" => Some("json"),
+        "events" => Some("jsonl"),
+        "srt" => Some("srt"),
+        "vtt" => Some("vtt"),
+        "csv" => Some("csv"),
+        "otio" => Some("otio"),
+        "fcpxml" => Some("fcpxml"),
+        "manifest" => Some("json"),
+        _ => None,
+    }
+}
+
+/// The worker's suggested name when it is a plain name with the expected extension.
+pub fn export_filename(suggested: Option<&str>, extension: &str) -> String {
+    suggested
+        .filter(|name| {
+            name.len() <= 100
+                && name.ends_with(&format!(".{extension}"))
+                && !name.starts_with('.')
+                && name
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+        })
+        .map(str::to_owned)
+        .unwrap_or_else(|| format!("export.{extension}"))
+}
+
+async fn save_worker_export(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    method: reqwest::Method,
+    path: String,
+    body: Option<Value>,
+    extension: &'static str,
+) -> Result<Value, Value> {
+    let method_name = method.as_str().to_owned();
+    if !crate::media::api_route_allowed(&method_name, &path) {
+        return Err(crate::media::route_refused());
+    }
+    let result = supervisor(&state)?
+        .request(method, &path, body.as_ref(), None)
+        .await
+        .map_err(to_ui_error)?;
+    let content = result
+        .get("content")
+        .and_then(Value::as_str)
+        .filter(|c| c.len() <= 16 * 1024 * 1024 && !c.contains('\0'))
+        .ok_or_else(unavailable)?
+        .to_owned();
+    let name = export_filename(result.get("filename").and_then(Value::as_str), extension);
+    let warnings = result.get("warnings").cloned().unwrap_or_else(|| json!([]));
+    use tauri_plugin_dialog::DialogExt;
+    let saved = tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app.dialog().file().add_filter(extension, &[extension]).set_file_name(&name).blocking_save_file() else { return Ok(false) };
+        let path = file.into_path().map_err(|_| crate::media::route_refused())?;
+        crate::calibration::write_export(&path, content.as_bytes(), extension).map_err(|_| json!({"code":"export.save_failed","message":"Choose a new filename with the expected extension. Existing files are never replaced.","retryable":true}))?;
+        Ok::<bool, Value>(true)
+    })
+    .await
+    .map_err(|_| unavailable())??;
+    Ok(json!({ "saved": saved, "warnings": warnings }))
+}
+
+/// M27: save an open-format export of the saved project. The host fetches the content
+/// itself and fixes the extension; the webview never names a path or sends content.
+#[tauri::command]
+pub async fn project_export(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    project_id: String,
+    format: String,
+    include_paths: bool,
+) -> Result<Value, Value> {
+    let extension = match export_extension(&format) {
+        Some(ext) if format != "manifest" => ext,
+        _ => return Err(crate::media::route_refused()),
+    };
+    let body = json!({ "format": format, "include_paths": include_paths });
+    let path = format!("/v1/projects/{project_id}/exports");
+    save_worker_export(
+        app,
+        state,
+        reqwest::Method::POST,
+        path,
+        Some(body),
+        extension,
+    )
+    .await
+}
+
+/// M27: save a completed render's stored manifest.
+#[tauri::command]
+pub async fn render_manifest_export(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    render_id: String,
+) -> Result<Value, Value> {
+    let path = format!("/v1/renders/{render_id}/manifest");
+    save_worker_export(app, state, reqwest::Method::GET, path, None, "json").await
+}
+
 /// Export only the worker-validated, saved media-free patch. No webview path input.
 #[tauri::command]
 pub async fn calibration_export_patch(
@@ -475,4 +579,35 @@ async fn calibration_save(
         crate::calibration::write_export(&path, &bytes, ext).map_err(|_| json!({"code":"calibration.export_failed", "message":"Choose a new filename with the expected extension. Existing files are never replaced.", "retryable":true}))?;
         Ok(true)
     }).await.map_err(|_| unavailable())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn export_extensions_are_fixed_per_format() {
+        assert_eq!(export_extension("otio"), Some("otio"));
+        assert_eq!(export_extension("project"), Some("json"));
+        assert_eq!(export_extension("events"), Some("jsonl"));
+        assert_eq!(export_extension("exe"), None);
+        assert_eq!(export_extension("../otio"), None);
+    }
+
+    #[test]
+    fn suggested_export_names_must_be_plain_names() {
+        assert_eq!(export_filename(Some("Escape.otio"), "otio"), "Escape.otio");
+        for bad in [
+            "../Escape.otio",
+            "Escape.otio.exe",
+            "Escape.json",
+            ".hidden.otio",
+            "a/b.otio",
+            "C:\\x.otio",
+            "Café.otio",
+        ] {
+            assert_eq!(export_filename(Some(bad), "otio"), "export.otio", "{bad}");
+        }
+        assert_eq!(export_filename(None, "srt"), "export.srt");
+    }
 }

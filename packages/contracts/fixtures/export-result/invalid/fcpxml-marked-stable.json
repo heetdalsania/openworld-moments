@@ -1,0 +1,54 @@
+{
+  "description": "FCPXML is labelled experimental",
+  "expect": "semantic",
+  "message_contains": "FCPXML is experimental",
+  "document": {
+    "capabilities": ["captions_as_markers", "cuts", "events", "source_ranges"],
+    "content": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE fcpxml>\n<fcpxml version=\"1.10\">\n  <resources>\n    <format id=\"r0\" name=\"FFVideoFormatRateUndefined\" frameDuration=\"1/30s\" width=\"1920\" height=\"1080\" />\n    <asset id=\"r1\" name=\"Capture 01 — Café.mp4\" start=\"0s\" duration=\"120000/1000s\" hasVideo=\"1\" hasAudio=\"1\" format=\"r0\" uid=\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\">\n      <media-rep kind=\"original-media\" src=\"Capture%2001%20%E2%80%94%20Caf%C3%A9.mp4\" />\n    </asset>\n  </resources>\n  <library>\n    <event name=\"OpenWorld Moments\">\n      <project name=\"Six-star escape: &quot;Café&quot; run\">\n        <sequence format=\"r0\" duration=\"43300/1000s\" tcStart=\"0s\">\n          <spine>\n            <asset-clip ref=\"r1\" name=\"Capture 01 — Café.mp4\" offset=\"0s\" start=\"12500/1000s\" duration=\"32300/1000s\">\n              <marker start=\"13500/1000s\" duration=\"1500/1000s\" value=\"Caption: Here we go &amp; &lt;go&gt; → 🚗\" />\n              <marker start=\"15500/1000s\" duration=\"1250/1000s\" value=\"Caption: =SUM(A1) 你好 second line\" />\n              <marker start=\"20000/1000s\" duration=\"2000/1000s\" value=\"openworld.wanted_level_changed\" />\n            </asset-clip>\n            <asset-clip ref=\"r1\" name=\"Capture 01 — Café.mp4\" offset=\"32300/1000s\" start=\"50000/1000s\" duration=\"11000/1000s\">\n              <marker start=\"52500/1000s\" duration=\"1000/1000s\" value=\"openworld.busted\" />\n            </asset-clip>\n          </spine>\n        </sequence>\n      </project>\n    </event>\n  </library>\n</fcpxml>\n",
+    "filename": "Six-star-escape-Caf-run.fcpxml",
+    "format": "fcpxml",
+    "format_version": "1.10-experimental",
+    "includes_paths": false,
+    "media_type": "application/xml",
+    "schema_version": "1.21",
+    "sha256": "a2a4bf1061082b718fdb9398f07e48485fdc0f9ce617e316e2ca3b10a60a3541",
+    "stability": "stable",
+    "warnings": [
+      {
+        "code": "export.audio_gain_not_supported",
+        "count": 2,
+        "detail": "Audio gain changes are not applied; they are kept in the metadata."
+      },
+      {
+        "code": "export.audio_mute_not_supported",
+        "count": 1,
+        "detail": "Mute ranges are not applied; they are kept in the metadata."
+      },
+      {
+        "code": "export.blur_not_supported",
+        "count": 1,
+        "detail": "Privacy blur regions are not applied; they are kept in the metadata. Check privacy before publishing from another editor."
+      },
+      {
+        "code": "export.captions_as_markers",
+        "count": 2,
+        "detail": "Captions are exported as markers, not caption tracks. Use the SRT or WebVTT export for caption files."
+      },
+      {
+        "code": "export.crop_not_supported",
+        "count": 1,
+        "detail": "Crop and framing (safe, fill and manual crops) are not represented; the full source frame is referenced. Values are kept in the openworld_moments metadata."
+      },
+      {
+        "code": "export.text_overlay_not_supported",
+        "count": 1,
+        "detail": "Text overlays are not represented as titles; they are kept in the metadata."
+      },
+      {
+        "code": "export.vertical_crop_not_supported",
+        "count": 1,
+        "detail": "Vertical 9:16 framing is not represented. Values are kept in the metadata."
+      }
+    ]
+  }
+}

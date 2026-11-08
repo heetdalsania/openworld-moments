@@ -1,0 +1,11 @@
+kind,label,start,end,start_ms,end_ms,duration_ms,detail
+cut,Capture 01 — Café.mp4,00:00:00.000,00:00:32.300,0,32300,32300,source 12500-44800 ms
+text,Title,00:00:00.000,00:00:01.000,0,1000,1000,"region 0,0,1,0.1"
+blur,privacy blur,00:00:00.000,00:00:05.000,0,5000,5000,"region 0,0,0.25,0.08"
+gain,gain -5 dB,00:00:00.000,00:00:01.000,0,1000,1000,
+caption,Here we go & <go> → 🚗,00:00:01.000,00:00:02.500,1000,2500,1500,
+caption,'=SUM(A1) 你好 second line,00:00:03.000,00:00:04.250,3000,4250,1250,
+event,openworld.wanted_level_changed,00:00:07.500,00:00:09.500,7500,9500,2000,"confirmed, confidence 0.97"
+mute,mute,00:00:20.000,00:00:21.000,20000,21000,1000,
+cut,Capture 01 — Café.mp4,00:00:32.300,00:00:43.300,32300,43300,11000,source 50000-61000 ms
+event,openworld.busted,00:00:34.800,00:00:35.800,34800,35800,1000,"corrected, confidence 0.80"

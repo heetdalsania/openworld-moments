@@ -30,6 +30,9 @@ import session from "../schemas/session.schema.json" with { type: "json" };
 import renderEncoders from "../schemas/render-encoders.schema.json" with { type: "json" };
 import render from "../schemas/render.schema.json" with { type: "json" };
 import collection from "../schemas/collection.schema.json" with { type: "json" };
+import eventExport from "../schemas/event-export.schema.json" with { type: "json" };
+import exportResult from "../schemas/export-result.schema.json" with { type: "json" };
+import projectExport from "../schemas/project-export.schema.json" with { type: "json" };
 import searchIndex from "../schemas/search-index.schema.json" with { type: "json" };
 import search from "../schemas/search.schema.json" with { type: "json" };
 import speechModels from "../schemas/speech-models.schema.json" with { type: "json" };
@@ -61,6 +64,9 @@ import type {
   Project,
   RenderPreset,
   Collection,
+  EventExportLine,
+  ExportResult,
+  ProjectExport,
   SearchResults,
   SearchIndexStatus,
   Session,
@@ -102,6 +108,9 @@ export interface ContractTypes {
   render: RenderRecord;
   "render-encoders": RenderEncoders;
   collection: Collection;
+  "event-export": EventExportLine;
+  "export-result": ExportResult;
+  "project-export": ProjectExport;
   search: SearchResults;
   "search-index": SearchIndexStatus;
   "speech-models": SpeechModels;
@@ -139,6 +148,9 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   render: [render, true],
   "render-encoders": [renderEncoders, true],
   collection: [collection, true],
+  "event-export": [eventExport, true],
+  "export-result": [exportResult, true],
+  "project-export": [projectExport, true],
   search: [search, true],
   "search-index": [searchIndex, true],
   "speech-models": [speechModels, true],

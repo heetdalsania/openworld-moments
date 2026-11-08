@@ -33,6 +33,8 @@ from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.inputs import content_hash
 from openworld_moments.detectors.profiles import ProfileError
 from openworld_moments.detectors.sdk import AnalysisCancelled
+from openworld_moments.exports.formats import canonical_json
+from openworld_moments.exports.service import detector_versions
 from openworld_moments.ingest.library import LibraryPaths, readable_source
 from openworld_moments.media.process import ToolCancelled, ToolError, run_tool
 from openworld_moments.media.tools import MediaTools
@@ -94,6 +96,7 @@ STORED_COLUMNS = frozenset(
         "output_json",
         "error_json",
         "fallback_json",
+        "manifest_json",
     }
 )
 
@@ -555,38 +558,51 @@ class Renderer:
     ) -> dict[str, Any]:
         size = output.stat().st_size
         digest = content_hash(output, threading.Event())
-        manifest = normalize(
-            load(
-                "export-manifest",
-                {
-                    "schema_version": SCHEMA_VERSION,
-                    "created_at": utc_now(),
-                    "app_version": __version__,
-                    "project_id": project_id,
-                    "sources": [
-                        {"sha256": s["sha256"], "original_name": s["original_name"]}
-                        for s in plan["sources"]
-                    ],
-                    "segments": [
-                        {"source": s["source"], "in_ms": s["in_ms"], "out_ms": s["out_ms"]}
-                        for s in plan["segments"]
-                    ],
-                    "render": {
-                        "preset_id": plan["preset"]["id"],
-                        "width": plan["output"]["width"],
-                        "height": plan["output"]["height"],
-                        "fps": plan["output"]["fps"],
-                        "layout": "vertical-v1"
-                        if plan["output"]["height"] > plan["output"]["width"]
-                        else "fit",
-                    },
-                    "detectors": [],
-                },
-            )
-        )
-        (staging / "render.manifest.json").write_text(
-            json.dumps(manifest, indent=2) + "\n", "utf-8"
-        )
+        finished = utc_now()
+        with contextlib.closing(self.database.connect()) as conn:
+            row = conn.execute(
+                "SELECT r.project_revision, s.session_id FROM render_jobs r "
+                "LEFT JOIN stories s ON s.id = r.story_id WHERE r.id = ?",
+                (job_id,),
+            ).fetchone()
+            detectors, profiles = detector_versions(conn, row["session_id"] if row else None)
+        manifest: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "created_at": finished,
+            "app_version": __version__,
+            "render_id": job_id,
+            "project_id": project_id,
+            "sources": [
+                {"sha256": s["sha256"], "original_name": s["original_name"]}
+                for s in plan["sources"]
+            ],
+            "segments": [
+                {"source": s["source"], "in_ms": s["in_ms"], "out_ms": s["out_ms"]}
+                for s in plan["segments"]
+            ],
+            "render": {
+                "preset_id": plan["preset"]["id"],
+                "width": plan["output"]["width"],
+                "height": plan["output"]["height"],
+                "fps": plan["output"]["fps"],
+                "layout": "vertical-v1"
+                if plan["output"]["height"] > plan["output"]["width"]
+                else "fit",
+            },
+            "encoder": plan["encoder"]["id"],
+            "tools": {
+                "ffmpeg": plan["tools"]["ffmpeg"],
+                "render_engine": plan["tools"]["render_engine"],
+            },
+            "output": {"sha256": digest, "size_bytes": size, "duration_ms": plan["duration_ms"]},
+            "detectors": detectors,
+            "profiles": profiles,
+        }
+        if row is not None and row["project_revision"] is not None:
+            manifest["project_revision"] = row["project_revision"]
+        manifest = normalize(load("export-manifest", manifest))
+        # The sidecar and the stored copy use the same canonical bytes (M27).
+        (staging / "render.manifest.json").write_text(canonical_json(manifest), "utf-8")
         target = self.root / RENDERS / project_id
         target.mkdir(parents=True, exist_ok=True)
         video = target / f"{job_id}.mp4"
@@ -604,8 +620,9 @@ class Renderer:
             job_id,
             status="ready",
             progress=1.0,
-            finished_at=utc_now(),
+            finished_at=finished,
             output=record_output,
+            manifest_json=json.dumps(manifest, sort_keys=True, separators=(",", ":")),
             output_path=record_output["relative_path"],
             manifest_path=record_output["manifest_relative_path"],
         )

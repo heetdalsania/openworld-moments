@@ -1,0 +1,166 @@
+{
+  "capabilities": [
+    "audio_gain",
+    "audio_mute",
+    "blur",
+    "caption_style",
+    "captions",
+    "crop",
+    "cuts",
+    "source_hashes",
+    "source_ranges",
+    "text_overlays",
+    "vertical_crop"
+  ],
+  "document": {
+    "layout": {
+      "aspect_ratio": "16:9"
+    },
+    "model_version": 1,
+    "project": {
+      "audio": {
+        "gain_db": -3.5,
+        "gain_ranges": [
+          {
+            "end_ms": 1000,
+            "gain_db": -5,
+            "start_ms": 0
+          }
+        ],
+        "mute_ranges": [
+          {
+            "end_ms": 21000,
+            "start_ms": 20000
+          }
+        ]
+      },
+      "captions": [
+        {
+          "end_ms": 2500,
+          "start_ms": 1000,
+          "text": "Here we go & <go> → 🚗"
+        },
+        {
+          "end_ms": 4250,
+          "start_ms": 3000,
+          "text": "=SUM(A1) 你好\nsecond line"
+        }
+      ],
+      "created_at": "2026-11-20T05:40:10Z",
+      "id": "prj_01JCBQ00000000000000000005",
+      "overlays": [
+        {
+          "end_ms": 5000,
+          "kind": "blur",
+          "region": [
+            0,
+            0,
+            0.25,
+            0.08
+          ],
+          "start_ms": 0
+        },
+        {
+          "end_ms": 1000,
+          "kind": "text",
+          "region": [
+            0,
+            0,
+            1,
+            0.1
+          ],
+          "start_ms": 0,
+          "text": "Title"
+        }
+      ],
+      "schema_version": "1.19",
+      "session_id": "ses_01JCBQ00000000000000000002",
+      "title": "Six-star escape: \"Café\" run",
+      "tracks": [
+        {
+          "kind": "video",
+          "segments": [
+            {
+              "asset_id": "ast_01JCBQ00000000000000000001",
+              "crop": {
+                "keyframes": [
+                  {
+                    "at_ms": 0,
+                    "region": [
+                      0.21875,
+                      0,
+                      0.5625,
+                      1
+                    ]
+                  }
+                ],
+                "mode": "safe"
+              },
+              "id": "seg_01JCBQ00000000000000000006",
+              "source_in_ms": 12500,
+              "source_out_ms": 44800,
+              "timeline_start_ms": 0,
+              "vertical_crop": {
+                "background": "solid",
+                "keyframes": [
+                  {
+                    "at_ms": 0,
+                    "region": [
+                      0.1,
+                      0,
+                      0.3,
+                      1
+                    ]
+                  },
+                  {
+                    "at_ms": 1000,
+                    "region": [
+                      0.5,
+                      0,
+                      0.3,
+                      1
+                    ]
+                  }
+                ],
+                "layout_version": 1,
+                "strategy": "keyed"
+              }
+            },
+            {
+              "asset_id": "ast_01JCBQ00000000000000000001",
+              "crop": {
+                "keyframes": [],
+                "mode": "fit"
+              },
+              "id": "seg_01JCBQ00000000000000000007",
+              "source_in_ms": 50000,
+              "source_out_ms": 61000,
+              "timeline_start_ms": 32300
+            }
+          ]
+        }
+      ],
+      "updated_at": "2026-11-20T05:45:00Z"
+    },
+    "schema_version": "1.19",
+    "sources": [
+      {
+        "asset_id": "ast_01JCBQ00000000000000000001",
+        "duration_ms": 120000,
+        "original_name": "Capture 01 — Café.mp4",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "extensions": {},
+  "format": "openworld-moments.project",
+  "format_version": "1.0",
+  "generator": {
+    "name": "openworld-moments",
+    "version": "0.0.0"
+  },
+  "project_revision": 3,
+  "saved_at": "2026-11-21T11:00:00.000Z",
+  "schema_version": "1.21",
+  "warnings": []
+}

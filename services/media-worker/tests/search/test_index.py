@@ -60,7 +60,8 @@ def corrupt_full_text(database: Database) -> None:
 
 
 def test_index_version_default_matches_the_code() -> None:
-    latest = bundled_migrations()[-1].sql
+    # The newest migration that (re)defines the documents table sets the default.
+    latest = [m.sql for m in bundled_migrations() if "CREATE TABLE search_documents" in m.sql][-1]
     assert f"index_version    INTEGER NOT NULL DEFAULT {index.INDEX_VERSION}" in latest
 
 

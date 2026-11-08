@@ -1,0 +1,51 @@
+{
+  "description": "Project ranges are non-empty",
+  "expect": "semantic",
+  "message_contains": "project_ranges[0].end_ms",
+  "document": {
+    "effective": {
+      "end_ms": 53500,
+      "review_state": "corrected",
+      "revision": 1,
+      "start_ms": 52500,
+      "type": "openworld.busted"
+    },
+    "observation": {
+      "asset_id": "ast_01JCBQ00000000000000000001",
+      "attributes": {
+        "text": "BUSTED"
+      },
+      "confidence": 0.8,
+      "end_ms": 53000,
+      "evidence": [
+        {
+          "kind": "region_template",
+          "region": [0.78, 0.02, 0.2, 0.12],
+          "score": 0.9
+        }
+      ],
+      "id": "evt_01JCBQ00000000000000000033",
+      "review_state": "unreviewed",
+      "schema_version": "1.21",
+      "session_id": "ses_01JCBQ00000000000000000002",
+      "source": {
+        "detector_id": "wanted-stars",
+        "detector_version": "0.3.0",
+        "kind": "detector",
+        "profile_id": "open-world-vi-1080p-en",
+        "profile_version": "1.0.0"
+      },
+      "start_ms": 52000,
+      "type": "openworld.busted"
+    },
+    "project_ranges": [
+      {
+        "start_ms": 5,
+        "end_ms": 5
+      }
+    ],
+    "record": "event",
+    "schema_version": "1.21",
+    "status": "current"
+  }
+}

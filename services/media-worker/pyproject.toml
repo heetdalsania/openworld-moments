@@ -21,6 +21,7 @@ dev = [
     "httpx2>=2.16.0",
     "mypy>=2.4.1",
     "opencv-python-headless>=4.12,<5",
+    "opentimelineio>=0.17,<0.19",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
 ]
@@ -51,6 +52,11 @@ select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF"]
 python_version = "3.12"
 strict = true
 files = ["openworld_moments", "tests"]
+
+# OpenTimelineIO (test-only validator for M27 exports) ships no type information.
+[[tool.mypy.overrides]]
+module = ["opentimelineio", "opentimelineio.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -38,7 +38,10 @@ Presets live in [`presets/render/`](../../presets/README.md).
    - `out_time_us` drives job progress, from 5% to 90%.
 6. **Validate.** The output is checked (see [Validation](#validation)).
 7. **Complete atomically.**
-   - The export manifest (`export-manifest` contract; no paths) is written.
+   - The export manifest (`export-manifest` contract; no paths) is written. Since M27 it also
+     records the render ID, project revision, encoder, FFmpeg and render-engine versions,
+     output hash and the session's detector/profile versions, and is stored in
+     `render_jobs.manifest_json` with the same canonical bytes ([exports](./exports.md)).
    - The MP4 and manifest are moved into `<library>/renders/<project>/<job>.{mp4,manifest.json}`.
    - **Only then** is the record set to `ready`.
    - The staging folder is always removed, including on failure and cancellation,

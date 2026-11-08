@@ -38,6 +38,7 @@ from openworld_moments.alignment.service import Aligner
 from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
 from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.profiles import ProfileCatalog, ProfileError
+from openworld_moments.exports.service import Exporter, ExportFailed
 from openworld_moments.fingerprints.service import candidate_doc, fingerprints_doc
 from openworld_moments.ids import new_id
 from openworld_moments.jobs.engine import EngineError, JobEngine
@@ -297,6 +298,12 @@ class AddCollectionItem(BaseModel):
         Annotated[str, Field(pattern=r"^(ast|ses|evt|prj)_[0-9A-HJKMNP-TV-Z]{26}$")]
         | Annotated[int, Field(strict=True, ge=1)]
     )
+
+
+class SubmitExport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    format: Literal["project", "events", "srt", "vtt", "csv", "otio", "fcpxml"]
+    include_paths: bool = False
 
 
 class SubmitTranscription(BaseModel):
@@ -657,6 +664,28 @@ def create_app(
             raise EngineError(
                 "render.not_found", "That render does not exist.", status=404
             ) from exc
+
+    # -- open exports (M27) --------------------------------------------------------------
+
+    exporter = Exporter(engine.database)
+
+    @app.exception_handler(ExportFailed)
+    async def export_failed(request: Request, exc: ExportFailed) -> JSONResponse:
+        return JSONResponse(
+            error_body(exc.code, exc.message, correlation_id=cid(request)), status_code=exc.status
+        )
+
+    @app.post("/v1/projects/{project_id}/exports")
+    async def open_format_export(project_id: str, body: SubmitExport) -> dict[str, Any]:
+        if not re.fullmatch(r"prj_[0-9A-HJKMNP-TV-Z]{26}", project_id):
+            raise ExportFailed("export.not_found", "That project does not exist.", 404)
+        return await asyncio.to_thread(
+            exporter.project, project_id, body.format, include_paths=body.include_paths
+        )
+
+    @app.get("/v1/renders/{render_id}/manifest")
+    async def render_manifest(render_id: str) -> dict[str, Any]:
+        return await asyncio.to_thread(exporter.render_manifest, render_id)
 
     # -- search and collections (M26) ------------------------------------------------------
 

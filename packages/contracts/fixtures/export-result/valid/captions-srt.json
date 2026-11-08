@@ -1,0 +1,13 @@
+{
+  "capabilities": ["captions"],
+  "content": "1\n00:00:01,000 --> 00:00:02,500\nHere we go & <go> → 🚗\n\n2\n00:00:03,000 --> 00:00:04,250\n=SUM(A1) 你好\nsecond line\n",
+  "filename": "Six-star-escape-Caf-run.srt",
+  "format": "srt",
+  "format_version": "1.0",
+  "includes_paths": false,
+  "media_type": "application/x-subrip",
+  "schema_version": "1.21",
+  "sha256": "06cd6c051d55dd819b026939fe014a0471aaefa97997d28518c600f1c9df9dc0",
+  "stability": "stable",
+  "warnings": []
+}

@@ -630,7 +630,42 @@ def _collection(doc: Document) -> Iterable[str]:
         yield "total: must equal item_count for a manual collection"
 
 
+_PATH_FORMATS = frozenset({"project", "otio", "fcpxml"})
+
+
+def _export_result(doc: Document) -> Iterable[str]:
+    if (doc["stability"] == "experimental") != (doc["format"] == "fcpxml"):
+        yield "stability: FCPXML is experimental; every other format is stable"
+    if doc["includes_paths"] and doc["format"] not in _PATH_FORMATS:
+        yield "includes_paths: only project, OTIO and FCPXML exports may carry paths"
+
+
+def _project_export(doc: Document) -> Iterable[str]:
+    known = {s["asset_id"] for s in doc["document"]["sources"]}
+    seen: set[str] = set()
+    for i, location in enumerate(doc.get("source_locations", [])):
+        if location["asset_id"] not in known:
+            yield f"source_locations[{i}].asset_id: not a source of the document"
+        if location["asset_id"] in seen:
+            yield f"source_locations[{i}].asset_id: each source appears once"
+        seen.add(location["asset_id"])
+
+
+def _event_export(doc: Document) -> Iterable[str]:
+    if doc["record"] != "event":
+        return
+    effective = doc["effective"]
+    yield from _range("effective.end_ms", effective["start_ms"], effective["end_ms"])
+    for i, span in enumerate(doc.get("project_ranges", [])):
+        yield from _range(
+            f"project_ranges[{i}].end_ms", span["start_ms"], span["end_ms"], strict=True
+        )
+
+
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "event-export": _event_export,
+    "export-result": _export_result,
+    "project-export": _project_export,
     "collection": _collection,
     "search": _search,
     "search-index": _search_index,

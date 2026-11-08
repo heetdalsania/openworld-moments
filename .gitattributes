@@ -2,3 +2,5 @@
 *.png binary
 *.ico binary
 *.icns binary
+# Export goldens are compared byte-for-byte (the CSV golden uses CRLF by design).
+services/media-worker/tests/exports/goldens/** -text

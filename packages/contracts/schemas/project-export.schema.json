@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/project-export.schema.json",
+  "title": "ProjectExport",
+  "description": "Versioned, self-contained project export (format openworld-moments.project 1.x): the portable editor document plus provenance. Paths appear only in source_locations, and only when explicitly requested.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "format",
+    "format_version",
+    "generator",
+    "project_revision",
+    "saved_at",
+    "capabilities",
+    "warnings",
+    "document",
+    "extensions"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "format": {
+      "const": "openworld-moments.project"
+    },
+    "format_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$",
+      "description": "Export format version: readers accept every 1.x and ignore what they do not know inside 'extensions'."
+    },
+    "generator": {
+      "$ref": "export-result.schema.json#/$defs/ExportGenerator"
+    },
+    "project_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "saved_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "maxLength": 40
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 200,
+      "items": {
+        "$ref": "export-result.schema.json#/$defs/ExportWarning"
+      }
+    },
+    "document": {
+      "$ref": "editor-project.schema.json"
+    },
+    "source_locations": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "title": "SourceLocation",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["asset_id", "path"],
+        "properties": {
+          "asset_id": {
+            "$ref": "common.schema.json#/$defs/AssetId"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Reserved for forward-compatible additions. Readers preserve and may ignore it."
+    }
+  }
+}
