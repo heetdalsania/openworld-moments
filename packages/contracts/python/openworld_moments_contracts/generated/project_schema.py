@@ -102,12 +102,63 @@ class BlurOverlay(BaseModel):
     ]
 
 
-class AudioSettings(BaseModel):
+class TextOverlay(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    kind: Literal["text"]
+    start_ms: Annotated[
+        int,
+        Field(
+            description="Position on a media or session timeline in integer milliseconds from its start.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ]
+    end_ms: Annotated[
+        int,
+        Field(
+            description="Position on a media or session timeline in integer milliseconds from its start.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ]
+    region: Annotated[
+        tuple[
+            common_schema.RegionItem,
+            common_schema.RegionItem,
+            common_schema.RegionItem2,
+            common_schema.RegionItem2,
+        ],
+        Field(
+            description="Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).",
+            title="Region",
+        ),
+    ]
+    text: Annotated[str, Field(max_length=1000, min_length=1)]
+
+
+class GainRange(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    start_ms: Annotated[
+        int,
+        Field(
+            description="Position on a media or session timeline in integer milliseconds from its start.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ]
+    end_ms: Annotated[
+        int,
+        Field(
+            description="Position on a media or session timeline in integer milliseconds from its start.",
+            ge=0,
+            title="TimelineMs",
+        ),
+    ]
     gain_db: Annotated[float, Field(ge=-60.0, le=24.0)]
-    mute_ranges: list[common_schema.TimeRange]
 
 
 class Crop(BaseModel):
@@ -116,6 +167,15 @@ class Crop(BaseModel):
     )
     mode: Literal["fit", "fill", "safe", "manual"]
     keyframes: list[CropKeyframe]
+
+
+class AudioSettings(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    gain_db: Annotated[float, Field(ge=-60.0, le=24.0)]
+    mute_ranges: list[common_schema.TimeRange]
+    gain_ranges: list[GainRange] | None = None
 
 
 class Segment(BaseModel):
@@ -221,5 +281,5 @@ class Project(BaseModel):
     ]
     tracks: list[VideoTrack]
     captions: list[Caption]
-    overlays: list[BlurOverlay]
+    overlays: list[BlurOverlay | TextOverlay]
     audio: AudioSettings

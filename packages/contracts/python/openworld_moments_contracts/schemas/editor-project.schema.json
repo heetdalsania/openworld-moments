@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/editor-project.schema.json",
+  "title": "EditorProject",
+  "description": "M21 versioned single-track editor document and portable JSON format. No local paths. Legacy Project documents migrate explicitly into model_version 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "model_version", "project", "layout", "sources"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "model_version": {
+      "const": 1
+    },
+    "project": {
+      "$ref": "project.schema.json"
+    },
+    "layout": {
+      "$ref": "#/$defs/EditorLayout"
+    },
+    "sources": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/ProjectSource"
+      }
+    }
+  },
+  "$defs": {
+    "ProjectSource": {
+      "title": "ProjectSource",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "sha256", "original_name", "duration_ms"],
+      "properties": {
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "original_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[^/\\\\\\u0000-\\u001f]+$"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "replaces_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "requires_relink": {
+          "const": true,
+          "description": "Portable source retained without an explicit local binding; never preview or render until relinked."
+        }
+      }
+    },
+    "EditorLayout": {
+      "title": "EditorLayout",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["aspect_ratio"],
+      "properties": {
+        "aspect_ratio": {
+          "enum": ["16:9", "9:16", "1:1"]
+        },
+        "profile_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "profile_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    }
+  }
+}

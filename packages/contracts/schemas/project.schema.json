@@ -17,16 +17,55 @@
     "audio"
   ],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^1\\.(0|[1-9][0-9]*)$" },
-    "id": { "$ref": "common.schema.json#/$defs/ProjectId" },
-    "title": { "type": "string", "minLength": 1, "maxLength": 300 },
-    "session_id": { "$ref": "common.schema.json#/$defs/SessionId" },
-    "created_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "updated_at": { "$ref": "common.schema.json#/$defs/UtcTimestamp" },
-    "tracks": { "type": "array", "items": { "$ref": "#/$defs/VideoTrack" } },
-    "captions": { "type": "array", "items": { "$ref": "#/$defs/Caption" } },
-    "overlays": { "type": "array", "items": { "$ref": "#/$defs/BlurOverlay" } },
-    "audio": { "$ref": "#/$defs/AudioSettings" }
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "id": {
+      "$ref": "common.schema.json#/$defs/ProjectId"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "session_id": {
+      "$ref": "common.schema.json#/$defs/SessionId"
+    },
+    "created_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "updated_at": {
+      "$ref": "common.schema.json#/$defs/UtcTimestamp"
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/VideoTrack"
+      }
+    },
+    "captions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Caption"
+      }
+    },
+    "overlays": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/BlurOverlay"
+          },
+          {
+            "$ref": "#/$defs/TextOverlay"
+          }
+        ]
+      }
+    },
+    "audio": {
+      "$ref": "#/$defs/AudioSettings"
+    }
   },
   "$defs": {
     "VideoTrack": {
@@ -35,8 +74,15 @@
       "additionalProperties": false,
       "required": ["kind", "segments"],
       "properties": {
-        "kind": { "const": "video" },
-        "segments": { "type": "array", "items": { "$ref": "#/$defs/Segment" } }
+        "kind": {
+          "const": "video"
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Segment"
+          }
+        }
       }
     },
     "Segment": {
@@ -46,12 +92,24 @@
       "additionalProperties": false,
       "required": ["id", "asset_id", "source_in_ms", "source_out_ms", "timeline_start_ms", "crop"],
       "properties": {
-        "id": { "$ref": "common.schema.json#/$defs/SegmentId" },
-        "asset_id": { "$ref": "common.schema.json#/$defs/AssetId" },
-        "source_in_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "source_out_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "timeline_start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "crop": { "$ref": "#/$defs/Crop" }
+        "id": {
+          "$ref": "common.schema.json#/$defs/SegmentId"
+        },
+        "asset_id": {
+          "$ref": "common.schema.json#/$defs/AssetId"
+        },
+        "source_in_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "source_out_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "timeline_start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "crop": {
+          "$ref": "#/$defs/Crop"
+        }
       }
     },
     "Crop": {
@@ -60,8 +118,16 @@
       "additionalProperties": false,
       "required": ["mode", "keyframes"],
       "properties": {
-        "mode": { "type": "string", "enum": ["fit", "fill", "safe", "manual"] },
-        "keyframes": { "type": "array", "items": { "$ref": "#/$defs/CropKeyframe" } }
+        "mode": {
+          "type": "string",
+          "enum": ["fit", "fill", "safe", "manual"]
+        },
+        "keyframes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CropKeyframe"
+          }
+        }
       }
     },
     "CropKeyframe": {
@@ -71,8 +137,12 @@
       "additionalProperties": false,
       "required": ["at_ms", "region"],
       "properties": {
-        "at_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "region": { "$ref": "common.schema.json#/$defs/Region" }
+        "at_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        }
       }
     },
     "Caption": {
@@ -81,9 +151,17 @@
       "additionalProperties": false,
       "required": ["start_ms", "end_ms", "text"],
       "properties": {
-        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "text": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
       }
     },
     "BlurOverlay": {
@@ -93,10 +171,18 @@
       "additionalProperties": false,
       "required": ["kind", "start_ms", "end_ms", "region"],
       "properties": {
-        "kind": { "const": "blur" },
-        "start_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "end_ms": { "$ref": "common.schema.json#/$defs/TimelineMs" },
-        "region": { "$ref": "common.schema.json#/$defs/Region" }
+        "kind": {
+          "const": "blur"
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        }
       }
     },
     "AudioSettings": {
@@ -105,10 +191,66 @@
       "additionalProperties": false,
       "required": ["gain_db", "mute_ranges"],
       "properties": {
-        "gain_db": { "type": "number", "minimum": -60, "maximum": 24 },
+        "gain_db": {
+          "type": "number",
+          "minimum": -60,
+          "maximum": 24
+        },
         "mute_ranges": {
           "type": "array",
-          "items": { "$ref": "common.schema.json#/$defs/TimeRange" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/TimeRange"
+          }
+        },
+        "gain_ranges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GainRange"
+          }
+        }
+      }
+    },
+    "TextOverlay": {
+      "title": "TextOverlay",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "start_ms", "end_ms", "region", "text"],
+      "properties": {
+        "kind": {
+          "const": "text"
+        },
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    },
+    "GainRange": {
+      "title": "GainRange",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_ms", "end_ms", "gain_db"],
+      "properties": {
+        "start_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "end_ms": {
+          "$ref": "common.schema.json#/$defs/TimelineMs"
+        },
+        "gain_db": {
+          "type": "number",
+          "minimum": -60,
+          "maximum": 24
         }
       }
     }

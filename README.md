@@ -37,6 +37,7 @@ Completed milestones:
 | M18 — Audio analysis and transcription | Deterministic audio features from the playback copy's first audio stream (onsets/impacts, silence, speech-like activity), always labelled supporting evidence; optional local whisper.cpp transcription with explicitly installed models, word timings in session time, per-clip cached and cancellable jobs, a privacy notice and text-only deletion in the session screen ([audio](./docs/detectors/audio.md), [transcription](./docs/architecture/transcription.md), [guide](./docs/guides/transcription.md)) |
 | M19 — Event review and evaluation | Timeline event markers, evidence/provenance inspector, immutable observations with separate audited corrections and manual events; reproducible local holdout metrics and privacy-minimized JSON/Markdown compatibility reports ([review](./docs/architecture/event-review.md), [evaluation](./docs/evaluation/README.md)) |
 | M20 — Story engine | Deterministic event-to-story windows with source ranges, narrative beats, speech-aware boundaries, duration presets, decomposed scores and alternatives; audited accept/reject/regeneration, local CLI/API and synthetic coverage report ([engine](./docs/architecture/stories.md), [guide](./docs/stories/README.md)) |
+| M21 — Editor project model | Versioned non-destructive EDL with source bindings, pure timeline commands and undo/redo, debounced revision-checked autosave/recovery, manual session selection and portable import/export/relink ([editor model](./docs/architecture/editor-projects.md)) |
 
 You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story candidates can be generated and reviewed through the local CLI/API, with visual editing arriving in later milestones. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -356,11 +357,12 @@ The product specification includes links to console capture documentation, exist
 
 ## Current next step
 
-M20 delivers the deterministic story engine through the local CLI/API, including
-candidate review and non-destructive project handoff. The next milestone is
-[M21 — Editor project model](./docs/milestones/M21-editor-project-model.md), then
-M22 supplies the focused editing UI. Manual projects remain independent of
-successful automatic detection.
+M21 delivers the editor document and command/persistence foundations through the
+local API and desktop model library. The next milestone is
+[M22 — Focused editor UI](./docs/milestones/M22-focused-editor-ui.md).
+[M24 — Render engine](./docs/milestones/M24-render-engine.md) also has its prerequisites.
+Manual projects remain independent of successful automatic detection. See the
+[M21 handoff](./docs/milestones/M21-handoff.md) and [editor model](./docs/architecture/editor-projects.md).
 
 M10 still needs its real-phone smoke test on a Windows private network. Detector
 quality remains synthetic/local; GTA profiles are unvalidated and M18 real

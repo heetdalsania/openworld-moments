@@ -101,6 +101,69 @@ def _project(doc: Document) -> Iterable[str]:
             f"audio.mute_ranges[{i}].end_ms", mute["start_ms"], mute["end_ms"], strict=True
         )
 
+    for i, gain in enumerate(doc["audio"].get("gain_ranges", [])):
+        yield from _range(
+            f"audio.gain_ranges[{i}].end_ms", gain["start_ms"], gain["end_ms"], strict=True
+        )
+
+
+def _editor_project(doc: Document) -> Iterable[str]:
+    p = doc["project"]
+    from openworld_moments_contracts.versioning import check_version
+
+    check_version("project", p)
+    yield from _project(p)
+    if len(p["tracks"]) != 1:
+        yield "project.tracks: editor requires one primary track"
+        return
+    sources = {s["asset_id"]: s for s in doc["sources"]}
+    if len(sources) != len(doc["sources"]):
+        yield "sources: duplicate asset ID"
+    segments = p["tracks"][0]["segments"]
+    if len(segments) > 4096:
+        yield "project.segments: limit 4096"
+    position, ids = 0, set()
+    for s in segments:
+        length = s["source_out_ms"] - s["source_in_ms"]
+        if s["id"] in ids:
+            yield "project.segments: duplicate segment ID"
+        ids.add(s["id"])
+        if s["timeline_start_ms"] != position:
+            yield "project.segments: primary track must be contiguous from zero"
+        position += length
+        source = sources.get(s["asset_id"])
+        if source is None or s["source_out_ms"] > source["duration_ms"]:
+            yield "project.segments: source binding missing or range exceeds source"
+        keys = s["crop"]["keyframes"]
+        if len(keys) > 1000:
+            yield "project.crop: limit 1000 keyframes"
+        last = -1
+        for k in keys:
+            if not last < k["at_ms"] < length:
+                yield "project.crop: keyframes must increase inside segment"
+            last = k["at_ms"]
+        if s["crop"]["mode"] == "manual" and (not keys or keys[0]["at_ms"] != 0):
+            yield "project.crop: manual crop needs a keyframe at zero"
+    if position > 9007199254740991:
+        yield "project: timeline exceeds safe integer range"
+    for name, items in (
+        ("captions", p["captions"]),
+        ("overlays", p["overlays"]),
+        ("mute_ranges", p["audio"]["mute_ranges"]),
+        ("gain_ranges", p["audio"].get("gain_ranges", [])),
+    ):
+        if len(items) > 10000:
+            yield f"project.{name}: limit 10000"
+        for item in items:
+            if not 0 <= item["start_ms"] < item["end_ms"] <= position:
+                yield f"project.{name}: range outside timeline"
+        if name == "gain_ranges":
+            ordered = sorted(items, key=lambda x: x["start_ms"])
+            if any(a["end_ms"] > b["start_ms"] for a, b in pairwise(ordered)):
+                yield "project.gain_ranges: overlapping gain ranges"
+    if ("profile_id" in doc["layout"]) != ("profile_version" in doc["layout"]):
+        yield "layout: profile ID and version must be supplied together"
+
 
 def _render_preset(doc: Document) -> Iterable[str]:
     video = doc["video"]
@@ -442,6 +505,7 @@ RULES: dict[str, Callable[[Document], Iterable[str]]] = {
         issue for name, r in doc["regions"].items() for issue in _region(f"regions.{name}", r)
     ),
     "project": _project,
+    "editor-project": _editor_project,
     "render-preset": _render_preset,
     "export-manifest": _export_manifest,
     "import": _import,

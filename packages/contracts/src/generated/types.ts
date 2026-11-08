@@ -61,6 +61,21 @@ export type TimelineMs = number;
  */
 export type DerivedOutcome = "generated" | "cached" | "not_needed" | "not_applicable";
 /**
+ * Opaque project ID: 'prj_' + ULID.
+ */
+export type ProjectId = string;
+/**
+ * Opaque timeline segment ID: 'seg_' + ULID.
+ */
+export type SegmentId = string;
+/**
+ * Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).
+ *
+ * @minItems 4
+ * @maxItems 4
+ */
+export type Region = [x: number, y: number, width: number, height: number];
+/**
  * Semantic version without build metadata, e.g. '0.3.0' or '1.2.0-beta.1'.
  */
 export type SemVer = string;
@@ -80,20 +95,9 @@ export type Evidence =
   | TranscriptEvidence
   | ModelFrameEvidence;
 /**
- * Normalized rectangle [x, y, width, height] relative to the frame, origin top-left. Width and height must be positive and the rectangle must lie inside the frame (checked semantically).
- *
- * @minItems 4
- * @maxItems 4
- */
-export type Region = [x: number, y: number, width: number, height: number];
-/**
  * Position on a media or session timeline in integer milliseconds from its start.
  */
 export type TimelineMs1 = number;
-/**
- * Opaque project ID: 'prj_' + ULID.
- */
-export type ProjectId = string;
 /**
  * This interface was referenced by `AssetFingerprints`'s JSON-Schema
  * via the `definition` "AlgorithmVersion".
@@ -122,10 +126,6 @@ export type UtcTimestamp1 = string;
  * Position on a media or session timeline in integer milliseconds from its start.
  */
 export type TimelineMs2 = number;
-/**
- * Opaque timeline segment ID: 'seg_' + ULID.
- */
-export type SegmentId = string;
 /**
  * RFC 3339 timestamp in UTC with a literal 'Z' suffix and at most millisecond precision.
  */
@@ -213,6 +213,7 @@ export type UtcTimestamp4 = string;
 export interface ContractsBundle {
   analysis?: AnalysisResult;
   "derived-media"?: AssetDerivedMedia;
+  "editor-project"?: EditorProject;
   error?: ErrorInfo;
   "evaluation-observations"?: EvaluationObservations;
   "evaluation-report"?: EvaluationReport;
@@ -672,6 +673,155 @@ export interface DerivedCleanupResult {
   removed_dirs: number;
   freed_bytes: number;
   skipped_links: number;
+}
+/**
+ * M21 versioned single-track editor document and portable JSON format. No local paths. Legacy Project documents migrate explicitly into model_version 1.
+ */
+export interface EditorProject {
+  schema_version: string;
+  model_version: 1;
+  project: Project;
+  layout: EditorLayout;
+  /**
+   * @maxItems 1000
+   */
+  sources: ProjectSource[];
+}
+/**
+ * Non-destructive edit decision list (spec 11.1). References source assets by ID; never stores rendered media.
+ */
+export interface Project {
+  schema_version: string;
+  id: ProjectId;
+  title: string;
+  session_id?: SessionId;
+  created_at: UtcTimestamp;
+  updated_at: UtcTimestamp;
+  tracks: VideoTrack[];
+  captions: Caption[];
+  overlays: (BlurOverlay | TextOverlay)[];
+  audio: AudioSettings;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "VideoTrack".
+ */
+export interface VideoTrack {
+  kind: "video";
+  segments: Segment[];
+}
+/**
+ * A source range placed on the timeline. source_out_ms > source_in_ms (checked semantically).
+ *
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "Segment".
+ */
+export interface Segment {
+  id: SegmentId;
+  asset_id: AssetId;
+  source_in_ms: TimelineMs;
+  source_out_ms: TimelineMs;
+  timeline_start_ms: TimelineMs;
+  crop: Crop;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "Crop".
+ */
+export interface Crop {
+  mode: "fit" | "fill" | "safe" | "manual";
+  keyframes: CropKeyframe[];
+}
+/**
+ * Crop region at a segment-relative time.
+ *
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "CropKeyframe".
+ */
+export interface CropKeyframe {
+  at_ms: TimelineMs;
+  region: Region;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "Caption".
+ */
+export interface Caption {
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  text: string;
+}
+/**
+ * Privacy blur over a region for a time range.
+ *
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "BlurOverlay".
+ */
+export interface BlurOverlay {
+  kind: "blur";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  region: Region;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "TextOverlay".
+ */
+export interface TextOverlay {
+  kind: "text";
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  region: Region;
+  text: string;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "AudioSettings".
+ */
+export interface AudioSettings {
+  gain_db: number;
+  mute_ranges: TimeRange[];
+  gain_ranges?: GainRange[];
+}
+/**
+ * Inclusive start, exclusive end, in timeline milliseconds. end_ms >= start_ms (checked semantically).
+ */
+export interface TimeRange {
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+}
+/**
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "GainRange".
+ */
+export interface GainRange {
+  start_ms: TimelineMs;
+  end_ms: TimelineMs;
+  gain_db: number;
+}
+/**
+ * This interface was referenced by `EditorProject`'s JSON-Schema
+ * via the `definition` "EditorLayout".
+ */
+export interface EditorLayout {
+  aspect_ratio: "16:9" | "9:16" | "1:1";
+  profile_id?: string;
+  profile_version?: string;
+}
+/**
+ * This interface was referenced by `EditorProject`'s JSON-Schema
+ * via the `definition` "ProjectSource".
+ */
+export interface ProjectSource {
+  asset_id: AssetId;
+  sha256: string;
+  original_name: string;
+  duration_ms: number;
+  replaces_sha256?: string;
+  /**
+   * Portable source retained without an explicit local binding; never preview or render until relinked.
+   */
+  requires_relink?: true;
 }
 export interface EvaluationObservations {
   schema_version: string;
@@ -2196,97 +2346,6 @@ export interface LocalePack {
    * Installed Tesseract language ID; never a path or download URL.
    */
   ocr_language?: string;
-}
-/**
- * Non-destructive edit decision list (spec 11.1). References source assets by ID; never stores rendered media.
- */
-export interface Project {
-  schema_version: string;
-  id: ProjectId;
-  title: string;
-  session_id?: SessionId;
-  created_at: UtcTimestamp;
-  updated_at: UtcTimestamp;
-  tracks: VideoTrack[];
-  captions: Caption[];
-  overlays: BlurOverlay[];
-  audio: AudioSettings;
-}
-/**
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "VideoTrack".
- */
-export interface VideoTrack {
-  kind: "video";
-  segments: Segment[];
-}
-/**
- * A source range placed on the timeline. source_out_ms > source_in_ms (checked semantically).
- *
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "Segment".
- */
-export interface Segment {
-  id: SegmentId;
-  asset_id: AssetId;
-  source_in_ms: TimelineMs;
-  source_out_ms: TimelineMs;
-  timeline_start_ms: TimelineMs;
-  crop: Crop;
-}
-/**
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "Crop".
- */
-export interface Crop {
-  mode: "fit" | "fill" | "safe" | "manual";
-  keyframes: CropKeyframe[];
-}
-/**
- * Crop region at a segment-relative time.
- *
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "CropKeyframe".
- */
-export interface CropKeyframe {
-  at_ms: TimelineMs;
-  region: Region;
-}
-/**
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "Caption".
- */
-export interface Caption {
-  start_ms: TimelineMs;
-  end_ms: TimelineMs;
-  text: string;
-}
-/**
- * Privacy blur over a region for a time range.
- *
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "BlurOverlay".
- */
-export interface BlurOverlay {
-  kind: "blur";
-  start_ms: TimelineMs;
-  end_ms: TimelineMs;
-  region: Region;
-}
-/**
- * This interface was referenced by `Project`'s JSON-Schema
- * via the `definition` "AudioSettings".
- */
-export interface AudioSettings {
-  gain_db: number;
-  mute_ranges: TimeRange[];
-}
-/**
- * Inclusive start, exclusive end, in timeline milliseconds. end_ms >= start_ms (checked semantically).
- */
-export interface TimeRange {
-  start_ms: TimelineMs;
-  end_ms: TimelineMs;
 }
 /**
  * Export preset (spec 11.4). Presets are JSON files so users can contribute new ones.
