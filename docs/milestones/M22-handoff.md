@@ -23,7 +23,13 @@
   focused Vitest/pytest/native E2E, required-tool `pnpm check`, Windows/Linux
   platform mypy and `pnpm build`; Playwright CLI headed Chromium against temporary
   synthetic FFmpeg sources and a real worker using the test IPC/Range bridge.
-- Test and validation results: Final gate results pending below before PR handoff.
+- Test and validation results: Full required-tool `pnpm check` passed: worker **927 passed,
+  1 skipped** (existing Windows-only junction test on macOS), Python contracts
+  **238 passed**, TypeScript contracts **257 passed**, desktop **177 passed** and
+  Rust **48 passed**. Windows/Linux worker mypy passed (153 source files), as did
+  the native macOS arm64 production build and final formatting checks. An initial
+  run hit the existing watched-file duplicate-report timing test; its unchanged
+  recheck and the complete default rerun passed. Staged-file audit was clean.
   Focused editor/mapping **18 passed**, worker project **18 passed** and native
   editor create/trim/split/reorder/reopen passed. Chromium completed manual create
   (1000–10000 ms), trim in to 2000, split at 1000, keyboard reorder, autosave and
@@ -62,4 +68,6 @@
   `m22-precision.json`; manual fixture source
   `services/media-worker/tests/editor_browser.py`. Browser sources/library were
   temporary and removed after capture. Generated media, model binaries and
-  libraries are not committed. Hosted PR/check links added before handoff.
+  libraries are not committed. [PR #28](https://github.com/heetdalsania/openworld-moments/pull/28) and
+  [its CI checks](https://github.com/heetdalsania/openworld-moments/pull/28/checks)
+  record hosted validation for the final head before merge.
