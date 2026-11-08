@@ -76,3 +76,5 @@
   `output/playwright/m25-crop-warning.png`, `m25-render-ready.png`,
   `m25-audit.txt` and `m25-render-report.txt`. No footage, models, user libraries,
   databases, secrets, private paths, generated media or build outputs are committed.
+
+- Pull request: [#31](https://github.com/heetdalsania/openworld-moments/pull/31).
