@@ -344,3 +344,7 @@ export const projectSelection = (
   id: string,
 ): Promise<{ layout_key: string; duration_ms: number }> =>
   call("GET", `/v1/sessions/${id}/project-selection`);
+
+/** Explicit native save dialog; no webview-supplied destination path. */
+export const exportCaptions = (text: string, format: "srt" | "vtt"): Promise<boolean> =>
+  invoke("caption_export", { text, format });

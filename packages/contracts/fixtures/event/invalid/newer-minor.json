@@ -2,7 +2,7 @@
   "description": "future minor",
   "expect": "version",
   "document": {
-    "schema_version": "1.17",
+    "schema_version": "1.18",
     "id": "evt_01JCBQ00000000000000000003",
     "session_id": "ses_01JCBQ00000000000000000002",
     "asset_id": "ast_01JCBQ00000000000000000001",
@@ -35,5 +35,5 @@
     },
     "review_state": "unreviewed"
   },
-  "message_contains": "reads up to 1.16"
+  "message_contains": "reads up to 1.17"
 }

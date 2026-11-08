@@ -85,3 +85,5 @@ M19 adds review and evaluation contracts at schema version 1.14; see [event revi
 M20 adds `story-candidate` and `story-candidates`; see [story engine](../../docs/architecture/stories.md). The `story` job kind generates candidates without editing source media.
 
 M21 adds `editor-project`, text overlays and optional gain ranges at 1.16; see [editor model](../../docs/architecture/editor-projects.md) for strict editor invariants and explicit legacy migration.
+
+M23 adds optional caption placement/style/output intent at **1.17**; existing timed captions and audio ranges retain their units. See [captions and audio](../../docs/architecture/captions-and-audio.md).

@@ -439,3 +439,39 @@ def test_editor_discovery_http_bounds_and_missing_session(library: Any) -> None:
             client.get("/v1/sessions/ses_00000000000000000000000000/project-selection").status_code
             == 404
         )
+
+
+def test_caption_settings_unicode_and_audio_survive_save_reopen_and_recovery(library: Any) -> None:
+    db, sid, _, paths = library
+    before = [(p.read_bytes(), p.stat().st_mtime_ns) for p in paths]
+    state = create(db, sid)
+    doc = copy.deepcopy(state["document"])
+    doc["project"]["captions"] = [
+        {"start_ms": 100, "end_ms": 1900, "text": "Café & <bridge>\n你好 🚗"}
+    ]
+    doc["project"]["caption_settings"] = {
+        "preset": "high-contrast",
+        "region": [0.08, 0.06, 0.84, 0.18],
+        "burn_in": True,
+        "sidecar": "both",
+    }
+    doc["project"]["audio"] = {
+        "gain_db": 6,
+        "mute_ranges": [{"start_ms": 500, "end_ms": 1000}],
+        "gain_ranges": [{"start_ms": 1000, "end_ms": 2000, "gain_db": -6}],
+    }
+    service = ProjectService(db)
+    pid = doc["project"]["id"]
+    saved = service.save(pid, SaveProject(document=doc, expected_revision=1))
+    reopened = ProjectService(Database.open(db.path)).get(pid)
+    assert reopened["document"] == saved["document"]
+    assert reopened["document"]["project"]["captions"] == doc["project"]["captions"]
+    assert reopened["document"]["project"]["caption_settings"] == doc["project"]["caption_settings"]
+    assert reopened["document"]["project"]["audio"] == doc["project"]["audio"]
+    assert reopened["recovery"] == state["document"]
+    invalid = copy.deepcopy(doc)
+    invalid["project"]["caption_settings"]["region"] = [0.9, 0.9, 0.8, 0.8]
+    with pytest.raises(ProjectError):
+        service.save(pid, SaveProject(document=invalid, expected_revision=2))
+    assert service.get(pid)["document"] == saved["document"]
+    assert [(p.read_bytes(), p.stat().st_mtime_ns) for p in paths] == before

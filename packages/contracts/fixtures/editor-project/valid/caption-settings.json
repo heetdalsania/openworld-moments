@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.17",
+  "model_version": 1,
+  "project": {
+    "schema_version": "1.17",
+    "id": "prj_01JCBQ00000000000000000005",
+    "title": "Six-star escape",
+    "session_id": "ses_01JCBQ00000000000000000002",
+    "created_at": "2026-11-20T05:40:10Z",
+    "updated_at": "2026-11-20T05:45:00Z",
+    "tracks": [
+      {
+        "kind": "video",
+        "segments": [
+          {
+            "id": "seg_01JCBQ00000000000000000006",
+            "asset_id": "ast_01JCBQ00000000000000000001",
+            "source_in_ms": 12500,
+            "source_out_ms": 44800,
+            "timeline_start_ms": 0,
+            "crop": {
+              "mode": "safe",
+              "keyframes": [
+                {
+                  "at_ms": 0,
+                  "region": [0.21875, 0, 0.5625, 1]
+                }
+              ]
+            }
+          },
+          {
+            "id": "seg_01JCBQ00000000000000000007",
+            "asset_id": "ast_01JCBQ00000000000000000001",
+            "source_in_ms": 50000,
+            "source_out_ms": 61000,
+            "timeline_start_ms": 32300,
+            "crop": {
+              "mode": "fit",
+              "keyframes": []
+            }
+          }
+        ]
+      }
+    ],
+    "captions": [
+      {
+        "start_ms": 1000,
+        "end_ms": 2500,
+        "text": "Here we go"
+      }
+    ],
+    "overlays": [
+      {
+        "kind": "blur",
+        "start_ms": 0,
+        "end_ms": 5000,
+        "region": [0.0, 0.0, 0.25, 0.08]
+      },
+      {
+        "kind": "text",
+        "start_ms": 0,
+        "end_ms": 1000,
+        "region": [0, 0, 1, 0.1],
+        "text": "Title"
+      }
+    ],
+    "audio": {
+      "gain_db": -3.5,
+      "mute_ranges": [
+        {
+          "start_ms": 20000,
+          "end_ms": 21000
+        }
+      ],
+      "gain_ranges": [
+        {
+          "start_ms": 0,
+          "end_ms": 1000,
+          "gain_db": -5
+        }
+      ]
+    },
+    "caption_settings": {
+      "preset": "high-contrast",
+      "region": [0.08, 0.06, 0.84, 0.18],
+      "burn_in": true,
+      "sidecar": "both"
+    }
+  },
+  "layout": {
+    "aspect_ratio": "16:9"
+  },
+  "sources": [
+    {
+      "asset_id": "ast_01JCBQ00000000000000000001",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "original_name": "clip.mp4",
+      "duration_ms": 120000
+    }
+  ]
+}

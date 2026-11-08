@@ -65,6 +65,9 @@
     },
     "audio": {
       "$ref": "#/$defs/AudioSettings"
+    },
+    "caption_settings": {
+      "$ref": "#/$defs/CaptionSettings"
     }
   },
   "$defs": {
@@ -251,6 +254,27 @@
           "type": "number",
           "minimum": -60,
           "maximum": 24
+        }
+      }
+    },
+    "CaptionSettings": {
+      "title": "CaptionSettings",
+      "description": "M23 output-frame caption placement and export intent. Defaults apply when absent; source text remains plain Unicode.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset", "region", "burn_in", "sidecar"],
+      "properties": {
+        "preset": {
+          "enum": ["high-contrast", "compact"]
+        },
+        "region": {
+          "$ref": "common.schema.json#/$defs/Region"
+        },
+        "burn_in": {
+          "type": "boolean"
+        },
+        "sidecar": {
+          "enum": ["none", "srt", "vtt", "both"]
         }
       }
     }

@@ -701,6 +701,7 @@ export interface Project {
   captions: Caption[];
   overlays: (BlurOverlay | TextOverlay)[];
   audio: AudioSettings;
+  caption_settings?: CaptionSettings;
 }
 /**
  * This interface was referenced by `Project`'s JSON-Schema
@@ -798,6 +799,18 @@ export interface GainRange {
   start_ms: TimelineMs;
   end_ms: TimelineMs;
   gain_db: number;
+}
+/**
+ * M23 output-frame caption placement and export intent. Defaults apply when absent; source text remains plain Unicode.
+ *
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "CaptionSettings".
+ */
+export interface CaptionSettings {
+  preset: "high-contrast" | "compact";
+  region: Region;
+  burn_in: boolean;
+  sidecar: "none" | "srt" | "vtt" | "both";
 }
 /**
  * This interface was referenced by `EditorProject`'s JSON-Schema

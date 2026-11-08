@@ -107,6 +107,7 @@ function* profile(doc: Profile): Generator<string> {
 }
 
 function* project(doc: Project): Generator<string> {
+  if (doc.caption_settings) yield* region("caption_settings.region", doc.caption_settings.region);
   for (const [t, track] of doc.tracks.entries()) {
     for (const [s, seg] of track.segments.entries()) {
       const path = `tracks[${t}].segments[${s}]`;

@@ -58,6 +58,7 @@ pub fn run() {
             host::worker_cancel_job,
             host::worker_list_jobs,
             host::worker_api,
+            host::caption_export,
             host::calibration_export_patch,
             host::calibration_export_sample,
             host::phone_interfaces,
