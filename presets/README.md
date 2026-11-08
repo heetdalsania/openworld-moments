@@ -14,3 +14,5 @@ The renderer validates every preset against the contract and refuses unknown fie
 odd dimensions and HEVC (M24 renders H.264 only). Vertical, Discord-size and
 HUD-aware presets arrive with M25/M27. See [render engine](../docs/architecture/render.md).
 Preset data is licensed under Apache-2.0.
+
+M25 adds [vertical layouts](../docs/architecture/vertical-layouts.md) with `vertical-1080x1920-30` and `vertical-source-fps` presets.

@@ -756,6 +756,7 @@ export interface Segment {
   source_out_ms: TimelineMs;
   timeline_start_ms: TimelineMs;
   crop: Crop;
+  vertical_crop?: VerticalCrop;
 }
 /**
  * This interface was referenced by `Project`'s JSON-Schema
@@ -774,6 +775,29 @@ export interface Crop {
 export interface CropKeyframe {
   at_ms: TimelineMs;
   region: Region;
+}
+/**
+ * Independent upright-source vertical variant. Smoothstep translation with fixed crop dimensions; never changes the horizontal crop.
+ *
+ * This interface was referenced by `Project`'s JSON-Schema
+ * via the `definition` "VerticalCrop".
+ */
+export interface VerticalCrop {
+  layout_version: 1;
+  strategy: "fit" | "fixed" | "keyed";
+  background: "solid" | "blur";
+  /**
+   * @maxItems 100
+   */
+  keyframes: CropKeyframe[];
+  suggestion?: FramingSuggestion;
+}
+export interface FramingSuggestion {
+  algorithm: "static-profile/1";
+  confidence: number;
+  reason: string;
+  profile_id?: string;
+  profile_version?: string;
 }
 /**
  * This interface was referenced by `Project`'s JSON-Schema
@@ -2323,12 +2347,26 @@ export interface Profile {
   };
   detectors: DetectorSettings[];
   safe_zones?: SafeZones;
-  extends?: Slug;
+  extends?: [
+    {
+      title: "Slug";
+      description: "Lowercase identifier for profiles, presets, detectors, and regions.";
+      type: "string";
+      pattern: "^[a-z0-9]+(?:[-_][a-z0-9]+)*$";
+      maxLength: 64;
+    }
+  ];
   license?: string;
   capabilities?: ("frames.gray" | "audio.pcm")[];
   locales?: {
     [k: string]: LocalePack | undefined;
   };
+  /**
+   * Optional named static subject regions for conservative framing suggestions. Not tracked objects.
+   *
+   * @maxItems 100
+   */
+  subject_hints?: Slug[];
 }
 /**
  * This interface was referenced by `Profile`'s JSON-Schema
@@ -2564,6 +2602,12 @@ export interface RenderPlan {
         mode: "fit" | "fill" | "safe" | "manual";
         region?: Region;
       };
+      vertical_crop?: VerticalCrop;
+      /**
+       * @minItems 2
+       * @maxItems 2
+       */
+      source_size?: [number, number];
     },
     ...{
       source: number;
@@ -2576,6 +2620,12 @@ export interface RenderPlan {
         mode: "fit" | "fill" | "safe" | "manual";
         region?: Region;
       };
+      vertical_crop?: VerticalCrop;
+      /**
+       * @minItems 2
+       * @maxItems 2
+       */
+      source_size?: [number, number];
     }[]
   ];
   audio: {
@@ -2796,6 +2846,7 @@ export interface RenderPlan {
     ffmpeg: string;
     render_engine?: SemVer;
   };
+  layout_profile?: Profile;
 }
 /**
  * This interface was referenced by `undefined`'s JSON-Schema
@@ -3079,6 +3130,14 @@ export interface RenderRequest {
    * Explicitly render without text overlays and burned-in captions.
    */
   omit_text?: boolean;
+  /**
+   * Explicit acknowledgment of current vertical layout warnings.
+   */
+  review_layout?: boolean;
+  /**
+   * Refuse if the saved revision changed after review.
+   */
+  expected_revision?: number;
 }
 /**
  * A candidate play session (spec 8.2, M11): assets grouped by source, format, and capture-time gaps, in order, with the evidence for each join. 'review_state' says who owns it: 'unreviewed' sessions are rebuilt by the 'group' job; 'corrected' (changed by the user) and 'confirmed' sessions are never touched by automatic grouping.

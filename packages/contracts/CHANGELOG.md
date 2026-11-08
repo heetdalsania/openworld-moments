@@ -2,6 +2,18 @@
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
+## 1.19 — M25 vertical layouts
+
+- Optional `Segment.vertical_crop` layout version 1: independent fit/fixed/keyed
+  framing, solid/blurred background and fixed-size smoothstep position keyframes.
+- Optional saved static suggestion provenance (algorithm, confidence, explanation,
+  profile identity); profile `subject_hints` references named normalized regions.
+- Render-plan pieces optionally retain vertical settings and upright source sizes;
+  plans optionally retain the effective calibrated profile. Plan version stays 1.
+- Render requests add explicit layout review and an optional expected project
+  revision. No SQL migration or editor-model version change.
+- Shared valid/invalid fixtures cover bounds, key times, dimensions and strategies.
+
 ## 1.18 — M24 render engine
 
 Additive; existing 1.17 documents remain valid.

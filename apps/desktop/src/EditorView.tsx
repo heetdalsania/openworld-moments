@@ -29,6 +29,8 @@ import { SegmentWave } from "./TimelineWave";
 import { CaptionPanel, CaptionPreview } from "./CaptionPanel";
 import { AudioPanel } from "./AudioPanel";
 import { ExportPanel } from "./ExportPanel";
+import { LayoutPanel } from "./LayoutPanel";
+import { VerticalPreview } from "./VerticalPreview";
 import { audioAt, EditorAudio } from "./editorAudio";
 import type { EditorCommand } from "./editor";
 
@@ -504,6 +506,13 @@ function LoadedEditor({
   };
   const selectedSource = document.sources.find((s) => s.asset_id === cut?.asset_id);
   const ratio = document.layout.aspect_ratio.replace(":", " / ");
+  const sourceSize = (m: ProjectMedia | undefined): [number, number] => {
+    const v = m?.asset?.video;
+    if (!v) return [1920, 1080];
+    return v.rotation === 90 || v.rotation === 270 ? [v.height, v.width] : [v.width, v.height];
+  };
+  const [previewWidth, previewHeight] = sourceSize(currentMedia);
+  const [cutWidth, cutHeight] = sourceSize(cut ? media.data?.[cut.asset_id] : undefined);
   return (
     <section
       className="view editor"
@@ -645,6 +654,16 @@ function LoadedEditor({
             >
               <video ref={v0} {...props(0)} />
               <video ref={v1} {...props(1)} />
+              {document.layout.aspect_ratio === "9:16" && (
+                <VerticalPreview
+                  video={state.activeElement === 0 ? v0 : v1}
+                  cut={cuts.find((c) => c.id === current?.segment.key)}
+                  width={previewWidth}
+                  height={previewHeight}
+                  atMs={state.virtualMs}
+                  playing={state.playing}
+                />
+              )}
               <CaptionPreview document={document} atMs={state.virtualMs} />
               {!canPlay && (
                 <div className="player-empty">
@@ -663,8 +682,9 @@ function LoadedEditor({
             </div>
           </div>
           <p className="muted">
-            Caption placement and audio edits are previewed. Final crops and other overlays are not
-            shown here.
+            Vertical crops, caption placement and audio edits are previewed. Privacy blurs and text
+            overlays appear only in supported exports. Blurred backgrounds are an approximate
+            preview.
           </p>
           {state.error && <p role="alert">{state.error}</p>}
           <div className="transport">
@@ -911,6 +931,15 @@ function LoadedEditor({
         )}
       </section>
       <div className="editor-detail-panels">
+        <LayoutPanel
+          document={document}
+          cut={cut}
+          width={cutWidth}
+          height={cutHeight}
+          atMs={state.virtualMs}
+          onCommand={(command) => perform(() => workspace.execute(command))}
+          seek={seek}
+        />
         <CaptionPanel
           workspace={workspace}
           atMs={state.virtualMs}
@@ -934,8 +963,12 @@ function LoadedEditor({
       <ExportPanel
         projectId={project.id}
         document={document}
-        flush={() => workspace.flush()}
+        flush={async () => {
+          await workspace.flush();
+          return workspace.autosave.revision;
+        }}
         workerReady={workerReady}
+        media={media.data}
       />
       {showRecovery && (
         <section className="panel" aria-labelledby="recovery-heading">

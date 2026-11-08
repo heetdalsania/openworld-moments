@@ -27,9 +27,11 @@ from typing import Any
 from openworld_moments_contracts import load, normalize
 
 from openworld_moments import __version__
-from openworld_moments.derived.policy import proxy_geometry
+from openworld_moments.derived.policy import display_size, proxy_geometry
 from openworld_moments.derived.tonemap import ToneMapSettings, lut
+from openworld_moments.detectors.calibration import Calibration
 from openworld_moments.detectors.inputs import content_hash
+from openworld_moments.detectors.profiles import ProfileError
 from openworld_moments.detectors.sdk import AnalysisCancelled
 from openworld_moments.ingest.library import LibraryPaths, readable_source
 from openworld_moments.media.process import ToolCancelled, ToolError, run_tool
@@ -146,6 +148,7 @@ class Renderer:
         presets: PresetCatalog | None = None,
         probe: EncoderProbe | None = None,
         encoders: Mapping[str, EncoderSpec] | None = None,
+        calibration: Calibration | None = None,
     ) -> None:
         self.database, self.tools = database, tools
         self.library = LibraryPaths.for_database(database.path)
@@ -154,6 +157,7 @@ class Renderer:
         self.presets = presets or PresetCatalog()
         self.encoders = dict(encoders or ENCODERS)
         self.probe = probe or EncoderProbe(self.encoders)
+        self.calibration = calibration or Calibration(database)
 
     # -- catalog and status ----------------------------------------------------------
 
@@ -192,15 +196,31 @@ class Renderer:
     def check_request(self, params: Mapping[str, Any]) -> None:
         """Refuse a render up front when the project, preset or encoder cannot work."""
         state = self._project(params["project_id"])
+        self._check_revision(state, params)
         self.presets.get(params["preset_id"])
         encoder = self._encoder(params.get("encoder", CPU.id))
         self._check_sources(state)
-        facts = {
-            s["asset_id"]: SourceFacts(
-                s["asset_id"], s["sha256"], s["original_name"], False, None, None
-            )
-            for s in state["document"]["sources"]
+        facts = {}
+        used = {
+            s["asset_id"] for t in state["document"]["project"]["tracks"] for s in t["segments"]
         }
+        with contextlib.closing(self.database.connect()) as conn:
+            for source in state["document"]["sources"]:
+                if source["asset_id"] not in used:
+                    continue
+                asset = AssetRepository(conn).get(source["asset_id"])
+                video = asset.video
+                w, h = display_size(video) if video else (1920, 1080)
+                facts[source["asset_id"]] = SourceFacts(
+                    source["asset_id"],
+                    source["sha256"],
+                    source["original_name"],
+                    bool(asset.audio),
+                    None,
+                    None,
+                    w,
+                    h,
+                )
         build_plan(
             state["document"],
             facts,
@@ -208,7 +228,35 @@ class Renderer:
             encoder,
             ffmpeg_version="check",
             omit_text=bool(params.get("omit_text", False)),
+            layout_profile=self._layout_profile(state["document"]),
+            review_layout=bool(params.get("review_layout", False)),
         )
+
+    @staticmethod
+    def _check_revision(state: dict[str, Any], params: Mapping[str, Any]) -> None:
+        if "expected_revision" in params and state["revision"] != params["expected_revision"]:
+            raise RenderError(
+                "render.revision_changed",
+                "The project changed after review. "
+                "Review the current saved revision before rendering.",
+            )
+
+    def _layout_profile(self, document: dict[str, Any]) -> dict[str, Any] | None:
+        layout = document["layout"]
+        if not layout.get("profile_id"):
+            return None
+        try:
+            state = self.calibration.state(layout["profile_id"])
+            profile = state["effective"]
+            if (
+                state["base_changed"]
+                or state["conflict"]
+                or profile["profile_version"] != layout["profile_version"]
+            ):
+                return None
+            return dict(profile)
+        except ProfileError:
+            return None
 
     # -- records ---------------------------------------------------------------------
 
@@ -347,6 +395,7 @@ class Renderer:
                     bool(asset.audio),
                     (rate.num, rate.den) if rate and rate.num > 0 and rate.den > 0 else None,
                     ToneMapSettings(transfer) if transfer else None,  # type: ignore[arg-type]
+                    *display_size(video),
                 )
                 paths[aid] = path
                 stats[aid] = (before.st_size, before.st_mtime_ns)
@@ -376,6 +425,7 @@ class Renderer:
         try:
             report(0, 1000, "Checking clips")
             state = self._project(project_id)
+            self._check_revision(state, params)
             self._check_sources(state)
             self._store(job_id, project_revision=state["revision"])
             preset = self.presets.get(params["preset_id"])
@@ -389,6 +439,8 @@ class Renderer:
                 encoder,
                 ffmpeg_version=tool.version or "unknown",
                 omit_text=bool(params.get("omit_text", False)),
+                layout_profile=self._layout_profile(state["document"]),
+                review_layout=bool(params.get("review_layout", False)),
             )
             self._store(job_id, plan=plan)
             free = shutil.disk_usage(self.root).free
@@ -524,7 +576,9 @@ class Renderer:
                         "width": plan["output"]["width"],
                         "height": plan["output"]["height"],
                         "fps": plan["output"]["fps"],
-                        "layout": "fit",
+                        "layout": "vertical-v1"
+                        if plan["output"]["height"] > plan["output"]["width"]
+                        else "fit",
                     },
                     "detectors": [],
                 },

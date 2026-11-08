@@ -347,7 +347,13 @@ def test_output_estimate_scales_with_duration_and_bitrate() -> None:
 
 def test_shipped_presets_are_valid_and_bad_files_are_ignored(tmp_path: Path) -> None:
     shipped = {p["id"] for p in PresetCatalog().all()}
-    assert shipped == {"horizontal-1080p30", "horizontal-source-fps", "horizontal-720p30"}
+    assert shipped == {
+        "horizontal-1080p30",
+        "horizontal-source-fps",
+        "horizontal-720p30",
+        "vertical-1080x1920-30",
+        "vertical-source-fps",
+    }
     good = json.loads((DEFAULT_PRESETS / "horizontal-720p30.json").read_text("utf-8"))
     (tmp_path / "horizontal-720p30.json").write_text(json.dumps(good), "utf-8")
     (tmp_path / "renamed.json").write_text(json.dumps(good), "utf-8")  # id mismatch

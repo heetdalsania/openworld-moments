@@ -186,6 +186,32 @@ class CaptionSettings(BaseModel):
     sidecar: Literal["none", "srt", "vtt", "both"]
 
 
+class FramingSuggestion(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    algorithm: Literal["static-profile/1"]
+    confidence: Annotated[float, Field(ge=0.0, le=1.0)]
+    reason: Annotated[str, Field(max_length=1000, min_length=1)]
+    profile_id: Annotated[str | None, Field(max_length=128)] = None
+    profile_version: Annotated[str | None, Field(max_length=64)] = None
+
+
+class VerticalCrop(BaseModel):
+    """
+    Independent upright-source vertical variant. Smoothstep translation with fixed crop dimensions; never changes the horizontal crop.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    layout_version: Literal[1]
+    strategy: Literal["fit", "fixed", "keyed"]
+    background: Literal["solid", "blur"]
+    keyframes: Annotated[list[CropKeyframe], Field(max_length=100)]
+    suggestion: Annotated[FramingSuggestion | None, Field(title="FramingSuggestion")] = None
+
+
 class Crop(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -252,6 +278,7 @@ class Segment(BaseModel):
         ),
     ]
     crop: Crop
+    vertical_crop: VerticalCrop | None = None
 
 
 class VideoTrack(BaseModel):

@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.19",
+  "id": "vertical-1080x1920-30",
+  "display_name": "Vertical 1080\u00d71920 \u00b7 30 fps",
+  "width": 1080,
+  "height": 1920,
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "video": {
+    "codec": "h264",
+    "crf": 20
+  },
+  "audio": {
+    "codec": "aac",
+    "bitrate_kbps": 192,
+    "sample_rate_hz": 48000
+  }
+}

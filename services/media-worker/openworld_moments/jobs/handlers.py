@@ -419,7 +419,17 @@ _PROJECT_ID = re.compile(r"^prj_[0-9A-HJKMNP-TV-Z]{26}$")
 
 def render_handler(renderer: Renderer) -> JobHandler:
     def validate(params: Mapping[str, Any]) -> dict[str, Any]:
-        _reject_unknown(params, {"project_id", "preset_id", "encoder", "omit_text"})
+        _reject_unknown(
+            params,
+            {
+                "project_id",
+                "preset_id",
+                "encoder",
+                "omit_text",
+                "review_layout",
+                "expected_revision",
+            },
+        )
         pid, preset = params.get("project_id"), params.get("preset_id")
         if not isinstance(pid, str) or not _PROJECT_ID.fullmatch(pid):
             raise ValueError("project_id: expected a project ID")
@@ -428,6 +438,13 @@ def render_handler(renderer: Renderer) -> JobHandler:
         encoder = params.get("encoder", "libx264")
         if not isinstance(encoder, str) or not re.fullmatch(r"[a-z0-9_]{1,40}", encoder):
             raise ValueError("encoder: expected an encoder ID")
+        if "expected_revision" in params and (
+            type(params["expected_revision"]) is not int
+            or not 0 <= params["expected_revision"] <= 9007199254740991
+        ):
+            raise ValueError("expected_revision: expected a nonnegative safe integer")
+        if not isinstance(params.get("review_layout", False), bool):
+            raise ValueError("review_layout: expected a boolean")
         if not isinstance(params.get("omit_text", False), bool):
             raise ValueError("omit_text: expected a boolean")
         clean = {**params, "encoder": encoder}

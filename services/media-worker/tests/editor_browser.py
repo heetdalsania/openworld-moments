@@ -226,9 +226,13 @@ def main() -> None:
                                 "/v1/jobs",
                                 "/v1/profiles",
                                 "/v1/transcription/models",
+                                "/v1/render/presets",
+                                "/v1/render/encoders",
                             }
                             or re.fullmatch(r"/v1/profiles/[a-z0-9][a-z0-9-]*/calibration", path)
-                            or re.fullmatch(rf"/v1/projects/prj_{identity}(?:/portable)?", path)
+                            or re.fullmatch(
+                                rf"/v1/projects/prj_{identity}(?:/(?:portable|renders))?", path
+                            )
                             or re.fullmatch(
                                 rf"/v1/sessions/ses_{identity}(?:/(?:project-selection|review|overlaps|transcript))?",
                                 path,
@@ -244,6 +248,7 @@ def main() -> None:
                             and (
                                 re.fullmatch(rf"/v1/sessions/ses_{identity}/projects", path)
                                 or re.fullmatch(rf"/v1/assets/ast_{identity}/derived", path)
+                                or re.fullmatch(rf"/v1/projects/prj_{identity}/render", path)
                             )
                         )
                         if not (read or write) or self.headers.get("Origin") not in {

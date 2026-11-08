@@ -112,6 +112,9 @@
         },
         "crop": {
           "$ref": "#/$defs/Crop"
+        },
+        "vertical_crop": {
+          "$ref": "#/$defs/VerticalCrop"
         }
       }
     },
@@ -275,6 +278,60 @@
         },
         "sidecar": {
           "enum": ["none", "srt", "vtt", "both"]
+        }
+      }
+    },
+    "VerticalCrop": {
+      "title": "VerticalCrop",
+      "description": "Independent upright-source vertical variant. Smoothstep translation with fixed crop dimensions; never changes the horizontal crop.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout_version", "strategy", "background", "keyframes"],
+      "properties": {
+        "layout_version": {
+          "const": 1
+        },
+        "strategy": {
+          "enum": ["fit", "fixed", "keyed"]
+        },
+        "background": {
+          "enum": ["solid", "blur"]
+        },
+        "keyframes": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/CropKeyframe"
+          }
+        },
+        "suggestion": {
+          "title": "FramingSuggestion",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "confidence", "reason"],
+          "properties": {
+            "algorithm": {
+              "const": "static-profile/1"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            },
+            "profile_id": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "profile_version": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
         }
       }
     }

@@ -73,7 +73,7 @@ def _job_event(doc: Document) -> Iterable[str]:
 def _profile(doc: Document) -> Iterable[str]:
     for name, region in doc["regions"].items():
         yield from _region(f"regions.{name}", region)
-    for name in doc.get("safe_zones", {}).get("preserve", []):
+    for name in [*doc.get("safe_zones", {}).get("preserve", []), *doc.get("subject_hints", [])]:
         if name not in doc["regions"]:
             yield f"safe_zones.preserve: '{name}' is not defined in regions"
 
@@ -87,6 +87,25 @@ def _project(doc: Document) -> Iterable[str]:
             yield from _range(
                 f"{path}.source_out_ms", seg["source_in_ms"], seg["source_out_ms"], strict=True
             )
+            v = seg.get("vertical_crop")
+            if v:
+                keys = v["keyframes"]
+                if (
+                    (v["strategy"] == "fit" and keys)
+                    or (v["strategy"] == "fixed" and len(keys) != 1)
+                    or (v["strategy"] != "fit" and (not keys or keys[0]["at_ms"] != 0))
+                ):
+                    yield (
+                        "vertical_crop: strategy requires fit with no keys or crop starting at zero"
+                    )
+                prev = -1
+                for k in keys:
+                    yield from _region("vertical_crop.region", k["region"])
+                    if not prev < k["at_ms"] < seg["source_out_ms"] - seg["source_in_ms"]:
+                        yield "vertical_crop: keys must increase inside cut"
+                    if k["region"][2:] != keys[0]["region"][2:]:
+                        yield "vertical_crop: interpolation requires fixed dimensions"
+                    prev = k["at_ms"]
             for k, frame in enumerate(seg["crop"]["keyframes"]):
                 yield from _region(f"{path}.crop.keyframes[{k}].region", frame["region"])
     for i, caption in enumerate(doc["captions"]):

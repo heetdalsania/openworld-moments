@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.19",
+  "id": "generic-text",
+  "profile_version": "1.0.0",
+  "display_name": "Synthetic banner and subtitle OCR \u2014 game compatibility unvalidated",
+  "game_family": "generic-open-world",
+  "license": "Apache-2.0",
+  "frame": {
+    "aspect_ratios": ["16:9"],
+    "min_width": 640,
+    "min_height": 360
+  },
+  "capabilities": ["frames.gray"],
+  "regions": {
+    "mission_banner": [0.1, 0.2, 0.8, 0.24],
+    "subtitle": [0.1, 0.72, 0.8, 0.24]
+  },
+  "locales": {
+    "en": {
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "ocr_language": "eng",
+      "vocabulary": {
+        "failure": ["TRY AGAIN"],
+        "arrest": ["CAUGHT"],
+        "mission-started": ["TASK STARTED"],
+        "mission-objective": ["NEW OBJECTIVE"],
+        "mission-completed": ["TASK COMPLETE"],
+        "mission-failed": ["TASK FAILED"]
+      }
+    }
+  },
+  "detectors": [
+    {
+      "id": "region-banner-ocr",
+      "enabled": true,
+      "locale": "en",
+      "confirmation_frames": 2,
+      "min_confidence": 0.3,
+      "ocr": {
+        "preprocess": "contrast",
+        "min_text_confidence": 0.6,
+        "match_threshold": 0.9,
+        "max_missing_frames": 1
+      }
+    },
+    {
+      "id": "region-subtitle-ocr",
+      "enabled": true,
+      "locale": "en",
+      "confirmation_frames": 2,
+      "min_confidence": 0.3,
+      "ocr": {
+        "preprocess": "threshold",
+        "min_text_confidence": 0.6,
+        "max_missing_frames": 1
+      }
+    }
+  ],
+  "safe_zones": {
+    "preserve": ["mission_banner", "subtitle"]
+  },
+  "subject_hints": ["mission_banner"]
+}

@@ -564,7 +564,8 @@ export function CaptionPanel({
       )}
       <p className="muted">
         The dashed area shows caption placement in the output frame. Preview shows captions even
-        when burn-in is off; sidecars keep plain text and timing. Final rendering arrives in M24.
+        when burn-in is off; sidecars keep plain text and timing. Exports use the saved layout;
+        unsupported burn-in requires explicit text omission.
       </p>
       <div className="row">
         {(settings.sidecar === "srt" || settings.sidecar === "both") && (

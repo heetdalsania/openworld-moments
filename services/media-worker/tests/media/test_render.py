@@ -471,6 +471,8 @@ def test_job_and_api_surface(studio: Studio, ffmpeg: ToolInfo, tmp_path: Path) -
             "horizontal-1080p30",
             "horizontal-source-fps",
             "horizontal-720p30",
+            "vertical-1080x1920-30",
+            "vertical-source-fps",
         }
         encoders = client.get("/v1/render/encoders").json()
         assert next(e for e in encoders["encoders"] if e["id"] == "libx264")["available"]

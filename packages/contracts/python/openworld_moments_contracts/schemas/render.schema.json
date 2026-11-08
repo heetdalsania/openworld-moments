@@ -287,6 +287,18 @@
                     "$ref": "common.schema.json#/$defs/Region"
                   }
                 }
+              },
+              "vertical_crop": {
+                "$ref": "project.schema.json#/$defs/VerticalCrop"
+              },
+              "source_size": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               }
             }
           }
@@ -403,6 +415,9 @@
               "$ref": "common.schema.json#/$defs/SemVer"
             }
           }
+        },
+        "layout_profile": {
+          "$ref": "profile.schema.json"
         }
       }
     },
@@ -600,6 +615,16 @@
         "omit_text": {
           "type": "boolean",
           "description": "Explicitly render without text overlays and burned-in captions."
+        },
+        "review_layout": {
+          "type": "boolean",
+          "description": "Explicit acknowledgment of current vertical layout warnings."
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "description": "Refuse if the saved revision changed after review."
         }
       }
     }

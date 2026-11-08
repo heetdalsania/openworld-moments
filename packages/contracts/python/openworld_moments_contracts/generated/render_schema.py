@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
-from . import common_schema, error_schema, render_preset_schema
+from . import common_schema, error_schema, profile_schema, project_schema, render_preset_schema
 
 
 class Fallback(BaseModel):
@@ -97,6 +97,10 @@ class Crop(BaseModel):
     ] = None
 
 
+class SourceSizeItem(RootModel[int]):
+    root: Annotated[int, Field(ge=1)]
+
+
 class Segment(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -129,6 +133,8 @@ class Segment(BaseModel):
     frames: Annotated[int, Field(ge=1)]
     samples: Annotated[int, Field(ge=1)]
     crop: Crop
+    vertical_crop: project_schema.VerticalCrop | None = None
+    source_size: Annotated[list[SourceSizeItem] | None, Field(max_length=2, min_length=2)] = None
 
 
 class GainRange(BaseModel):
@@ -232,34 +238,6 @@ class Tools(BaseModel):
             title="SemVer",
         ),
     ] = None
-
-
-class RenderPlan(BaseModel):
-    """
-    The normalized render intermediate representation (plan_version 1). Fully determined by the project revision, preset, encoder and FFmpeg version. Contains no paths: inputs and output appear as placeholders.
-    """
-
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    plan_version: Literal[1]
-    preset: render_preset_schema.RenderPreset
-    encoder: Encoder
-    output: Output
-    duration_ms: Annotated[int, Field(ge=1)]
-    sources: Annotated[list[Source], Field(max_length=200, min_length=1)]
-    segments: Annotated[list[Segment], Field(max_length=400, min_length=1)]
-    audio: Audio
-    blur_overlays: Annotated[list[BlurOverlay], Field(max_length=100)]
-    omitted: Annotated[
-        list[Literal["text_overlays", "burned_captions"]],
-        Field(
-            description="Project content that this render explicitly leaves out because the user chose to (text rendering is a hook in M24)."
-        ),
-    ]
-    notes: Annotated[list[Note], Field(max_length=20)]
-    command: Command
-    tools: Tools
 
 
 class Check(BaseModel):
@@ -408,6 +386,47 @@ class RenderRequest(BaseModel):
         bool | None,
         Field(description="Explicitly render without text overlays and burned-in captions."),
     ] = None
+    review_layout: Annotated[
+        bool | None,
+        Field(description="Explicit acknowledgment of current vertical layout warnings."),
+    ] = None
+    expected_revision: Annotated[
+        int | None,
+        Field(
+            description="Refuse if the saved revision changed after review.",
+            ge=0,
+            le=9007199254740991,
+        ),
+    ] = None
+
+
+class RenderPlan(BaseModel):
+    """
+    The normalized render intermediate representation (plan_version 1). Fully determined by the project revision, preset, encoder and FFmpeg version. Contains no paths: inputs and output appear as placeholders.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    plan_version: Literal[1]
+    preset: render_preset_schema.RenderPreset
+    encoder: Encoder
+    output: Output
+    duration_ms: Annotated[int, Field(ge=1)]
+    sources: Annotated[list[Source], Field(max_length=200, min_length=1)]
+    segments: Annotated[list[Segment], Field(max_length=400, min_length=1)]
+    audio: Audio
+    blur_overlays: Annotated[list[BlurOverlay], Field(max_length=100)]
+    omitted: Annotated[
+        list[Literal["text_overlays", "burned_captions"]],
+        Field(
+            description="Project content that this render explicitly leaves out because the user chose to (text rendering is a hook in M24)."
+        ),
+    ]
+    notes: Annotated[list[Note], Field(max_length=20)]
+    command: Command
+    tools: Tools
+    layout_profile: profile_schema.Profile | None = None
 
 
 class RenderRecord(BaseModel):

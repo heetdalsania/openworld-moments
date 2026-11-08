@@ -17,6 +17,7 @@ from typing import Any
 
 from openworld_moments.media.process import ToolCancelled, ToolError, run_tool
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.render.layout import fit_rect, pixels, region_at
 
 DURATION_TOLERANCE_MS = 100
 BLACK_LUMA = 20.0
@@ -25,7 +26,9 @@ SAMPLE_SIZE = (64, 36)
 ALLOWED_TAGS = {"major_brand", "minor_version", "compatible_brands", "encoder"}
 
 
-def _mean_luma(tool: Any, path: Path, at_ms: int, cancel: threading.Event) -> float | None:
+def _mean_luma(
+    tool: Any, path: Path, at_ms: int, cancel: threading.Event, crop: list[int] | None = None
+) -> float | None:
     try:
         result = run_tool(
             [
@@ -43,7 +46,8 @@ def _mean_luma(tool: Any, path: Path, at_ms: int, cancel: threading.Event) -> fl
                 "-frames:v",
                 "1",
                 "-vf",
-                f"scale={SAMPLE_SIZE[0]}:{SAMPLE_SIZE[1]}:flags=area,format=gray",
+                (f"crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]}:exact=1," if crop else "")
+                + f"scale={SAMPLE_SIZE[0]}:{SAMPLE_SIZE[1]}:flags=area,format=gray",
                 "-f",
                 "rawvideo",
                 "pipe:1",
@@ -231,7 +235,20 @@ def validate_output(
     }
     black: list[str] = []
     for name, at in points.items():
-        luma = _mean_luma(ffmpeg, output, at, cancel)
+        # Vertical fit may contain large intentional black bars. Validate the actual
+        # foreground against the corresponding upright source crop, not the bars.
+        piece = next(
+            (p for p in plan["segments"] if at < p["timeline_start_ms"] + p["out_ms"] - p["in_ms"]),
+            plan["segments"][-1],
+        )
+        output_crop = source_crop = None
+        if "vertical_crop" in piece:
+            sw, sh = piece["source_size"]
+            source_crop = pixels(
+                region_at(piece["vertical_crop"], at - piece["timeline_start_ms"]), sw, sh
+            )
+            output_crop = fit_rect(source_crop[2], source_crop[3], out["width"], out["height"])
+        luma = _mean_luma(ffmpeg, output, at, cancel, output_crop)
         check(
             name,
             luma is not None,
@@ -239,7 +256,7 @@ def validate_output(
         )
         if luma is not None and luma < BLACK_LUMA:
             index, source_ms = source_at(plan, at)
-            source_luma = _mean_luma(ffmpeg, sources[index], source_ms, cancel)
+            source_luma = _mean_luma(ffmpeg, sources[index], source_ms, cancel, source_crop)
             if source_luma is not None and source_luma >= SOURCE_LUMA:
                 black.append(f"{at} ms")
     check(

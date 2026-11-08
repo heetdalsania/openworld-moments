@@ -11,11 +11,13 @@ import {
 
 import { editCaptions, type CaptionOperation } from "./captions";
 import { editAudio, type AudioOperation } from "./editorAudio";
+import { trimVertical } from "./verticalLayout";
 
 export type EditorCommand =
   | { kind: "captions"; operation: CaptionOperation }
   | { kind: "audio"; operation: AudioOperation }
   | { kind: "caption-settings"; settings: NonNullable<Project["caption_settings"]> }
+  | { kind: "vertical-crop"; id: string; layout: NonNullable<Segment["vertical_crop"]> }
   | { kind: "add"; segment: Segment; index: number }
   | { kind: "trim"; id: string; source_in_ms: number; source_out_ms: number }
   | { kind: "split"; id: string; at_ms: number; new_id: string }
@@ -117,6 +119,10 @@ export function applyCommand(document: EditorProject, command: EditorCommand): E
       out.schema_version = p.schema_version = formatVersion(SUPPORTED_VERSION);
       return copy(load("editor-project", out));
     }
+    case "vertical-crop":
+      segment(command.id).vertical_crop = copy(command.layout);
+      out.schema_version = p.schema_version = formatVersion(SUPPORTED_VERSION);
+      return copy(load("editor-project", out));
     case "add":
       integer(command.index);
       if (command.index < 0 || command.index > segments.length)
@@ -129,6 +135,8 @@ export function applyCommand(document: EditorProject, command: EditorCommand): E
       integer(command.source_in_ms);
       integer(command.source_out_ms);
       const s = segment(command.id);
+      if (s.vertical_crop)
+        s.vertical_crop = trimVertical(s, command.source_in_ms, command.source_out_ms);
       s.crop = crop(s, command.source_in_ms, command.source_out_ms);
       s.source_in_ms = command.source_in_ms;
       s.source_out_ms = command.source_out_ms;
@@ -147,7 +155,9 @@ export function applyCommand(document: EditorProject, command: EditorCommand): E
         id: command.new_id,
         source_in_ms: middle,
         crop: crop(s, middle, s.source_out_ms),
+        ...(s.vertical_crop ? { vertical_crop: trimVertical(s, middle, s.source_out_ms) } : {}),
       };
+      if (s.vertical_crop) s.vertical_crop = trimVertical(s, s.source_in_ms, middle);
       s.crop = crop(s, s.source_in_ms, middle);
       s.source_out_ms = middle;
       segments.splice(i + 1, 0, right);
