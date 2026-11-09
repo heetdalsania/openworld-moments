@@ -33,6 +33,25 @@ your computer**:
    - Check the engine with `owm speech doctor`.
    - List or remove models with `owm models list` and `owm models remove`.
 
+## Install models from Settings
+
+The Windows alpha candidate also offers **Settings → Optional speech models**.
+Choose **Install tiny.en** or **Install base.en** after reviewing the size, source,
+MIT license, pinned revision and checksum. This is the only action that starts a
+download. Audio and transcripts are never sent to the model host.
+
+The app checks space, verifies the signed catalog and checks the completed file's
+SHA-256 before showing **Verified installed**. Cancelled/interrupted bytes can be
+resumed by selecting **Resume install**. Offline, low-space or checksum failures
+leave existing verified models usable. **Verify models again** checks local
+contents; **Remove** asks before deleting that model and its saved versions.
+Media and transcripts stay in the library. Previously verified versions can be
+selected explicitly when available. See the [packaging guide](../architecture/windows-packaging.md).
+
+The speech engine in step 1 is still a separate optional installation. Installing
+a model does not install the engine. The CLI flow above remains available for
+other models and development installations.
+
 ## Transcribe a session
 
 1. **Open the session:** go to **Sessions** and open one.
@@ -58,7 +77,7 @@ Repeated footage that the session hides is not transcribed twice.
 |---|---|
 | Install whisper.cpp (whisper-cli) to enable optional local transcription | whisper.cpp is not on your PATH; install it or set `OWM_WHISPER` |
 | This whisper.cpp build does not support full JSON output | Update whisper.cpp |
-| No speech model is installed | Download a model and run `owm models install` |
+| No speech model is installed | Choose Install in Settings, or use `owm models install` |
 | The installed model file changed | The model file was modified; install it again |
 | This clip has no audio | Nothing to transcribe in that clip; the others still are |
 

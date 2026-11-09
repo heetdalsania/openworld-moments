@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.23",
+  "ready": true,
+  "packaged": false,
+  "platform": "Windows",
+  "architecture": "AMD64",
+  "free_bytes": 1073741824,
+  "checks": [
+    {
+      "id": "codecs",
+      "status": "pass",
+      "message": "CPU codec test passed"
+    }
+  ],
+  "tools": [
+    {
+      "name": "Worker",
+      "version": "0.0.0",
+      "origin": "development",
+      "license": "AGPL-3.0-or-later"
+    }
+  ]
+}

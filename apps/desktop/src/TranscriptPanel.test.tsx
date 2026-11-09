@@ -101,7 +101,8 @@ describe("transcript panel", () => {
   it("always explains that transcription is local, optional, and deletable", async () => {
     panel();
     const notice = await screen.findByText(/transcribed on this computer/);
-    expect(notice.textContent).toContain("nothing is uploaded or downloaded");
+    expect(notice.textContent).toContain("nothing is uploaded");
+    expect(notice.textContent).toContain("only when you choose Install");
     expect(notice.textContent).toContain("without affecting your videos");
   });
 

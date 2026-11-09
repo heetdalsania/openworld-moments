@@ -1,6 +1,6 @@
 # ADR-0007: Windows FFmpeg packaging policy
 
-- Status: Proposed; maintainer decision required before implementation
+- Status: Accepted via maintainer merge of [PR #35](https://github.com/heetdalsania/openworld-moments/pull/35)
 - Date: 2026-11-08
 - Milestone: M29
 - Deciders: project maintainers
@@ -32,7 +32,7 @@ encoder while describing that distribution as LGPL would be inaccurate.
 and `MILESTONES.md` requires the planning correction to merge first. This ADR
 records that pause; it does not announce an installer or release.
 
-## Proposed decision
+## Decision
 
 Accept a narrow M29 exception to the LGPL preference: retain the existing
 `libx264` proxy recipe and CPU render behavior, and package a GPL-enabled
@@ -71,10 +71,7 @@ than an unannounced encoder substitution in packaging code.
 
 ## Restart and validation gates
 
-The maintainer must accept one of these policies. For the proposed exception,
-mark this ADR Accepted, remove the proposal/pause wording from the spec and M29
-status, and merge the planning correction before restarting implementation.
-Do not mark M29 Complete on that planning merge.
+The maintainer merged the proposed exception in PR #35 and instructed implementation to continue. That planning merge authorizes the GPL packaging policy; it does not mark M29 Complete.
 
 All M29 validation remains mandatory, including clean Windows 11 x64 install,
 first launch, import, render, upgrade and uninstall; interrupted/offline/low-disk

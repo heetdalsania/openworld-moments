@@ -15,9 +15,11 @@ from openworld_moments_contracts import load, normalize
 from openworld_moments_contracts.errors import ContractError
 
 from openworld_moments.detectors.sdk import AnalysisError
+from openworld_moments.resources import data_root
 
 SLUG = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
-DEFAULT_CATALOG = Path(__file__).resolve().parents[4] / "profiles"
+
+DEFAULT_CATALOG = data_root() / "profiles"
 MAX_PROFILE_BYTES = 256 * 1024
 MAX_INHERITANCE = 8
 

@@ -30,6 +30,17 @@ beforeEach(() => {
   install(host, { invoke, listen });
   host.route("GET /v1/assets?order=newest&limit=60", [asset()]);
   host.route("GET /v1/jobs?limit=200", []);
+  host.route("GET /v1/system-doctor", {
+    schema_version: "1.23",
+    ready: true,
+    packaged: false,
+    platform: "development",
+    architecture: "x86_64",
+    free_bytes: 1e9,
+    checks: [{ id: "development", status: "warn", message: "Development runtime" }],
+    tools: [],
+  });
+  host.route("GET /v1/model-manager", { schema_version: "1.23", catalog_version: 1, models: [] });
   window.location.hash = "";
 });
 

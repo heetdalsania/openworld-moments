@@ -1,0 +1,102 @@
+{
+  "title": "SystemDoctor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ready",
+    "packaged",
+    "platform",
+    "architecture",
+    "free_bytes",
+    "checks",
+    "tools"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+$"
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "packaged": {
+      "type": "boolean"
+    },
+    "platform": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "architecture": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "free_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checks": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "title": "SystemCheck",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "message"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "status": {
+            "enum": ["pass", "warn", "fail"]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "title": "RuntimeTool",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version", "origin", "license"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "origin": {
+            "enum": ["bundle", "development"]
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/heetdalsania/openworld-moments/contracts/system-doctor.schema.json"
+}

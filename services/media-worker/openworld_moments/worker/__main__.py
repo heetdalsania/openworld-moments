@@ -42,6 +42,7 @@ from openworld_moments.media.tools import MediaTools
 from openworld_moments.redaction import Redactor
 from openworld_moments.render.service import Renderer
 from openworld_moments.storage import Database, StorageError
+from openworld_moments.transcripts.downloads import Downloads
 from openworld_moments.transcripts.service import Transcriber
 
 PROTOCOL_VERSION = 1
@@ -181,6 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     transcriber = Transcriber(database, tools, derived)
     transcriber.clean_staging()
     renderer = Renderer(database, tools)
+    downloads = Downloads(database.path.parent)
     renderer.clean_staging()
     app = create_app(
         JobEngine(
@@ -191,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
                 derived=derived,
                 transcriber=transcriber,
                 renderer=renderer,
+                downloads=downloads,
             ),
         ),
         settings,
@@ -199,6 +202,7 @@ def main(argv: list[str] | None = None) -> int:
         derived=derived,
         transcriber=transcriber,
         renderer=renderer,
+        downloads=downloads,
     )
     config = uvicorn.Config(
         app,

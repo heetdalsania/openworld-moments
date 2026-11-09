@@ -55,6 +55,7 @@ from openworld_moments.search import index as search_index
 from openworld_moments.sessions.service import GroupCancelled, SessionError, SessionService
 from openworld_moments.storage import Database, NotFoundError
 from openworld_moments.stories.service import StoryCancelled, StoryError, StoryRequest, StoryService
+from openworld_moments.transcripts.downloads import Downloads
 from openworld_moments.transcripts.service import Transcriber
 from openworld_moments.transcripts.whisper import TranscriptionCancelled, TranscriptionError
 
@@ -625,6 +626,7 @@ def build_handlers(
     derived: DerivedMedia | None = None,
     transcriber: Transcriber | None = None,
     renderer: Renderer | None = None,
+    downloads: Downloads | None = None,
 ) -> dict[str, JobHandler]:
     """Every handler the worker serves. Import handlers need the library ``database``.
     Pass the API's ``derived`` service so jobs and cleanup share one lock."""
@@ -652,4 +654,31 @@ def build_handlers(
         handlers[render.kind] = render
         indexer = index_handler(database)
         handlers[indexer.kind] = indexer
+        manager = downloads or Downloads(database.path.parent)
+
+        def validate_model(params: Mapping[str, Any]) -> dict[str, Any]:
+            _reject_unknown(params, {"name", "sha256"})
+            name = params.get("name")
+            if not isinstance(name, str):
+                raise ValueError("Choose a catalog model.")
+            try:
+                entry = manager.entry(name)
+                if params.get("sha256", entry.sha256) != entry.sha256:
+                    raise ValueError("The catalog changed. Choose the model again.")
+            except TranscriptionError as exc:
+                raise ValueError(exc.message) from exc
+            return {"name": name, "sha256": entry.sha256}
+
+        def run_model(ctx: JobContext) -> dict[str, Any]:
+            try:
+                if manager.entry(ctx.params["name"]).sha256 != ctx.params["sha256"]:
+                    raise JobFailure(
+                        "models.catalog_changed", "Choose the model again after updating."
+                    )
+                return manager.run(ctx.params["name"], ctx.cancel_event, ctx.progress)
+            except TranscriptionError as exc:
+                raise JobFailure(exc.code, exc.message, retryable=True) from exc
+
+        download = JobHandler("model_download", run_model, validate_model, "analyzing", True, 10)
+        handlers[download.kind] = download
     return handlers

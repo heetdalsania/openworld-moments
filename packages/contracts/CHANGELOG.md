@@ -1,5 +1,11 @@
 # Contracts changelog
 
+## 1.23 — Windows runtime and optional model management (M29)
+
+- Add model-manager and system-doctor contracts, shared semantic consistency rules and fixtures.
+- Add durable model_download jobs; queued jobs pin the selected SHA-256 across restarts/upgrades.
+- Existing 1.x projects, events, speech-model status and exports remain readable.
+
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 
 ## 1.22 — M28 privacy and spoiler review

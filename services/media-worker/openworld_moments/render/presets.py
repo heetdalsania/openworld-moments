@@ -10,8 +10,9 @@ from typing import Any
 from openworld_moments_contracts import ContractError, load, normalize
 
 from openworld_moments.render.plan import RenderError
+from openworld_moments.resources import data_root
 
-DEFAULT_PRESETS = Path(__file__).resolve().parents[4] / "presets" / "render"
+DEFAULT_PRESETS = data_root() / "presets/render"
 MAX_PRESET_BYTES = 64 * 1024
 
 

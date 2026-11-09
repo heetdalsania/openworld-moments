@@ -2,6 +2,8 @@
 // Single entry point for reading contract documents: version → schema → semantics.
 // Mirrors validate.py.
 import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
+import modelManager from "../schemas/model-manager.schema.json" with { type: "json" };
+import systemDoctor from "../schemas/system-doctor.schema.json" with { type: "json" };
 import privacyReview from "../schemas/privacy-review.schema.json" with { type: "json" };
 import editorProject from "../schemas/editor-project.schema.json" with { type: "json" };
 import storyCandidate from "../schemas/story-candidate.schema.json" with { type: "json" };
@@ -43,6 +45,8 @@ import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "
 import { ContractError } from "./errors.ts";
 import type {
   PrivacyReview,
+  ModelManager,
+  SystemDoctor,
   EditorProject,
   StoryCandidate,
   StoryCandidates,
@@ -84,6 +88,8 @@ import { checkVersion } from "./versioning.ts";
 
 /** Top-level contracts and their TypeScript types. */
 export interface ContractTypes {
+  "model-manager": ModelManager;
+  "system-doctor": SystemDoctor;
   "privacy-review": PrivacyReview;
   "editor-project": EditorProject;
   "story-candidate": StoryCandidate;
@@ -125,6 +131,8 @@ export type ContractName = keyof ContractTypes;
 
 /** Top-level contracts: name -> [schema, carries schema_version]. */
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
+  "model-manager": [modelManager, true],
+  "system-doctor": [systemDoctor, true],
   "privacy-review": [privacyReview, true],
   "editor-project": [editorProject, true],
   "story-candidate": [storyCandidate, true],

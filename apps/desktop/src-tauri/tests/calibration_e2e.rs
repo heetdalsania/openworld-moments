@@ -18,11 +18,15 @@ async fn save_export_import_reset_and_restart() {
         .join("../../..")
         .canonicalize()
         .unwrap();
-    let python = if cfg!(windows) {
-        root.join(".venv/Scripts/python.exe")
-    } else {
-        root.join(".venv/bin/python")
-    };
+    let python = std::env::var_os("OWM_WORKER_PYTHON")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            if cfg!(windows) {
+                root.join(".venv/Scripts/python.exe")
+            } else {
+                root.join(".venv/bin/python")
+            }
+        });
     let temp = tempfile::tempdir().unwrap();
     let worker = WorkerCommand {
         program: python,

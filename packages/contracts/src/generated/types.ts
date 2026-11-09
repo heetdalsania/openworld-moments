@@ -316,6 +316,7 @@ export interface ContractsBundle {
   "job-event"?: JobEvent;
   job?: Job;
   "media-asset"?: MediaAsset;
+  "model-manager"?: ModelManager;
   overlap?: AssetOverlap;
   "privacy-review"?: PrivacyReview;
   "profile-patch"?: ProfilePatch;
@@ -331,6 +332,7 @@ export interface ContractsBundle {
   "speech-models"?: SpeechModels;
   "story-candidate"?: StoryCandidate;
   "story-candidates"?: StoryCandidates;
+  "system-doctor"?: SystemDoctor;
   transcript?: Transcript;
   transcription?: TranscriptionResult;
   "watched-folder"?: WatchedFolder;
@@ -2503,7 +2505,8 @@ export interface Job {
     | "fingerprint"
     | "group"
     | "align"
-    | "story";
+    | "story"
+    | "model_download";
   state:
     | "queued"
     | "probing"
@@ -2709,6 +2712,29 @@ export interface MediaProbe {
 }
 export interface ProbeTool {
   ffprobe_version: string;
+}
+export interface ModelManager {
+  schema_version: string;
+  catalog_version: number;
+  /**
+   * @maxItems 64
+   */
+  models: ManagedModel[];
+}
+export interface ManagedModel {
+  name: string;
+  revision: string;
+  size_bytes: number;
+  sha256: string;
+  license: "MIT";
+  source_url: string;
+  downloaded_bytes: number;
+  disk_required_bytes: number;
+  active_sha256: string | null;
+  /**
+   * @maxItems 64
+   */
+  versions: string[];
 }
 /**
  * Alignment of clip B after clip A in a session (spec 8.2.3, M12): whether B's start repeats A's end, where B starts inside A ('offset_ms'), how long the repeat is ('overlap_ms'), with confidence and evidence. 'applied' is what the session timeline uses: a user override, else a 'matched' result of the current algorithm version, else nothing. Low-confidence, ambiguous, stale, or missing results never shorten a clip.
@@ -5446,6 +5472,34 @@ export interface StoryCandidateReview {
   review_state: "suggested" | "accepted" | "rejected";
   current: boolean;
   project_id?: ProjectId;
+}
+export interface SystemDoctor {
+  schema_version: string;
+  ready: boolean;
+  packaged: boolean;
+  platform: string;
+  architecture: string;
+  free_bytes: number;
+  /**
+   * @maxItems 64
+   */
+  checks: SystemCheck[];
+  /**
+   * @maxItems 32
+   */
+  tools: RuntimeTool[];
+}
+export interface SystemCheck {
+  id: string;
+  status: "pass" | "warn" | "fail";
+  message: string;
+}
+export interface RuntimeTool {
+  name: string;
+  version: string;
+  sha256?: string;
+  origin: "bundle" | "development";
+  license: string;
 }
 /**
  * A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.

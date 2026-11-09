@@ -12,13 +12,10 @@ OpenWorld Moments is **not** a console mod, recorder, cheat, game-memory reader,
 
 **Foundation lane in progress. No usable application has been released yet.**
 
-M29 planning is under review: the merged media pipeline requires `libx264`,
-while the packaging plan prefers LGPL FFmpeg. The proposed
-[GPL packaging exception](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md)
-must be accepted before implementation. M29 is not complete and no Windows
-installer has been qualified.
+M29 implementation is in progress under the accepted [GPL FFmpeg packaging decision](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md). A Windows installer candidate and optional model manager are being validated. Clean Windows 11 qualification remains required; no public alpha has been released.
 
-Completed milestones:
+Milestone delivery:
+
 
 | Milestone | What it delivered |
 |---|---|
@@ -51,6 +48,7 @@ Completed milestones:
 | M26 — Search and collections | Local SQLite FTS5 search over clips, sessions, OCR/event labels, transcript spans and projects, kept current by triggers in the same transaction; safe query grammar, facets and filters, timestamp results that open at the matching moment, keyboard-complete Search screen, manual and rule collections that explain each match, cancellable rebuild with stale/corrupt recovery, privacy-safe clearing; 10,000-clip queries under 300 ms ([search](./docs/architecture/search.md)) |
 | M27 — Open exports and manifests | Deterministic project JSON, event JSONL, SRT/WebVTT, CSV markers, OpenTimelineIO and experimental FCPXML from the saved revision, with capability declarations and warnings instead of silent loss; render manifests with source hashes, project revision, encoder, FFmpeg, detector and profile versions; no absolute paths unless explicitly chosen ([exports](./docs/architecture/exports.md)) |
 | M28 — Privacy and spoiler review | Conservative local text/audio/spoiler findings with supporting ranges, reversible creator decisions, moving rectangular blurs and mute suggestions; current-review gates for renders and open/caption exports; text-only deletion preserves originals ([review](./docs/architecture/privacy-review.md)) |
+| M29 — Windows packaging and model manager (in progress) | Per-user NSIS candidate, bundled pinned worker/media tools, system doctor and explicit signed-catalog downloads; qualification pending ([packaging](./docs/architecture/windows-packaging.md)) |
 
 You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story candidates can be generated and reviewed through the local CLI/API, and manual or existing projects can be edited visually through the Projects screen, including caption correction and simple audio gain/mute. Everything is searchable locally, results open at the matching moment, and collections keep hand-picked lists or saved searches. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -372,13 +370,7 @@ The product specification includes links to console capture documentation, exist
 
 M28 adds local privacy and spoiler review, moving blur regions, mute suggestions
 and current-review export gates (see the [M28 handoff](./docs/milestones/M28-handoff.md)).
-The current milestone is [M29 — Windows packaging and model manager](./docs/milestones/M29-windows-packaging-and-models.md).
-Its dependencies are merged. First resolve the proposed
-[libx264/GPL packaging exception](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md)
-and merge the planning correction, then implement M29 and run its clean Windows
-11 x64 install, first-launch, import, render, upgrade and uninstall validation.
-See the [planning handoff](./docs/milestones/M29-handoff.md). M30 remains dependent
-on completed M29 delivery.
+The current milestone is [M29 — Windows packaging and model manager](./docs/milestones/M29-windows-packaging-and-models.md). The GPL packaging plan is accepted. Finish the Windows installer/model manager and its clean Windows 11 x64 qualification before starting M30. See the [M29 handoff](./docs/milestones/M29-handoff.md) and [Windows packaging guide](./docs/architecture/windows-packaging.md).
 
 Text overlays and burned-in captions are recorded but not drawn yet (an explicit
 omission hook); see the [M24 handoff](./docs/milestones/M24-handoff.md) and

@@ -12,6 +12,7 @@ open it in the same pull request as the change it justifies.
 | [0004](./adr/0004-worker-ipc.md) | Worker IPC: stdin token, loopback HTTP, WebSocket events | Accepted |
 | [0005](./adr/0005-local-ocr.md) | Local region OCR with Tesseract | M17 implementation |
 | [0006](./adr/0006-local-transcription.md) | Optional local transcription with whisper.cpp | M18 implementation |
+| [0007](./adr/0007-windows-ffmpeg-packaging.md) | GPL Windows FFmpeg packaging exception | Accepted in PR #35 |
 
 Other architecture notes:
 
@@ -52,3 +53,5 @@ M25 adds [vertical layouts](./vertical-layouts.md) with `vertical-1080x1920-30` 
 - [Search and collections](./search.md): searchable-document views and triggers, query grammar, filters, ranking, collection rules with reasons, stale/corrupt detection and rebuild, privacy-safe clearing, 10,000-clip benchmark.
 
 - [Privacy and spoiler review](./privacy-review.md): conservative local findings, exact-range review, reversible decisions, moving blurs, mute suggestions, export gates and text deletion.
+
+- [Windows packaging and models](./windows-packaging.md): per-user installer, pinned frozen runtime, source/license inventory, signed optional downloads, retention and client qualification.

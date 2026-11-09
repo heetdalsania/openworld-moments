@@ -456,6 +456,8 @@ async fn spawn_and_handshake(inner: &Inner) -> Result<Spawned, SupervisorError> 
     if let Some(cwd) = &config.command.cwd {
         command.current_dir(cwd);
     }
+    #[cfg(windows)]
+    command.creation_flags(0x0800_0000); // preserve pipes without opening a console window
     let mut child = command
         .spawn()
         .map_err(|e| SupervisorError::Spawn(e.to_string()))?;

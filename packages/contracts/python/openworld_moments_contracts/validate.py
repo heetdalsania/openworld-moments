@@ -33,6 +33,7 @@ from openworld_moments_contracts.generated import (
     job_event_schema,
     job_schema,
     media_asset_schema,
+    model_manager_schema,
     overlap_schema,
     privacy_review_schema,
     profile_patch_schema,
@@ -48,6 +49,7 @@ from openworld_moments_contracts.generated import (
     speech_models_schema,
     story_candidate_schema,
     story_candidates_schema,
+    system_doctor_schema,
     transcript_schema,
     transcription_schema,
     watched_folder_schema,
@@ -57,6 +59,8 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "model-manager": (model_manager_schema.ModelManager, True),
+    "system-doctor": (system_doctor_schema.SystemDoctor, True),
     "privacy-review": (privacy_review_schema.PrivacyReview, True),
     "editor-project": (editor_project_schema.EditorProject, True),
     "story-candidate": (story_candidate_schema.StoryCandidate, True),

@@ -74,7 +74,10 @@ from openworld_moments.storage import (
     transaction,
 )
 from openworld_moments.stories.service import StoryDecision, StoryError, StoryRequest, StoryService
+from openworld_moments.system import doctor
+from openworld_moments.transcripts.downloads import Downloads
 from openworld_moments.transcripts.service import Transcriber
+from openworld_moments.transcripts.whisper import TranscriptionError
 from openworld_moments.watched import service as watched
 
 API_VERSION = 1
@@ -363,6 +366,12 @@ class SubmitRelink(BaseModel):
     idempotency_key: str | None = Field(default=None, pattern=IDEMPOTENCY_KEY)
 
 
+class ModelChange(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    name: str = Field(pattern=r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$", max_length=64)
+    sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+
+
 def create_app(
     engine: JobEngine,
     settings: ApiSettings,
@@ -373,7 +382,10 @@ def create_app(
     profile_catalog: ProfileCatalog | None = None,
     transcriber: Transcriber | None = None,
     renderer: Renderer | None = None,
+    downloads: Downloads | None = None,
 ) -> ASGIApp:
+    manager = downloads or Downloads(engine.database.path.parent)
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await engine.start()
@@ -428,6 +440,60 @@ def create_app(
         if capabilities is None:
             raise EngineError("request.not_found", "No capability report.", status=404)
         return await asyncio.to_thread(capabilities, refresh=refresh)
+
+    @app.get("/v1/system-doctor")
+    async def get_system_doctor() -> dict[str, Any]:
+        return await asyncio.to_thread(doctor, engine.database.path.parent, derived_service().tools)
+
+    @app.exception_handler(TranscriptionError)
+    async def model_error(request: Request, exc: TranscriptionError) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content=error_body(exc.code, exc.message, retryable=True, correlation_id=cid(request)),
+        )
+
+    @app.get("/v1/model-manager")
+    async def get_model_manager() -> dict[str, Any]:
+        return await asyncio.to_thread(manager.status)
+
+    @app.post("/v1/model-manager/download", status_code=201)
+    async def download_model(
+        body: ModelChange, request: Request, response: Response
+    ) -> dict[str, Any]:
+        if body.sha256 is not None:
+            raise EngineError(
+                "models.invalid_request", "Choose a model from the signed catalog.", status=422
+            )
+        return await submit_job("model_download", {"name": body.name}, None, request, response)
+
+    def idle_model(name: str) -> None:
+        with contextlib.closing(engine.database.connect()) as conn:
+            active = conn.execute(
+                "SELECT 1 FROM jobs WHERE state NOT IN ('ready','cancelled','failed') AND "
+                "((kind = 'model_download' AND json_extract(params_json, '$.name') = ?) OR "
+                "(kind = 'transcribe' AND json_extract(params_json, '$.model') = ?)) LIMIT 1",
+                (name, name),
+            ).fetchone()
+        if active:
+            raise EngineError("models.busy", "Wait for or cancel the model job first.", status=409)
+
+    @app.post("/v1/model-manager/pin")
+    async def pin_model(body: ModelChange) -> dict[str, Any]:
+        if body.sha256 is None:
+            raise EngineError("models.invalid_request", "Choose an installed checksum.", status=422)
+        idle_model(body.name)
+        await asyncio.to_thread(manager.change, body.name, body.sha256)
+        return await asyncio.to_thread(manager.status)
+
+    @app.post("/v1/model-manager/remove")
+    async def remove_model(body: ModelChange) -> dict[str, Any]:
+        if body.sha256 is not None:
+            raise EngineError(
+                "models.invalid_request", "Removal takes a model name only.", status=422
+            )
+        idle_model(body.name)
+        await asyncio.to_thread(manager.change, body.name, None)
+        return await asyncio.to_thread(manager.status)
 
     @app.get("/v1/jobs")
     async def list_jobs(limit: int = 200) -> list[dict[str, Any]]:

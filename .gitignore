@@ -31,6 +31,8 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+output/packaging/
+apps/desktop/src-tauri/bundle-input/
 venv/
 .coverage
 htmlcov/

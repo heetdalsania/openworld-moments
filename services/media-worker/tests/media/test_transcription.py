@@ -248,7 +248,9 @@ def test_a_changed_model_file_is_not_used(setup: Setup) -> None:
     model.write_bytes(bytes(data))
     with pytest.raises(TranscriptionError) as caught:
         setup.run(sid)
-    assert caught.value.code == "transcription.model_changed"
+    # The registry now rehashes before returning a model, so corrupt bytes are absent.
+    assert caught.value.code == "transcription.model_missing"
+    assert setup.transcriber.models.installed() == []
     assert setup.call_count() == 0
 
 

@@ -31,6 +31,23 @@ def _parse_time(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _model_manager(doc: Document) -> Iterable[str]:
+    names = [m["name"] for m in doc["models"]]
+    if len(names) != len(set(names)):
+        yield "models: duplicate model names"
+    for model in doc["models"]:
+        if model["downloaded_bytes"] > model["size_bytes"]:
+            yield "downloaded_bytes: exceeds signed size"
+
+
+def _system_doctor(doc: Document) -> Iterable[str]:
+    if doc["ready"] != (not any(c["status"] == "fail" for c in doc["checks"])):
+        yield "ready: must match checks"
+    ids = [c["id"] for c in doc["checks"]]
+    if len(ids) != len(set(ids)):
+        yield "checks: duplicate IDs"
+
+
 def _event(doc: Document) -> Iterable[str]:
     yield from _range("end_ms", doc["start_ms"], doc["end_ms"])
     if doc["source"]["kind"] == "detector" and not doc["evidence"]:
@@ -708,6 +725,8 @@ def _privacy_review(doc: Document) -> Iterable[str]:
 
 
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "model-manager": _model_manager,
+    "system-doctor": _system_doctor,
     "privacy-review": _privacy_review,
     "event-export": _event_export,
     "export-result": _export_result,

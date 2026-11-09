@@ -168,7 +168,7 @@
           "state": "acknowledge"
         }
       ],
-      "token": "ece75b550b0a19ec53a07d33799d80bb0fe3845291fd5cc080419f9b3d88c819",
+      "token": "dafda1681c6788f822b5451afae043961f47d2ee88504afcd60afba3680c9d74",
       "unresolved": 0
     }
   },
@@ -180,6 +180,6 @@
   },
   "project_revision": 3,
   "saved_at": "2026-11-21T11:00:00.000Z",
-  "schema_version": "1.22",
+  "schema_version": "1.23",
   "warnings": []
 }
