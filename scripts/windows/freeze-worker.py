@@ -6,6 +6,7 @@ import importlib.metadata
 import json
 import os
 import platform
+import re
 import shutil
 import struct
 import subprocess
@@ -92,6 +93,45 @@ def main() -> None:
                     folder.mkdir(exist_ok=True)
                     shutil.copyfile(source, folder / source.name)
     shutil.copytree(OUT / "media/toolchain-notices", notices / "mingw-toolchain")
+    javascript = {}
+    pnpm = shutil.which("pnpm")
+    if pnpm is None:
+        raise RuntimeError("Pinned pnpm installation is required")
+    for workspace in ("@openworld-moments/desktop", "@openworld-moments/contracts"):
+        licenses = json.loads(
+            subprocess.check_output(
+                [pnpm, "--filter", workspace, "licenses", "list", "--prod", "--json"],
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+            )
+        )
+        for packages in licenses.values():
+            for package in packages:
+                key = (
+                    re.sub(r"[^A-Za-z0-9._-]", "_", package["name"])
+                    + "-"
+                    + "-".join(package["versions"])
+                )
+                target = notices / ("javascript-" + key)
+                target.mkdir(exist_ok=True)
+                found = False
+                for folder in package["paths"]:
+                    for source in Path(folder).iterdir():
+                        if (
+                            source.name.lower().startswith(
+                                ("license", "licence", "copying", "notice")
+                            )
+                            and source.is_file()
+                            and source.resolve().is_relative_to(ROOT.resolve())
+                        ):
+                            shutil.copyfile(source, target / source.name)
+                            found = True
+                if not found:
+                    raise RuntimeError("Missing JavaScript package notices: " + package["name"])
+                javascript[key] = {
+                    field: package[field] for field in ("name", "versions", "license")
+                }
     python_license = Path(sys.base_prefix) / "LICENSE.txt"
     if not python_license.is_file():
         raise RuntimeError("Python runtime license not found")
@@ -172,6 +212,7 @@ def main() -> None:
         "uv": "0.13.7",
         "python_build": "20260929",
         "python_notices": python_notices,
+        "javascript_packages": [javascript[key] for key in sorted(javascript)],
         "architecture": "x86_64",
         "sources": sources,
         "commit": subprocess.check_output(
@@ -185,7 +226,7 @@ def main() -> None:
     (OUT / "THIRD_PARTY_NOTICES.txt").write_text(
         "OpenWorld Moments Windows alpha: AGPL-3.0-or-later.\n"
         "FFmpeg and x264: GPL-2.0-or-later; matching source archives accompany this artifact.\n"
-        "Python: PSF-2.0. Python package license texts are in runtime/notices.\n"
+        "Python: PSF-2.0. Runtime and JavaScript package license texts are in runtime/notices.\n"
         "WebView2: Microsoft-managed Windows component; not bundled or frozen.\n"
         "No OCR engine, whisper.cpp engine or model weights are bundled.\n"
         "Runtime inventory and exact sources: runtime/inventory.json.\n",

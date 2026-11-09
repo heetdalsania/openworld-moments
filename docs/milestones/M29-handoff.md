@@ -21,6 +21,10 @@
     existing `OWM_WORKER_PYTHON` override, as the other E2E helpers already do.
     This permits a fresh locked local environment without a skipped test or
     application import-path workaround.
+  - Small prerequisite repair: watched-folder scans and native-event root aliases
+    now use one stabilization/report key. Repeated macOS full-gate failures showed
+    duplicate reports for the same unchanged file; a deterministic root-alias
+    regression protects the fix without following source-file symlinks.
 - Public contracts or migrations:
   - Contracts 1.23: `system-doctor`, `model-manager`, `model_download` job kind and
     mirrored Python/TypeScript semantic validation. Existing job routes own
@@ -38,9 +42,9 @@
     when available. A macOS build is not Windows installer evidence.
 - Test and validation results:
   - Required-tool full `pnpm check` passes: format, lint, REUSE, type checks, tests
-    and generated-contract drift. Worker **1,119 passed, 1 skipped** (existing
+    and generated-contract drift. Worker **1,120 passed, 1 skipped** (existing
     Windows-junction-only test on macOS); Python contracts **340**, TypeScript
-    contracts **370**, desktop **251**, Rust **51** passed.
+    contracts **370**, desktop **251**, Rust **52** passed.
   - Worker mypy passes for both Windows and Linux targets (**208 files**).
     Build-script Ruff/import checks, Python compilation and shell syntax pass.
     After Windows CI exposed fixture handle retention and metadata encoding,

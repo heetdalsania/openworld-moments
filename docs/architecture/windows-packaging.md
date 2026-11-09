@@ -61,7 +61,9 @@ direct_url metadata. `python-notices.json` pins the Python build source commit a
 matching license-text hashes for its native dependencies (including OpenSSL,
 libffi, SQLite and zlib); these are verified before bundling. MinGW toolchain
 license texts, including static-runtime exceptions, accompany the package. M30 still owns the
-full transitive SBOM and security audit.
+full transitive SBOM and security audit. Frontend production dependencies from
+both workspaces have their installed notices copied and their names, versions
+and licenses inventoried; absolute build paths are excluded.
 
 ## Build and CI
 
