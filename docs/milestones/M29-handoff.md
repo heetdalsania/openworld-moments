@@ -46,6 +46,7 @@
 - Follow-up milestones affected: M30, M31 and M33 remain dependent on actual M29
   completion. M32/M34 and later release gates must not consume this proposal as
   a packaged-runtime handoff.
+- Pull request: [#35 — planning correction only](https://github.com/heetdalsania/openworld-moments/pull/35).
 - Screenshots, reports, or artifacts: Documentation proposal only; no generated
   media, binary, model, library, private path or credential is committed.
 
