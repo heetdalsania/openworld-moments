@@ -73,7 +73,9 @@ const schemas = await Promise.all(
   files.map(async (file) => JSON.parse(await readFile(path.join(schemaDir, file), "utf8"))),
 );
 for (const schema of schemas) ajv.addSchema(schema);
-const exports = Object.fromEntries(schemas.map((schema, i) => [`contractValidator${i}`, schema.$id]));
+const exports = Object.fromEntries(
+  schemas.map((schema, i) => [`contractValidator${i}`, schema.$id]),
+);
 let validation = standaloneCode(ajv, exports);
 // Ajv emits CommonJS references to small runtime helpers even in ESM mode.
 // Use static imports and normalize Node/bundler CJS interop without evaluation.
