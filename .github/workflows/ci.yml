@@ -198,6 +198,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-second.json
           python -c "import json,pathlib;d=pathlib.Path('output/packaging');a=json.loads((d/'repro-first.json').read_text());b=json.loads((d/'repro-second.json').read_text());changed=sorted(k for k in set(a['files'])|set(b['files']) if a['files'].get(k)!=b['files'].get(k));(d/'reproducibility.json').write_text(json.dumps({'frozen_payload_identical':not changed,'changed_files':changed,'installer_bit_reproducibility':'not claimed'}));assert not changed,changed"
+      - name: Probe the frozen worker outside the desktop host
+        shell: pwsh
+        working-directory: apps/desktop/src-tauri/bundle-input/runtime
+        run: |
+          python ../../../../../scripts/windows/frozen-worker-probe.py (Resolve-Path owm-worker.exe) -m openworld_moments.worker
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - run: pnpm build:windows
       - name: Install, native WebView import/render, repair, upgrade and uninstall retention
         shell: pwsh

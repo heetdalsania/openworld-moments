@@ -49,6 +49,18 @@ def main() -> None:
                 diagnostic["worker"] = page.evaluate(
                     "() => window.__TAURI_INTERNALS__.invoke('worker_status')"
                 )
+                # Record every status change for 20 s: a restart's reason carries the
+                # worker's exit status, and a crash loop ends in a stderr tail.
+                timeline: list[object] = []
+                watch_until = time.monotonic() + 20
+                while time.monotonic() < watch_until:
+                    status = page.evaluate(
+                        "() => window.__TAURI_INTERNALS__.invoke('worker_status')"
+                    )
+                    if not timeline or timeline[-1] != status:
+                        timeline.append(status)
+                    time.sleep(0.1)
+                diagnostic["worker_timeline"] = timeline
             except Exception as error:
                 diagnostic["capture_error"] = str(error)[:2000]
             (OUT / f"native-{mode}-diagnostics.json").write_text(
