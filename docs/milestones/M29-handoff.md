@@ -29,6 +29,15 @@
     handshake, and unexpected-exit diagnostics wait for the bounded stderr drain
     before snapshotting failure state. The original nine supervisor assertions,
     including immediate crash/restart and secret redaction, remain intact.
+  - Small prerequisite repair: the UI subscribes before reading initial worker
+    status and prevents a late startup snapshot from overwriting a live ready
+    event. A controlled regression reproduces Import becoming disabled with the
+    old code; this ordering must remain stable for packaged first-run checks.
+  - Small prerequisite repair: production CSP blocked Ajv's runtime compiler,
+    leaving the installed WebView blank. Contract generation now emits static
+    validators; `load()` keeps schema/version/semantic checks without runtime
+    string evaluation. The CSP remains unchanged. A Node subprocess regression
+    validates all fixtures with string code generation disabled.
 - Public contracts or migrations:
   - Contracts 1.23: `system-doctor`, `model-manager`, `model_download` job kind and
     mirrored Python/TypeScript semantic validation. Existing job routes own
@@ -48,7 +57,7 @@
   - Required-tool full `pnpm check` passes: format, lint, REUSE, type checks, tests
     and generated-contract drift. Worker **1,121 passed, 1 skipped** (existing
     Windows-junction-only test on macOS); Python contracts **340**, TypeScript
-    contracts **370**, desktop **251**, Rust **52** passed.
+    contracts **371**, desktop **252**, Rust **52** passed.
   - Worker mypy passes for both Windows and Linux targets (**208 files**).
     Build-script Ruff/import checks, Python compilation and shell syntax pass.
     After Windows CI exposed fixture handle retention and metadata encoding,

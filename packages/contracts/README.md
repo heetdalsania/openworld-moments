@@ -16,6 +16,7 @@ files, profiles, events, and jobs. Licensed under Apache-2.0
 | `fixtures/<contract>/valid/` | Documents that must load | hand |
 | `fixtures/<contract>/invalid/` | `{description, expect, path?, message_contains?, document}` cases that must fail for the stated reason | hand |
 | `src/generated/types.ts` | TypeScript types | `pnpm contracts:generate` |
+| `src/generated/validators.{js,d.ts}` | Static Ajv validators for CSP-restricted runtimes | `pnpm contracts:generate` |
 | `src/{versioning,semantic,validate}.ts` | TypeScript `load()` / `normalize()` | hand |
 | `python/openworld_moments_contracts/generated/` | Pydantic v2 models | `pnpm contracts:generate` |
 | `python/openworld_moments_contracts/schemas/` | Vendored copy of `schemas/` | `pnpm contracts:generate` |
@@ -87,3 +88,9 @@ M20 adds `story-candidate` and `story-candidates`; see [story engine](../../docs
 M21 adds `editor-project`, text overlays and optional gain ranges at 1.16; see [editor model](../../docs/architecture/editor-projects.md) for strict editor invariants and explicit legacy migration.
 
 M23 adds optional caption placement/style/output intent at **1.17**; existing timed captions and audio ranges retain their units. See [captions and audio](../../docs/architecture/captions-and-audio.md).
+
+TypeScript `load()` uses generated standalone validators. Ajv compilation happens
+only during generation; browser validation needs no `unsafe-eval`. The generator
+normalizes the two module systems used by Ajv runtime helpers through static
+imports, and `pnpm contracts:check` covers validator drift. The CSP regression
+executes fixtures with Node string code generation disabled.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Single entry point for reading contract documents: version → schema → semantics.
 // Mirrors validate.py.
-import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js";
+import type { ErrorObject, ValidateFunction } from "ajv/dist/2020.js";
 import modelManager from "../schemas/model-manager.schema.json" with { type: "json" };
 import systemDoctor from "../schemas/system-doctor.schema.json" with { type: "json" };
 import privacyReview from "../schemas/privacy-review.schema.json" with { type: "json" };
@@ -13,11 +13,9 @@ import evaluation from "../schemas/evaluation.schema.json" with { type: "json" }
 import evaluationobservations from "../schemas/evaluation-observations.schema.json" with { type: "json" };
 import evaluationreport from "../schemas/evaluation-report.schema.json" with { type: "json" };
 import eventreview from "../schemas/event-review.schema.json" with { type: "json" };
-import common from "../schemas/common.schema.json" with { type: "json" };
 import derivedMedia from "../schemas/derived-media.schema.json" with { type: "json" };
 import error from "../schemas/error.schema.json" with { type: "json" };
 import event from "../schemas/event.schema.json" with { type: "json" };
-import evidence from "../schemas/evidence.schema.json" with { type: "json" };
 import exportManifest from "../schemas/export-manifest.schema.json" with { type: "json" };
 import fingerprint from "../schemas/fingerprint.schema.json" with { type: "json" };
 import importResult from "../schemas/import.schema.json" with { type: "json" };
@@ -42,6 +40,7 @@ import speechModels from "../schemas/speech-models.schema.json" with { type: "js
 import transcript from "../schemas/transcript.schema.json" with { type: "json" };
 import transcription from "../schemas/transcription.schema.json" with { type: "json" };
 import watchedFolder from "../schemas/watched-folder.schema.json" with { type: "json" };
+import compiledValidators from "./generated/validators.js";
 import { ContractError } from "./errors.ts";
 import type {
   PrivacyReview,
@@ -171,26 +170,10 @@ export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   "watched-folder": [watchedFolder, true],
 };
 
-const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
-ajv.addKeyword({ keyword: "tsType", schemaType: "string" }); // generator hint, no validation
-// Register every schema before compiling any, so cross-file $refs (e.g. job -> error) resolve
-// no matter which contract is loaded first. Mirrors the Python registry.
-const SCHEMAS: { $id: string }[] = [
-  common,
-  evidence,
-  ...Object.values(CONTRACTS).map(([s]) => s as { $id: string }),
-];
-for (const schema of SCHEMAS) ajv.addSchema(schema);
-const validators = new Map<ContractName, ValidateFunction>();
-
 function validator(contract: ContractName): ValidateFunction {
-  let fn = validators.get(contract);
-  if (!fn) {
-    const id = (CONTRACTS[contract][0] as { $id: string }).$id;
-    fn = ajv.getSchema(id);
-    if (!fn) throw new Error(`schema ${id} is not registered`);
-    validators.set(contract, fn);
-  }
+  const id = (CONTRACTS[contract][0] as { $id: string }).$id;
+  const fn = compiledValidators[id];
+  if (!fn) throw new Error(`schema ${id} is not registered`);
   return fn;
 }
 

@@ -5,6 +5,7 @@
 - Add model-manager and system-doctor contracts, shared semantic consistency rules and fixtures.
 - Add durable model_download jobs; queued jobs pin the selected SHA-256 across restarts/upgrades.
 - Existing 1.x projects, events, speech-model status and exports remain readable.
+- Generate standalone TypeScript validators so packaged CSP can prohibit runtime string evaluation; validation and compatibility rules are unchanged.
 
 Versions refer to `schema_version` (see [VERSIONING.md](./VERSIONING.md)).
 

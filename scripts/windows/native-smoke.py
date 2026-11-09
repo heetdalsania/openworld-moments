@@ -65,7 +65,9 @@ def exercise(page, installed: Path, mode: str) -> None:
 
     def api(method: str, path: str, body: object = None) -> object:
         return page.evaluate(
-            "args => window.__TAURI_INTERNALS__.invoke('worker_api', args)",
+            "async args => { try { return await "
+            "window.__TAURI_INTERNALS__.invoke('worker_api', args); } "
+            "catch (error) { throw new Error(JSON.stringify(error)); } }",
             {"method": method, "path": path, "body": body},
         )
 
