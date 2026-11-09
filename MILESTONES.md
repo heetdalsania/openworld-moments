@@ -98,6 +98,8 @@ flowchart TD
     M22 --> M28
     M24 --> M29[M29 Windows packaging and model manager]
     M03 --> M29
+    M08 --> M29
+    M18 --> M29
     M10 --> M30[M30 Security hardening and SBOM]
     M29 --> M30
     M22 --> M31[M31 Accessibility onboarding and docs]
@@ -196,7 +198,7 @@ required check is skipped.
 | M26 | Search and collections | M02, M09, M19 | FTS search, filters, and collections | [Open](./docs/milestones/M26-search-and-collections.md) |
 | M27 | Open exports and manifests | M21, M24 | JSONL, captions, OTIO, and reproducibility | [Open](./docs/milestones/M27-open-exports-and-manifests.md) |
 | M28 | Privacy and spoiler review | M17, M18, M22 | Review gates, blur regions, risk flags | [Open](./docs/milestones/M28-privacy-and-spoiler-review.md) |
-| M29 | Windows packaging and model manager | M03, M08, M24 | Installable signed-ready alpha package | [Open](./docs/milestones/M29-windows-packaging-and-models.md) |
+| M29 | Windows packaging and model manager | M03, M08, M18, M24 | Installable signed-ready alpha package | [Open](./docs/milestones/M29-windows-packaging-and-models.md) |
 | M30 | Security hardening and SBOM | M10, M29 | Threat-model closure, dependency inventory | [Open](./docs/milestones/M30-security-hardening-and-sbom.md) |
 | M31 | Accessibility, onboarding, and documentation | M22, M29 | Keyboard-complete onboarding and user docs | [Open](./docs/milestones/M31-accessibility-onboarding-docs.md) |
 | M32 | Windows public alpha qualification | M20, M23, M25–M31 | Windows release candidate and qualification report | [Open](./docs/milestones/M32-public-alpha-qualification.md) |
@@ -290,7 +292,7 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M26 | Complete | [#32](https://github.com/heetdalsania/openworld-moments/pull/32) | — | Arun Velkumar | Contracts 1.20 `search`, `search-index`, `collection`; migration 0016 trigger-maintained FTS5 index (secure-delete) over clips, sessions, effective events/OCR, transcript spans and projects; safe query grammar, filters, facets, ranking and timestamp results; keyboard search-to-playback; manual and rule collections with reasons; cancellable rebuild, stale/corrupt recovery, privacy clear; 10,000-clip p95 ≤ 138 ms on M4. See [handoff](./docs/milestones/M26-handoff.md). |
 | M27 | Complete | [#33](https://github.com/heetdalsania/openworld-moments/pull/33) | — | Arun Velkumar | Contracts 1.21 `export-result`, `project-export`, `event-export` and extended `export-manifest`; migration 0017 stored render manifests; deterministic project JSON, event JSONL, SRT/WebVTT (byte-identical to the desktop), CSV markers with formula guard, OpenTimelineIO (validated with OTIO 0.18 and `otiostat`) and experimental FCPXML; warnings for unsupported operations and missing sources; paths only on explicit opt-in; host native save. See [handoff](./docs/milestones/M27-handoff.md). |
 | M28 | Complete | [#34](https://github.com/heetdalsania/openworld-moments/pull/34) | — | Arun Velkumar | Contracts 1.22; migration 0018 hashed local review decisions; conservative OCR/caption/transcript/audio/spoiler findings, exact-range review, reversible choices, moving blur preview/render goldens, M23 mute suggestions, current-review gates for renders and project/caption/portable exports, and explicit text-only deletion. Required-tool gate, platform types, native build and synthetic Chromium walkthrough pass. See [handoff](./docs/milestones/M28-handoff.md). |
-| M29 | Ready | — | — | — | M03, M08 and M24 complete. |
+| M29 | Planning review | — | — | — | M03, M08, M18 and M24 merged. Implementation paused pending the explicit libx264/GPL packaging decision in [ADR-0007](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md); [planning handoff](./docs/milestones/M29-handoff.md). No installer or Windows qualification delivered. |
 | M30–M39 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure

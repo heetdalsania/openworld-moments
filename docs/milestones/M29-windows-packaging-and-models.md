@@ -6,11 +6,20 @@ Deliver a clean-machine Windows alpha package with predictable runtime dependenc
 
 ## Dependencies
 
-M03, M08, and M24 merged.
+M03, M08, M18, and M24 merged. M18 owns the speech-model registry and optional
+whisper.cpp adapter extended by this milestone.
+
+Implementation is paused for the packaging-policy decision in
+[ADR-0007](../architecture/adr/0007-windows-ffmpeg-packaging.md). Resolve and merge
+that planning correction before implementation; see the
+[M29 planning handoff](./M29-handoff.md). This does not mark M29 complete.
 
 ## Required context
 
-Read specification sections 6.5, 15.3, 19.1, and 19.2.
+Read specification sections 8.3, 10.7, 11.3, 14, 15.5, and 28; the M03, M08,
+M18 and M24 merged handoffs; and ADR-0007. The former references to 6.5, 15.3,
+19.1 and 19.2 describe search, game interaction and contribution rules rather
+than runtime packaging and model management.
 
 ## In scope
 
