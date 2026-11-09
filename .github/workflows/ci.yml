@@ -157,6 +157,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2.9.3
         with:
           cache-on-failure: true
+          key: packaged-windows-x64-v1
       - run: pnpm install --frozen-lockfile
       - uses: astral-sh/setup-uv@v10.3.3
         with:
