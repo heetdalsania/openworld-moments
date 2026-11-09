@@ -12,6 +12,12 @@ OpenWorld Moments is **not** a console mod, recorder, cheat, game-memory reader,
 
 **Foundation lane in progress. No usable application has been released yet.**
 
+M29 planning is under review: the merged media pipeline requires `libx264`,
+while the packaging plan prefers LGPL FFmpeg. The proposed
+[GPL packaging exception](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md)
+must be accepted before implementation. M29 is not complete and no Windows
+installer has been qualified.
+
 Completed milestones:
 
 | Milestone | What it delivered |
@@ -366,7 +372,13 @@ The product specification includes links to console capture documentation, exist
 
 M28 adds local privacy and spoiler review, moving blur regions, mute suggestions
 and current-review export gates (see the [M28 handoff](./docs/milestones/M28-handoff.md)).
-The next milestone is [M29 — Windows packaging and model manager](./docs/milestones/M29-windows-packaging-and-models.md).
+The current milestone is [M29 — Windows packaging and model manager](./docs/milestones/M29-windows-packaging-and-models.md).
+Its dependencies are merged. First resolve the proposed
+[libx264/GPL packaging exception](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md)
+and merge the planning correction, then implement M29 and run its clean Windows
+11 x64 install, first-launch, import, render, upgrade and uninstall validation.
+See the [planning handoff](./docs/milestones/M29-handoff.md). M30 remains dependent
+on completed M29 delivery.
 
 Text overlays and burned-in captions are recorded but not drawn yet (an explicit
 omission hook); see the [M24 handoff](./docs/milestones/M24-handoff.md) and
