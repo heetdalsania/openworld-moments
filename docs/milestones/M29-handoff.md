@@ -25,6 +25,10 @@
     now use one stabilization/report key. Repeated macOS full-gate failures showed
     duplicate reports for the same unchanged file; a deterministic root-alias
     regression protects the fix without following source-file symlinks.
+  - Small prerequisite repair: readiness is logged before publishing the worker
+    handshake, and unexpected-exit diagnostics wait for the bounded stderr drain
+    before snapshotting failure state. The original nine supervisor assertions,
+    including immediate crash/restart and secret redaction, remain intact.
 - Public contracts or migrations:
   - Contracts 1.23: `system-doctor`, `model-manager`, `model_download` job kind and
     mirrored Python/TypeScript semantic validation. Existing job routes own
@@ -42,7 +46,7 @@
     when available. A macOS build is not Windows installer evidence.
 - Test and validation results:
   - Required-tool full `pnpm check` passes: format, lint, REUSE, type checks, tests
-    and generated-contract drift. Worker **1,120 passed, 1 skipped** (existing
+    and generated-contract drift. Worker **1,121 passed, 1 skipped** (existing
     Windows-junction-only test on macOS); Python contracts **340**, TypeScript
     contracts **370**, desktop **251**, Rust **52** passed.
   - Worker mypy passes for both Windows and Linux targets (**208 files**).
@@ -67,7 +71,11 @@
     as missing; the engine never starts.
   - Native macOS production `pnpm build` passes (existing chunk-size warning).
     Actual pinned FFmpeg/x264 sources pass the safe-extraction checks.
-  - Windows candidate build/lifecycle/reproducibility checks are run by hosted CI.
+  - Hosted CI passed the NSIS build and complete frozen-payload reproducibility
+    comparison. Native lifecycle testing remains pending. Elevated runner hosts
+    need a temporary app-specific HKLM WebView2 debug policy because current
+    WebView2 ignores environment/HKCU flags there. The harness removes the
+    override in `finally`; the installer contains no debugging configuration.
     No clean Windows 11 client run is claimed.
 - Decisions made:
   - Per-user NSIS `0.1.0-alpha.29`, stable application/library identity, x64 only;

@@ -389,7 +389,7 @@ fn launch(inner: Arc<Inner>) -> BoxFuture<'static, Result<WorkerInfo, Supervisor
         inner.status.send_replace(WorkerStatus::Starting);
         let result = spawn_and_handshake(&inner).await;
         match result {
-            Ok((info, token, child, stdin, tail)) => {
+            Ok((info, token, child, stdin, tail, stderr_reader)) => {
                 let (control_tx, control_rx) = mpsc::channel(4);
                 *inner.running.lock().await = Some(Running {
                     port: info.port,
@@ -402,7 +402,14 @@ fn launch(inner: Arc<Inner>) -> BoxFuture<'static, Result<WorkerInfo, Supervisor
                     pid: info.pid,
                     restarts: inner.restarts_total.load(Ordering::SeqCst),
                 });
-                tokio::spawn(monitor(inner.clone(), child, stdin, control_rx, tail));
+                tokio::spawn(monitor(
+                    inner.clone(),
+                    child,
+                    stdin,
+                    control_rx,
+                    tail,
+                    stderr_reader,
+                ));
                 Ok(info)
             }
             Err(err) => {
@@ -437,6 +444,7 @@ type Spawned = (
     Child,
     ChildStdin,
     Arc<StdMutex<BoundedTail>>,
+    Option<tokio::task::JoinHandle<()>>,
 );
 
 async fn spawn_and_handshake(inner: &Inner) -> Result<Spawned, SupervisorError> {
@@ -466,7 +474,7 @@ async fn spawn_and_handshake(inner: &Inner) -> Result<Spawned, SupervisorError> 
         config.stderr_tail_bytes,
         vec![token.expose().to_string()],
     )));
-    if let Some(stderr) = child.stderr.take() {
+    let stderr_reader = child.stderr.take().map(|stderr| {
         let tail = tail.clone();
         tokio::spawn(async move {
             let mut lines = BufReader::new(stderr).lines();
@@ -475,8 +483,8 @@ async fn spawn_and_handshake(inner: &Inner) -> Result<Spawned, SupervisorError> 
                     t.push_line(&line);
                 }
             }
-        });
-    }
+        })
+    });
 
     let mut stdin = child
         .stdin
@@ -544,7 +552,14 @@ async fn spawn_and_handshake(inner: &Inner) -> Result<Spawned, SupervisorError> 
                     &tail,
                 ));
             }
-            Ok((WorkerInfo { port, pid }, token, child, stdin, tail))
+            Ok((
+                WorkerInfo { port, pid },
+                token,
+                child,
+                stdin,
+                tail,
+                stderr_reader,
+            ))
         }
         Ok(StartupLine::Error { code, message }) => {
             let _ = timeout(Duration::from_secs(5), child.wait()).await;
@@ -563,6 +578,7 @@ async fn monitor(
     stdin: ChildStdin,
     mut control: mpsc::Receiver<Control>,
     tail: Arc<StdMutex<BoundedTail>>,
+    stderr_reader: Option<tokio::task::JoinHandle<()>>,
 ) {
     let mut stdin = Some(stdin);
     let exit = loop {
@@ -583,6 +599,14 @@ async fn monitor(
         }
     };
 
+    // The process can exit before the pipe reader has consumed its last records.
+    // Drain before publishing a crash-loop snapshot; an inherited open pipe must
+    // not prevent shutdown/restart indefinitely.
+    if let Some(mut reader) = stderr_reader
+        && timeout(Duration::from_secs(1), &mut reader).await.is_err()
+    {
+        reader.abort();
+    }
     *inner.running.lock().await = None;
     if inner.stopping.load(Ordering::SeqCst) {
         inner.status.send_replace(WorkerStatus::Stopped);

@@ -18,15 +18,31 @@ function Install-App($package) {
 function Test-App($mode) {
   $application = Get-ChildItem "$install/*.exe" | Where-Object Name -NotMatch 'uninstall' | Select-Object -First 1
   if (-not $application) { throw 'Installed application missing' }
-  $process = Start-Process -FilePath $application.FullName -WorkingDirectory $env:RUNNER_TEMP -PassThru
+  # Hosted runners launch elevated. Current WebView2 ignores environment and HKCU
+  # overrides in elevated hosts, so scope a temporary HKLM override to this app only.
+  # Never ship debug flags in the installer or change wildcard WebView2 policy.
+  $policy = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments'
+  $name = $application.Name
+  if (Get-ItemProperty -LiteralPath $policy -Name $name -ErrorAction SilentlyContinue) {
+    throw 'Refusing to replace an existing app-specific WebView2 debug policy'
+  }
+  New-Item -Path $policy -Force | Out-Null
+  New-ItemProperty -LiteralPath $policy -Name $name -Value '--remote-debugging-port=9223' -PropertyType String | Out-Null
+  $process = $null
   try {
+    $process = Start-Process -FilePath $application.FullName -WorkingDirectory $env:RUNNER_TEMP -PassThru
     uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/native-smoke.py "$install" $mode
     if ($LASTEXITCODE -ne 0) { throw 'Native WebView2/worker smoke failed' }
   } finally {
-    $process.Refresh()
-    if (-not $process.HasExited) {
-      if (-not $process.CloseMainWindow()) { Stop-Process -Id $process.Id; throw 'Native window did not close gracefully' }
-      if (-not $process.WaitForExit(30000)) { Stop-Process -Id $process.Id; throw 'Application shutdown timed out' }
+    Remove-ItemProperty -LiteralPath $policy -Name $name
+    if ($null -ne $process) {
+      $process.Refresh()
+      if ($process.HasExited) {
+        Write-Host "Native application exit code: $($process.ExitCode)"
+      } else {
+        if (-not $process.CloseMainWindow()) { Stop-Process -Id $process.Id; throw 'Native window did not close gracefully' }
+        if (-not $process.WaitForExit(30000)) { Stop-Process -Id $process.Id; throw 'Application shutdown timed out' }
+      }
     }
   }
 }

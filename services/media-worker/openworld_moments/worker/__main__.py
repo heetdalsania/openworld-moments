@@ -155,6 +155,8 @@ def main(argv: list[str] | None = None) -> int:
             server.should_exit = True
 
     def on_ready() -> None:
+        # Flush the readiness diagnostic before the host can act on the handshake.
+        log.info("worker ready", extra={"port": port})
         emit(
             {
                 "event": "ready",
@@ -167,7 +169,6 @@ def main(argv: list[str] | None = None) -> int:
                 "pid": os.getpid(),
             }
         )
-        log.info("worker ready", extra={"port": port})
 
     settings = ApiSettings(
         token=token,
