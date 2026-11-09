@@ -54,9 +54,9 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.ROOT = tmp_path
-    module.OUT = tmp_path / "output/packaging"
-    module.RUNTIME = tmp_path / "runtime"
+    module.__dict__.update(
+        ROOT=tmp_path, OUT=tmp_path / "output/packaging", RUNTIME=tmp_path / "runtime"
+    )
     out, runtime = module.OUT, module.RUNTIME
     (out / "sources").mkdir(parents=True)
     (out / "sources/source.tar.xz").write_bytes(b"source archive fixture")
