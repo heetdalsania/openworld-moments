@@ -94,10 +94,16 @@ def exercise(page, installed: Path, mode: str) -> None:
             time.sleep(0.1)
         raise RuntimeError("Packaged job timed out")
 
-    page.wait_for_function(
-        "async () => (await window.__TAURI_INTERNALS__.invoke('worker_status')).status === 'ready'",
-        timeout=90000,
-    )
+    # Poll from Python: an async predicate passed to wait_for_function returns a Promise,
+    # which is truthy, so that wait passed while the worker was still starting.
+    deadline = time.monotonic() + 90
+    while True:
+        status = page.evaluate("() => window.__TAURI_INTERNALS__.invoke('worker_status')")
+        if status.get("status") == "ready":
+            break
+        if status.get("status") == "failed" or time.monotonic() >= deadline:
+            raise RuntimeError(f"Packaged worker did not become ready: {status}")
+        time.sleep(0.25)
     identity = page.evaluate("() => window.__TAURI_INTERNALS__.invoke('app_info')")
     expected = "0.1.0-alpha.29.1" if mode == "upgrade" else "0.1.0-alpha.29"
     assert identity["version"] == expected, identity
