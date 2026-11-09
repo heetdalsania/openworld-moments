@@ -74,6 +74,7 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         "native-import-render.json",
         "native-repair.json",
         "native-upgrade.json",
+        "native-uninstall.json",
     ):
         (out / name).write_text("report fixture")
     scripts = tmp_path / "scripts/windows"

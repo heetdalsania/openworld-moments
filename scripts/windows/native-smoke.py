@@ -32,7 +32,9 @@ def main() -> None:
                     raise
                 time.sleep(0.5)
         context = browser.contexts[0]
-        page = context.pages[0]
+        # The CDP browser endpoint can be ready before Tauri creates its first
+        # WebView target. Wait for the real installed page, never create a tab.
+        page = context.pages[0] if context.pages else context.wait_for_event("page", timeout=60000)
         page.wait_for_function("typeof window.__TAURI_INTERNALS__?.invoke === 'function'")
 
         def api(method: str, path: str, body: object = None) -> object:

@@ -93,7 +93,11 @@ to check the doctor/catalog, import synthetic media and render a privacy-reviewe
 project with bundled tools. It repairs the same version, builds a test-only higher
 version (`0.1.0-alpha.29.1`), checks saved projects/renders after upgrade and verifies
 uninstall retention. It refuses to run against an existing library. CDP is enabled
-only in the CI child environment, never in product defaults.
+only by the CI harness, never in product defaults. Elevated hosted runners ignore
+WebView2 environment/HKCU overrides, so the harness temporarily sets a fixed,
+app-specific HKLM debug policy and removes it in `finally`. It refuses to replace
+an existing policy. See Microsoft's
+[elevated-host guidance](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/security#for-an-elevated-host-app-use-appropriate-override-flags).
 
 The candidate artifact contains only the M29 installer, hashes, notices, source
 archives, inventory and reports; it excludes test footage, libraries and model

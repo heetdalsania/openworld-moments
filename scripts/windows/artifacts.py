@@ -34,6 +34,7 @@ def main() -> None:
         "native-import-render.json",
         "native-repair.json",
         "native-upgrade.json",
+        "native-uninstall.json",
     ):
         shutil.copyfile(OUT / path, release / path)
     shutil.copyfile(RUNTIME / "inventory.json", release / "runtime-inventory.json")

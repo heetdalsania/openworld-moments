@@ -76,7 +76,11 @@
     need a temporary app-specific HKLM WebView2 debug policy because current
     WebView2 ignores environment/HKCU flags there. The harness removes the
     override in `finally`; the installer contains no debugging configuration.
-    No clean Windows 11 client run is claimed.
+    The harness waits for the native WebView target after connecting to CDP,
+    since the browser endpoint can become ready before the window's page.
+    The uninstall harness keeps its sentinel inside the actual library and checks
+    the database SHA-256 before/after removal of application files, exporting a
+    separate retention report. No clean Windows 11 client run is claimed.
 - Decisions made:
   - Per-user NSIS `0.1.0-alpha.29`, stable application/library identity, x64 only;
     OS-managed WebView2. Required worker/FFmpeg tools are bundled and ignore

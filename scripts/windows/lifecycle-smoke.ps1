@@ -48,7 +48,7 @@ function Test-App($mode) {
 }
 Install-App $installer.FullName
 Test-App 'import-render'
-$sentinel = Join-Path $library 'retention-sentinel.txt'
+$sentinel = Join-Path $library 'library/retention-sentinel.txt'
 Set-Content -Path $sentinel -Value 'Keep libraries through repair, upgrade and uninstall' -Encoding utf8
 Install-App $installer.FullName
 Test-App 'repair'
@@ -65,8 +65,20 @@ Test-App 'upgrade'
 if (-not (Test-Path $sentinel)) { throw 'Upgrade removed user data' }
 $uninstaller = Get-ChildItem "$install/*uninstall*.exe" | Select-Object -First 1
 if (-not $uninstaller) { throw 'Uninstaller missing' }
+$database = Join-Path $library 'library/database.sqlite3'
+$databaseHash = (Get-FileHash -LiteralPath $database -Algorithm SHA256).Hash
 $result = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/S' -Wait -PassThru
 if ($result.ExitCode -ne 0) { throw 'Uninstall failed' }
 if (-not (Test-Path $sentinel)) { throw 'Uninstall removed user libraries' }
+if ((Get-FileHash -LiteralPath $database -Algorithm SHA256).Hash -ne $databaseHash) {
+  throw 'Uninstall changed the retained database'
+}
+@{
+  scope = 'Hosted Windows Server; clean Windows 11 client qualification pending'
+  uninstall_exit_code = $result.ExitCode
+  library_sentinel_preserved = $true
+  database_sha256_preserved = $true
+  database_sha256 = $databaseHash.ToLowerInvariant()
+} | ConvertTo-Json | Set-Content -Path 'output/packaging/native-uninstall.json' -Encoding utf8
 # Only this script's scratch library can reach this cleanup.
 Remove-Item $library -Recurse -Force
