@@ -95,6 +95,8 @@
   media, model weights, scratch libraries, databases and build outputs are excluded
   from commits and candidate uploads.
 
+Implementation pull request: [#36](https://github.com/heetdalsania/openworld-moments/pull/36) (draft; qualification pending).
+
 ### Dependency evidence
 
 All dependency merge commits are ancestors of the implementation base `5ca9d27`:
