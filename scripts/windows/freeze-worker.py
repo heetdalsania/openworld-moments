@@ -31,7 +31,7 @@ def main() -> None:
     environment = os.environ.copy()
     environment["PYTHONHASHSEED"] = "0"
     environment["SOURCE_DATE_EPOCH"] = subprocess.check_output(
-        ["git", "show", "-s", "--format=%ct", "HEAD"], cwd=ROOT, text=True
+        ["git", "show", "-s", "--format=%ct", "HEAD"], cwd=ROOT, text=True, encoding="utf-8"
     ).strip()
     args = [
         sys.executable,
@@ -91,6 +91,7 @@ def main() -> None:
                     folder = notices / (dist.metadata["Name"] + "-" + dist.version)
                     folder.mkdir(exist_ok=True)
                     shutil.copyfile(source, folder / source.name)
+    shutil.copytree(OUT / "media/toolchain-notices", notices / "mingw-toolchain")
     python_license = Path(sys.base_prefix) / "LICENSE.txt"
     if not python_license.is_file():
         raise RuntimeError("Python runtime license not found")
@@ -119,7 +120,9 @@ def main() -> None:
     tools = []
     media_build = {}
     for name in ("ffmpeg", "ffprobe"):
-        output = subprocess.check_output([str(DEST / f"tools/{name}.exe"), "-version"], text=True)
+        output = subprocess.check_output(
+            [str(DEST / f"tools/{name}.exe"), "-version"], text=True, encoding="utf-8"
+        )
         media_build[name] = output
         if "--enable-gpl" not in output or "--enable-nonfree" in output:
             raise RuntimeError("Unexpected FFmpeg licensing configuration")
@@ -140,7 +143,10 @@ def main() -> None:
                 raise RuntimeError("Wrong native architecture: " + path.name)
     cargo = json.loads(
         subprocess.check_output(
-            ["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT, text=True
+            ["cargo", "metadata", "--locked", "--format-version", "1"],
+            cwd=ROOT,
+            text=True,
+            encoding="utf-8",
         )
     )
     for package in cargo["packages"]:
@@ -168,7 +174,9 @@ def main() -> None:
         "python_notices": python_notices,
         "architecture": "x86_64",
         "sources": sources,
-        "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+        "commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True, encoding="utf-8"
+        ).strip(),
         "files": files,
         "tools": tools,
         "media_build": media_build,

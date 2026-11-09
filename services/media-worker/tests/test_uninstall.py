@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import sqlite3
@@ -17,7 +18,7 @@ def library_fixture(tmp_path: Path, monkeypatch: Any) -> Path:
     monkeypatch.setattr(uninstall, "roaming_appdata", lambda: tmp_path)
     library = tmp_path / uninstall.APP_ID / "library"
     library.mkdir(parents=True)
-    with sqlite3.connect(library / "database.sqlite3") as db:
+    with contextlib.closing(sqlite3.connect(library / "database.sqlite3")) as db, db:
         db.execute("CREATE TABLE marker (id INTEGER)")
     return library
 

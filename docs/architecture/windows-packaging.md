@@ -59,7 +59,8 @@ compiler/package versions, runtime inventory and license notices. The inventory
 audits every native PE file as x64, hashes payload files, and omits editable-build
 direct_url metadata. `python-notices.json` pins the Python build source commit and
 matching license-text hashes for its native dependencies (including OpenSSL,
-libffi, SQLite and zlib); these are verified before bundling. M30 still owns the
+libffi, SQLite and zlib); these are verified before bundling. MinGW toolchain
+license texts, including static-runtime exceptions, accompany the package. M30 still owns the
 full transitive SBOM and security audit.
 
 ## Build and CI
@@ -79,9 +80,10 @@ pnpm build:windows
 ```
 
 Use a fresh `output/packaging/source-build` for source preparation. Build inputs,
-sidecars, sources and media outputs stay ignored. The normal `pnpm build` remains
-an installer-free development build; the packaging overlay is explicitly selected
-by `build:windows`.
+sidecars, sources and media outputs stay ignored. The normal `pnpm build` creates an unbundled host; use `pnpm dev` for the
+checkout runtime. Windows release execution expects the packaged runtime even
+when the host was built without an installer. The packaging overlay is explicitly
+selected by `build:windows`.
 
 CI uses pinned `windows-2025`, freezes twice and compares payload hashes, builds
 NSIS, then installs into a Unicode scratch path. It uses real WebView2/Tauri IPC

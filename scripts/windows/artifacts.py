@@ -13,7 +13,11 @@ RUNTIME = ROOT / "apps/desktop/src-tauri/bundle-input/runtime"
 
 def main() -> None:
     release = OUT / "release"
-    release.mkdir(exist_ok=True)
+    if release.is_symlink():
+        raise ValueError("Refusing a linked artifact directory")
+    if release.exists():
+        shutil.rmtree(release)
+    release.mkdir()
     installers = list(
         (ROOT / "target/x86_64-pc-windows-msvc/release/bundle/nsis").glob("*alpha.29_*-setup.exe")
     )

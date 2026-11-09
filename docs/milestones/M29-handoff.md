@@ -43,6 +43,10 @@
     contracts **370**, desktop **251**, Rust **51** passed.
   - Worker mypy passes for both Windows and Linux targets (**208 files**).
     Build-script Ruff/import checks, Python compilation and shell syntax pass.
+    After Windows CI exposed fixture handle retention and metadata encoding,
+    SQLite test handles close explicitly and Cargo JSON is decoded as UTF-8.
+    Eight focused uninstall/archive/artifact regressions pass, including repeated
+    assembly with accurate checksums and exclusion of stale generated media.
   - Model tests cover signed-catalog tampering, rejected origins, exact HTTP range
     resume, cancellation, ignored ranges, corruption/oversize, low disk/offline,
     Unicode paths, linked partials, active-job safety, removal and pinning.

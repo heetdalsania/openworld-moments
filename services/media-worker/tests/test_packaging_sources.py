@@ -42,3 +42,56 @@ def test_archive_paths_and_links_are_refused(tmp_path: Path, name: str, link: bo
     with pytest.raises(ValueError, match="Unsafe source archive"):
         extraction(archive, tmp_path / "extracted")
     assert not (tmp_path / "escape").exists()
+
+
+def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Path) -> None:
+    import hashlib
+    import json
+
+    spec = importlib.util.spec_from_file_location(
+        "packaging_artifacts", Path(__file__).resolve().parents[3] / "scripts/windows/artifacts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.ROOT = tmp_path
+    module.OUT = tmp_path / "output/packaging"
+    module.RUNTIME = tmp_path / "runtime"
+    out, runtime = module.OUT, module.RUNTIME
+    (out / "sources").mkdir(parents=True)
+    (out / "sources/source.tar.xz").write_bytes(b"source archive fixture")
+    (out / "media").mkdir()
+    for name in ("compiler.txt", "build-packages.txt", "config.log"):
+        (out / "media" / name).write_text("compiler fixture")
+    (runtime / "notices").mkdir(parents=True)
+    (runtime / "notices/LICENSE").write_text("license fixture")
+    manifest = json.dumps({"files": {"worker": "a" * 64}})
+    (runtime / "inventory.json").write_text(manifest)
+    (out / "repro-first.json").write_text(manifest)
+    for name in (
+        "THIRD_PARTY_NOTICES.txt",
+        "reproducibility.json",
+        "native-import-render.json",
+        "native-repair.json",
+        "native-upgrade.json",
+    ):
+        (out / name).write_text("report fixture")
+    scripts = tmp_path / "scripts/windows"
+    scripts.mkdir(parents=True)
+    for name in ("build-media.sh", "freeze-worker.py", "sources.json", "python-notices.json"):
+        (scripts / name).write_text("build input fixture")
+    installers = tmp_path / "target/x86_64-pc-windows-msvc/release/bundle/nsis"
+    installers.mkdir(parents=True)
+    (installers / "Moments_0.1.0-alpha.29_x64-setup.exe").write_bytes(b"installer fixture")
+    module.main()
+    release = out / "release"
+    (release / "stale-media.mp4").write_bytes(b"never include stale generated media")
+    module.main()
+    assert not (release / "stale-media.mp4").exists()
+    listed = []
+    for line in (release / "checksums.txt").read_text().splitlines():
+        expected, name = line.split("  ", 1)
+        listed.append(name)
+        assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
+    assert "checksums.txt" not in listed
+    assert "runtime-notices.zip" in listed

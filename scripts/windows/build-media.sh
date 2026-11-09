@@ -24,3 +24,5 @@ cp ffmpeg.exe ffprobe.exe "$project_root/output/packaging/media/"
 cp ffbuild/config.log "$project_root/output/packaging/media/config.log"
 gcc --version > "$project_root/output/packaging/media/compiler.txt"
 pacman -Q > "$project_root/output/packaging/media/build-packages.txt"
+# Include static-runtime exceptions and the compiler/toolchain license inventory.
+cp -R /mingw64/share/licenses "$project_root/output/packaging/media/toolchain-notices"

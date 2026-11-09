@@ -179,6 +179,12 @@ jobs:
         if: steps.media-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: bash scripts/windows/build-media.sh
+      - name: Cache completed media build before downstream packaging
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: output/packaging/media
+          key: windows-x64-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/windows/build-media.sh') }}
       - name: Freeze and inventory worker
         run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
       - name: Repeat frozen build and compare payload
