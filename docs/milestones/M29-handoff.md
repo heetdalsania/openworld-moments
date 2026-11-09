@@ -49,8 +49,12 @@
     Build-script Ruff/import checks, Python compilation and shell syntax pass.
     After Windows CI exposed fixture handle retention and metadata encoding,
     SQLite test handles close explicitly and Cargo JSON is decoded as UTF-8.
-    Eight focused uninstall/archive/artifact regressions pass, including repeated
+    Nine focused uninstall/archive/artifact regressions pass, including repeated
     assembly with accurate checksums and exclusion of stale generated media.
+    Standard-library ZIP order/metadata is normalized without changing module
+    bytes, and the repeated-build gate still compares every payload hash.
+    The existing phone countdown test flushes async mount effects before advancing
+    fake time; its assertions and application behavior remain unchanged.
   - Model tests cover signed-catalog tampering, rejected origins, exact HTTP range
     resume, cancellation, ignored ranges, corruption/oversize, low disk/offline,
     Unicode paths, linked partials, active-job safety, removal and pinning.

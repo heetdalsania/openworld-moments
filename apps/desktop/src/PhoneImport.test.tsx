@@ -93,10 +93,13 @@ describe("import from phone", () => {
     // Only the countdown interval is faked, so it ticks exactly when the test says.
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     status = ACTIVE;
-    render(<PhoneImport />);
-    expect(await screen.findByRole("timer")).toBeTruthy();
+    // Flush the async host status and countdown effect before advancing its interval.
     await act(async () => {
-      vi.advanceTimersByTime(3000);
+      render(<PhoneImport />);
+    });
+    expect(screen.getByRole("timer")).toBeTruthy();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
     });
     expect(screen.getByRole("timer").textContent).toBe("Closes in 9:57");
     act(() =>

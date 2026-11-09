@@ -193,7 +193,8 @@ jobs:
           Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-first.json
           uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -c "import json,pathlib;d=pathlib.Path('output/packaging');a=json.loads((d/'repro-first.json').read_text());b=json.loads(pathlib.Path('apps/desktop/src-tauri/bundle-input/runtime/inventory.json').read_text());changed=sorted(k for k in set(a['files'])|set(b['files']) if a['files'].get(k)!=b['files'].get(k));(d/'reproducibility.json').write_text(json.dumps({'frozen_payload_identical':not changed,'changed_files':changed,'installer_bit_reproducibility':'not claimed'}));assert not changed,changed"
+          Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-second.json
+          python -c "import json,pathlib;d=pathlib.Path('output/packaging');a=json.loads((d/'repro-first.json').read_text());b=json.loads((d/'repro-second.json').read_text());changed=sorted(k for k in set(a['files'])|set(b['files']) if a['files'].get(k)!=b['files'].get(k));(d/'reproducibility.json').write_text(json.dumps({'frozen_payload_identical':not changed,'changed_files':changed,'installer_bit_reproducibility':'not claimed'}));assert not changed,changed"
       - run: pnpm build:windows
       - name: Install, native WebView import/render, repair, upgrade and uninstall retention
         shell: pwsh

@@ -95,3 +95,30 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
     assert "checksums.txt" not in listed
     assert "runtime-notices.zip" in listed
+
+
+def test_stdlib_archive_normalization_preserves_code_and_detects_changes(tmp_path: Path) -> None:
+    import hashlib
+    import zipfile
+
+    spec = importlib.util.spec_from_file_location(
+        "packaging_freeze", Path(__file__).resolve().parents[3] / "scripts/windows/freeze-worker.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    archives = [tmp_path / f"stdlib-{i}.zip" for i in range(3)]
+    payload = {"a.pyc": b"first module", "z.pyc": b"last module"}
+    for i, archive in enumerate(archives):
+        with zipfile.ZipFile(archive, "w") as target:
+            for name in sorted(payload, reverse=i == 0):
+                info = zipfile.ZipInfo(name, (2020 + i, 1, 1, 0, 0, 0))
+                target.writestr(info, payload[name] + (b"changed" if i == 2 else b""))
+        module.canonicalize_stdlib_zip(archive)
+    assert archives[0].read_bytes() == archives[1].read_bytes()
+    with zipfile.ZipFile(archives[0]) as result:
+        assert {name: result.read(name) for name in result.namelist()} == payload
+    assert (
+        hashlib.sha256(archives[2].read_bytes()).digest()
+        != hashlib.sha256(archives[0].read_bytes()).digest()
+    )

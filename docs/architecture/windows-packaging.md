@@ -97,7 +97,9 @@ only in the CI child environment, never in product defaults.
 
 The candidate artifact contains only the M29 installer, hashes, notices, source
 archives, inventory and reports; it excludes test footage, libraries and model
-weights. Frozen-payload repeatability is checked within one toolchain snapshot.
+weights. Before inventorying, the standard-library ZIP is rewritten in sorted member order
+with fixed metadata, preserving every module's bytes. Frozen-payload repeatability
+is checked within one toolchain snapshot; no files are excluded from comparison.
 Bit-identical NSIS installers across compiler/runner updates are not claimed.
 Hosted Windows Server smoke evidence cannot replace a clean Windows 11 client run.
 

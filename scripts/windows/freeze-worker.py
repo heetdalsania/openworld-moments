@@ -12,6 +12,7 @@ import struct
 import subprocess
 import sys
 import urllib.request
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +23,23 @@ DEST = ROOT / "apps/desktop/src-tauri/bundle-input/runtime"
 def digest(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def canonicalize_stdlib_zip(path: Path) -> dict[str, str]:
+    """PyInstaller's module set order varies; preserve bytes, sort the ZIP container."""
+    with zipfile.ZipFile(path) as source:
+        entries = [(entry.filename, source.read(entry)) for entry in source.infolist()]
+    if len({name for name, _ in entries}) != len(entries):
+        raise ValueError("Duplicate standard-library ZIP member")
+    temporary = path.with_suffix(".canonical.zip")
+    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_STORED) as target:
+        for name, content in sorted(entries):
+            entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            entry.create_system = 3
+            entry.external_attr = 0o100644 << 16
+            target.writestr(entry, content)
+    os.replace(temporary, path)
+    return {name: hashlib.sha256(content).hexdigest() for name, content in sorted(entries)}
 
 
 def main() -> None:
@@ -71,6 +89,7 @@ def main() -> None:
     if DEST.exists():
         shutil.rmtree(DEST)
     shutil.copytree(frozen, DEST)
+    stdlib_modules = canonicalize_stdlib_zip(DEST / "_internal/base_library.zip")
     for file in DEST.rglob("direct_url.json"):
         file.unlink()  # editable-build locations are not release metadata
     (DEST / "tools").mkdir()
@@ -213,6 +232,7 @@ def main() -> None:
         "python_build": "20260929",
         "python_notices": python_notices,
         "javascript_packages": [javascript[key] for key in sorted(javascript)],
+        "stdlib_modules": stdlib_modules,
         "architecture": "x86_64",
         "sources": sources,
         "commit": subprocess.check_output(
