@@ -114,7 +114,10 @@ def exercise(page, installed: Path, mode: str) -> None:
             timeout=90000
         )
         page.get_by_role("button", name="Continue", exact=True).click(timeout=90000)
-    page.get_by_role("link", name="Settings", exact=True).click()
+    # Scope to the primary navigation: an empty library also links to Settings.
+    page.get_by_role("navigation", name="Primary").get_by_role(
+        "link", name="Settings", exact=True
+    ).click()
     page.get_by_role("heading", name="Optional speech models", exact=True).wait_for()
     page.get_by_text("Core checks passed", exact=True).wait_for()
     models = api("GET", "/v1/model-manager")
