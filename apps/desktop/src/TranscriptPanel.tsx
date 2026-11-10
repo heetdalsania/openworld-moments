@@ -74,9 +74,9 @@ export function TranscriptPanel({
       <h2 id="transcript-heading">Transcript</h2>
       <p className="muted" id="transcript-privacy">
         Optional. Speech is transcribed on this computer by whisper.cpp with a model you install
-        yourself; nothing is uploaded or downloaded. Transcripts can contain private conversations.
-        They stay in your library, and you can delete them at any time without affecting your
-        videos.
+        explicitly in Settings; nothing is uploaded. Model downloads happen only when you choose
+        Install. Transcripts can contain private conversations. They stay in your library, and you
+        can delete them at any time without affecting your videos.
       </p>
 
       {status.error && (

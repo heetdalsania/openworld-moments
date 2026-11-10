@@ -1,58 +1,138 @@
 ## Milestone handoff
 
 - Milestone: M29 — Windows packaging and model manager
-- Outcome: Planning review only; M29 is **not complete**. Implementation stopped
-  before code changes because the existing libx264 requirement and LGPL packaging
-  policy need an explicit decision. The proposed smallest correction retains the
-  merged encoders and accepts a narrowly scoped GPL FFmpeg distribution with
-  matching source, build instructions and notices.
+- Outcome: Implementation candidate; **M29 is not complete** until the clean Windows
+  11 x64 lifecycle qualification below is recorded. The GPL packaging exception
+  was accepted by merging [PR #35](https://github.com/heetdalsania/openworld-moments/pull/35).
+  This branch implements that plan; it does not begin M30 or publish an alpha.
 - Files and modules changed:
-  - `docs/architecture/adr/0007-windows-ffmpeg-packaging.md`: evidence, proposed
-    exception, alternative, restart gate and unchanged Windows validation.
-  - `OPENWORLD_MOMENTS_BUILD_SPEC.md`: proposed, explicitly pending exception and
-    consistent licensing-risk wording.
-  - M29 brief, `MILESTONES.md` and README: planning-review status, corrected context
-    references and the existing M18 model-manager dependency.
-- Public contracts or migrations: None. No runtime or installer behavior changed.
+  - `scripts/windows`, the explicit Tauri packaging overlay and Windows CI:
+    verified source extraction, source-built GPL FFmpeg/libx264, frozen worker,
+    native architecture/hash/license inventory, repeated-build comparison, NSIS
+    lifecycle smoke and candidate checksums/notices/source artifacts.
+  - Rust host/supervisor: release resource discovery and hidden-console worker
+    startup; exact doctor/model-management API allowlist.
+  - Worker runtime/resources/system doctor, model catalog/download manager, M18
+    registry, durable job handler and authenticated API; safe optional uninstall.
+  - Settings model manager, system/first-run panels, jobs invalidation and tests.
+  - Contracts 1.23 schemas/generated bindings/fixtures, migration 0019, README,
+    ledger, accepted ADR and packaging/transcription architecture notes.
+  - Small prerequisite repair: the calibration Rust E2E helper now respects the
+    existing `OWM_WORKER_PYTHON` override, as the other E2E helpers already do.
+    This permits a fresh locked local environment without a skipped test or
+    application import-path workaround.
+  - Small prerequisite repair: watched-folder scans and native-event root aliases
+    now use one stabilization/report key. Repeated macOS full-gate failures showed
+    duplicate reports for the same unchanged file; a deterministic root-alias
+    regression protects the fix without following source-file symlinks.
+  - Small prerequisite repair: readiness is logged before publishing the worker
+    handshake, and unexpected-exit diagnostics wait for the bounded stderr drain
+    before snapshotting failure state. The original nine supervisor assertions,
+    including immediate crash/restart and secret redaction, remain intact.
+  - Small prerequisite repair: the UI subscribes before reading initial worker
+    status and prevents a late startup snapshot from overwriting a live ready
+    event. A controlled regression reproduces Import becoming disabled with the
+    old code; this ordering must remain stable for packaged first-run checks.
+  - Small prerequisite repair: production CSP blocked Ajv's runtime compiler,
+    leaving the installed WebView blank. Contract generation now emits static
+    validators; `load()` keeps schema/version/semantic checks without runtime
+    string evaluation. The CSP remains unchanged. A Node subprocess regression
+    validates all fixtures with string code generation disabled.
+- Public contracts or migrations:
+  - Contracts 1.23: `system-doctor`, `model-manager`, `model_download` job kind and
+    mirrored Python/TypeScript semantic validation. Existing job routes own
+    cancellation/retry; exact management routes are documented in the guide.
+  - Migration 0019 rebuilds the jobs constraint while preserving existing rows,
+    indexes and idempotency. Existing pre-migration backup/newer-schema refusal
+    remains authoritative.
 - Commands run:
-  - Repository/dependency inspection, `git fetch origin`, dependency ancestry,
-    changed-document local-link checks and `git diff --cached --check`.
-  - `uv sync --all-packages --locked --link-mode copy` into a fresh temporary
-    environment outside Documents.
-  - `OWM_REQUIRE_FFMPEG=1 OWM_REQUIRE_OCR=1 pnpm check`, with
-    `UV_PROJECT_ENVIRONMENT` and `OWM_WORKER_PYTHON` selecting that environment.
+  - Locked environment sync, formatting/generation, required-tool `pnpm check`
+    using the fresh environment for uv and all native worker E2E subprocesses.
+  - Worker mypy on Windows/Linux targets; Windows scripts compile and shell
+    syntax checks; focused download/catalog/doctor/archive/uninstall regressions.
+  - Real-worker synthetic browser fixture, Vite and Playwright Settings walkthrough.
+  - Native macOS production build; hosted Windows commands/results recorded below
+    when available. A macOS build is not Windows installer evidence.
 - Test and validation results:
-  - Full repository gate passes: formatting, ESLint/Clippy/Ruff, REUSE, TypeScript
-    and mypy, all tests and generated-contract drift.
-  - Worker **1,085 passed, 1 skipped** (existing Windows-only junction test on
-    macOS); Python contracts **336**, TypeScript contracts **364**, desktop
-    **244**, Rust **50** passed.
-  - The original local environment repeatedly acquired hidden flags on workspace
-    `.pth` files: the first attempt failed imports during mypy; the next passed
-    type checks but failed nine fresh-worker tests with the same missing-contracts
-    import. A fresh locked environment restored the imports and passed the whole
-    gate. No test, source, timeout or import-path workaround was committed.
-  - No Windows installer, model download, clean VM or release qualification was
-    run or is claimed. Hosted CI status is recorded in the planning PR.
-- Decisions made: No license-policy exception accepted on behalf of maintainers.
-  ADR-0007 is a proposal requiring acceptance and a planning merge before code.
+  - Required-tool full `pnpm check` passes: format, lint, REUSE, type checks, tests
+    and generated-contract drift. Worker **1,121 passed, 1 skipped** (existing
+    Windows-junction-only test on macOS); Python contracts **340**, TypeScript
+    contracts **371**, desktop **252**, Rust **52** passed.
+  - Worker mypy passes for both Windows and Linux targets (**208 files**).
+    Build-script Ruff/import checks, Python compilation and shell syntax pass.
+    After Windows CI exposed fixture handle retention and metadata encoding,
+    SQLite test handles close explicitly and Cargo JSON is decoded as UTF-8.
+    Nine focused uninstall/archive/artifact regressions pass, including repeated
+    assembly with accurate checksums and exclusion of stale generated media.
+    Standard-library ZIP order/metadata is normalized without changing module
+    bytes, and the repeated-build gate still compares every payload hash.
+    The existing phone countdown test flushes async mount effects before advancing
+    fake time; its assertions and application behavior remain unchanged.
+  - Model tests cover signed-catalog tampering, rejected origins, exact HTTP range
+    resume, cancellation, ignored ranges, corruption/oversize, low disk/offline,
+    Unicode paths, linked partials, active-job safety, removal and pinning.
+  - Browser Settings walkthrough passed against the real local worker: core
+    doctor checks, offline initial catalog, keyboard focus to Install, and no
+    horizontal overflow at 800 px. No model download started. Native transport
+    was bridged for this macOS browser fixture; it is not Windows evidence.
+  - Export goldens were regenerated only for contract 1.23 and the derived privacy
+    token. Corrupt-model transcription now fails at registry lookup and is tested
+    as missing; the engine never starts.
+  - Native macOS production `pnpm build` passes (existing chunk-size warning).
+    Actual pinned FFmpeg/x264 sources pass the safe-extraction checks.
+  - Hosted CI passed the NSIS build and complete frozen-payload reproducibility
+    comparison. Native lifecycle testing remains pending. Elevated runner hosts
+    need a temporary app-specific HKLM WebView2 debug policy because current
+    WebView2 ignores environment/HKCU flags there. The harness removes the
+    override in `finally`; the installer contains no debugging configuration.
+    The harness waits for the native WebView target after connecting to CDP,
+    since the browser endpoint can become ready before the window's page.
+    The uninstall harness keeps its sentinel inside the actual library and checks
+    the database SHA-256 before/after removal of application files, exporting a
+    separate retention report. No clean Windows 11 client run is claimed.
+- Decisions made:
+  - Per-user NSIS `0.1.0-alpha.29`, stable application/library identity, x64 only;
+    OS-managed WebView2. Required worker/FFmpeg tools are bundled and ignore
+    development overrides. Optional OCR/whisper.cpp engines are not bundled.
+  - Python 3.12.14 standalone 20260929, uv 0.13.7, PyInstaller 6.22.3, FFmpeg 9.0.2
+    and pinned x264 source with SHA-256; dependency lockfiles and build inventory.
+  - Offline bundled Ed25519 catalog, curated MIT tiny.en/base.en at immutable
+    upstream revision. The initial signing key was generated in memory and
+    discarded; changing the catalog requires a reviewed app/trust-root update.
+    No keys, models or footage are committed. No automatic catalog refresh.
+  - Downloads are explicit authenticated jobs, limited HTTPS origins/redirects,
+    strict size/range/digest checks, partial resume, disk reserve and atomic
+    promotion. Listings rehash contents. Cancellation never activates partial
+    bytes; already committed verified versions may remain at the commit boundary.
+  - Repair/upgrade/default and silent uninstall retain libraries. Interactive
+    removal needs two choices, resolves a fixed OS Known Folder, refuses linked
+    roots, and unlinks nested junctions rather than visiting external originals.
+    NSIS recursive app-data deletion is disabled; preferences remain.
 - Known limitations:
-  - Release worker discovery still requires `OWM_WORKER_PYTHON`; the development
-    environment and PATH media tools are not a clean-machine package.
-  - Existing Windows CI builds without installers. A green run of that workflow
-    cannot satisfy M29's clean Windows client lifecycle criterion.
-  - Signed model catalog, resumable downloads, model-manager UI, runtime pinning,
-    installer lifecycle and all M29 implementation remain outstanding.
-- Follow-up milestones affected: M30, M31 and M33 remain dependent on actual M29
-  completion. M32/M34 and later release gates must not consume this proposal as
-  a packaged-runtime handoff.
-- Pull request: [#35 — planning correction only](https://github.com/heetdalsania/openworld-moments/pull/35).
-- Screenshots, reports, or artifacts: Documentation proposal only; no generated
-  media, binary, model, library, private path or credential is committed.
+  - The host for local validation is macOS. Windows Server CI automation is
+    intentionally separate from clean supported Windows 11 client qualification.
+  - Unsigned candidate; SmartScreen/enterprise policy may warn or block. No paid
+    signing procurement, release publication, or macOS/Linux installer is included.
+  - Repeated frozen-payload hashes can be compared within a CI toolchain snapshot;
+    cross-runner/compiler NSIS bit reproducibility is not claimed. MSYS2 compiler
+    and installed package versions accompany the artifacts.
+  - Real speech recognition/gameplay detector quality is unmeasured. Model tests
+    use synthetic bytes and controlled HTTP interruption, never real weights.
+  - Optional hardware encoders absent from the minimal source build are reported
+    unavailable; the tested CPU encoder is the required fallback.
+- Follow-up milestones affected: M30, M31, M33 and M34 must respect the actual M29
+  completion dependency. M32 remains the public alpha gate.
+- Screenshots, reports, or artifacts: Ignored local Settings screenshot under
+  `output/playwright`; CI candidate contains installer, runtime/source inventory,
+  notices, checksums, build inputs and native lifecycle reports only. Synthetic
+  media, model weights, scratch libraries, databases and build outputs are excluded
+  from commits and candidate uploads.
+
+Implementation pull request: [#36](https://github.com/heetdalsania/openworld-moments/pull/36) (draft; qualification pending).
 
 ### Dependency evidence
 
-All dependency merge commits are ancestors of current `origin/main`:
+All dependency merge commits are ancestors of the implementation base `5ca9d27`:
 
 | Milestone | Merged PR | Merge commit | Handoff inspected |
 |---|---|---|---|
@@ -61,9 +141,13 @@ All dependency merge commits are ancestors of current `origin/main`:
 | M18 | [#24](https://github.com/heetdalsania/openworld-moments/pull/24) | `200aaed` | `M18-handoff.md` and model registry/adapter |
 | M24 | [#30](https://github.com/heetdalsania/openworld-moments/pull/30) | `7a4233c` | `M24-handoff.md` and CPU encoder registry |
 
-### Required next action
+### Remaining qualification gate
 
-Maintainer accepts the GPL packaging exception or requests the separately scoped
-LGPL encoder prerequisite. Then merge the corrected plan and resume M29. Keep
-the ledger out of Complete until every original acceptance criterion and
-required validation is satisfied.
+Follow the clean Windows 11 x64 matrix in the [packaging guide](../architecture/windows-packaging.md):
+normal-user GUI install/launch without developer tools, first-run doctor, lawful
+synthetic import/render, optional download interruption/failure/Unicode cases,
+repair/upgrade with retained database/projects/backups, uninstall/reinstall
+retention and separately confirmed disposable-library removal. Record OS/WebView
+versions, artifact SHA-256, results and unsigned prompts. Hosted Server CI passing
+alone does not close this gate. Keep the PR draft and M29 ledger In progress until
+that evidence is available.

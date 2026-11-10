@@ -22,7 +22,7 @@ pub const STAGE: &str = "planning";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AppInfo {
     pub name: &'static str,
-    pub version: &'static str,
+    pub version: String,
     pub stage: &'static str,
 }
 
@@ -30,7 +30,7 @@ pub struct AppInfo {
 pub fn app_info() -> AppInfo {
     AppInfo {
         name: "OpenWorld Moments",
-        version: env!("CARGO_PKG_VERSION"),
+        version: env!("CARGO_PKG_VERSION").to_owned(),
         stage: STAGE,
     }
 }
@@ -38,8 +38,13 @@ pub fn app_info() -> AppInfo {
 mod commands {
     /// Exposed to the UI as `invoke("app_info")`.
     #[tauri::command]
-    pub fn app_info() -> super::AppInfo {
-        super::app_info()
+    pub fn app_info(app: tauri::AppHandle) -> super::AppInfo {
+        let mut info = super::app_info();
+        info.version = app.package_info().version.to_string();
+        if cfg!(target_os = "windows") && !cfg!(debug_assertions) {
+            info.stage = "unsigned alpha candidate";
+        }
+        info
     }
 }
 

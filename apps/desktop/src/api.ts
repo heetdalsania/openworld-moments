@@ -13,6 +13,8 @@ import type {
   Session,
   SpeechModels,
   Transcript,
+  ModelManager,
+  SystemDoctor,
 } from "@openworld-moments/contracts";
 
 /** A contract ErrorInfo, or a stand-in for transport failures. */
@@ -64,6 +66,22 @@ async function call<T>(
   } catch (error) {
     throw toApiError(error);
   }
+}
+
+export function systemDoctor(): Promise<SystemDoctor> {
+  return call("GET", "/v1/system-doctor");
+}
+export function managedModels(): Promise<ModelManager> {
+  return call("GET", "/v1/model-manager");
+}
+export function installModel(name: string): Promise<Job> {
+  return call("POST", "/v1/model-manager/download", { name });
+}
+export function pinModel(name: string, sha256: string): Promise<ModelManager> {
+  return call("POST", "/v1/model-manager/pin", { name, sha256 });
+}
+export function removeModel(name: string): Promise<ModelManager> {
+  return call("POST", "/v1/model-manager/remove", { name });
 }
 
 export const PAGE_SIZE = 60;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -30,6 +30,17 @@ beforeEach(() => {
   install(host, { invoke, listen });
   host.route("GET /v1/assets?order=newest&limit=60", [asset()]);
   host.route("GET /v1/jobs?limit=200", []);
+  host.route("GET /v1/system-doctor", {
+    schema_version: "1.23",
+    ready: true,
+    packaged: false,
+    platform: "development",
+    architecture: "x86_64",
+    free_bytes: 1e9,
+    checks: [{ id: "development", status: "warn", message: "Development runtime" }],
+    tools: [],
+  });
+  host.route("GET /v1/model-manager", { schema_version: "1.23", catalog_version: 1, models: [] });
   window.location.hash = "";
 });
 
@@ -73,6 +84,28 @@ describe("app shell", () => {
     host.route("GET /v1/jobs?limit=200", [job({ kind: "import", state: "probing" })]);
     act(() => host.emit("worker://status", { status: "ready", port: 1, pid: 3, restarts: 1 }));
     expect(await screen.findByRole("button", { name: "Background jobs (1 running)" })).toBeTruthy();
+  });
+
+  it("keeps a live ready event when an older startup snapshot resolves late", async () => {
+    const original = invoke.getMockImplementation();
+    if (!original) throw new Error("Expected the installed fake host implementation");
+    let resolveSnapshot!: (value: unknown) => void;
+    const snapshot = new Promise((resolve) => {
+      resolveSnapshot = resolve;
+    });
+    invoke.mockImplementation((command: string, args?: Record<string, unknown>) =>
+      command === "worker_status" ? snapshot : original(command, args),
+    );
+    render(<App />);
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("worker_status"));
+    act(() => host.emit("worker://status", { status: "ready", port: 1, pid: 2, restarts: 0 }));
+    expect(await screen.findByText("Heist finale.mp4")).toBeTruthy();
+    await act(async () => {
+      resolveSnapshot({ status: "starting" });
+    });
+    expect((screen.getByRole("button", { name: "Import" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
   });
 
   it("restores the asset screen after a reload", async () => {

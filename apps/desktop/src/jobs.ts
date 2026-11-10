@@ -38,6 +38,7 @@ const LABELS: Record<string, string> = {
   render: "Render video",
   index: "Rebuild search index",
   diagnostic: "Diagnostic",
+  model_download: "Install optional model",
 };
 
 export function jobLabel(job: Job): string {
@@ -127,6 +128,9 @@ export function upsertJob(job: Job): void {
     invalidate("sessions");
   }
   // A transcription keeps completed clips even when it fails or is cancelled.
+  if (previous?.state !== job.state && job.kind === "model_download" && !isActive(job)) {
+    invalidate("models:", "transcript:models");
+  }
   if (previous?.state !== job.state && job.kind === "render" && !isActive(job)) {
     const projectId = (job.params as { project_id?: string } | undefined)?.project_id;
     invalidate(projectId ? `renders:${projectId}` : "renders:");

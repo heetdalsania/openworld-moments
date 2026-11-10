@@ -53,6 +53,8 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
     let segments: Vec<&str> = route.split('/').collect();
     match (method, segments.as_slice()) {
         ("GET", ["", "v1", "capabilities"]) => true,
+        ("GET", ["", "v1", "system-doctor" | "model-manager"]) => query.is_none(),
+        ("POST", ["", "v1", "model-manager", "download" | "pin" | "remove"]) => query.is_none(),
         ("GET", ["", "v1", "assets"]) | ("GET", ["", "v1", "jobs"]) => true,
         ("POST", ["", "v1", "imports"]) => query.is_none(),
         ("POST", ["", "v1", "assets", "check-sources"]) => query.is_none(),
@@ -642,5 +644,19 @@ mod tests {
                 .status,
             404
         );
+    }
+    #[test]
+    fn runtime_management_routes_are_exact_and_method_scoped() {
+        for path in ["/v1/system-doctor", "/v1/model-manager"] {
+            assert!(api_route_allowed("GET", path));
+            assert!(!api_route_allowed("POST", path));
+            assert!(!api_route_allowed("GET", &format!("{path}?path=outside")));
+        }
+        for action in ["download", "pin", "remove"] {
+            let path = format!("/v1/model-manager/{action}");
+            assert!(api_route_allowed("POST", &path));
+            assert!(!api_route_allowed("DELETE", &path));
+            assert!(!api_route_allowed("POST", &format!("{path}/extra")));
+        }
     }
 }

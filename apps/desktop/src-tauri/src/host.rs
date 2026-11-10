@@ -25,7 +25,15 @@ pub type Phone = Option<PhoneGateway>;
 
 /// Where the worker comes from. `OWM_WORKER_PYTHON` overrides; debug builds fall
 /// back to the repository's virtualenv. Packaged builds bundle a worker in M29.
-fn worker_command() -> Option<WorkerCommand> {
+fn worker_command<R: Runtime>(app: &AppHandle<R>) -> Option<WorkerCommand> {
+    if cfg!(target_os = "windows") && !cfg!(debug_assertions) {
+        let runtime = app.path().resource_dir().ok()?.join("runtime");
+        return Some(WorkerCommand {
+            program: runtime.join("owm-worker.exe"),
+            args: vec!["-m".into(), "openworld_moments.worker".into()],
+            cwd: Some(runtime),
+        });
+    }
     let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
     let python = std::env::var_os("OWM_WORKER_PYTHON")
         .map(PathBuf::from)
@@ -48,7 +56,7 @@ fn worker_command() -> Option<WorkerCommand> {
 }
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
-    let Some(command) = worker_command() else {
+    let Some(command) = worker_command(app) else {
         app.manage(None::<Supervisor>);
         app.manage(None::<WatchService<WorkerSink>> as Watcher);
         app.manage(None::<PhoneGateway> as Phone);

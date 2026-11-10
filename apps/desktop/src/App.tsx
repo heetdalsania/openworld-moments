@@ -18,6 +18,8 @@ import { SearchView } from "./SearchView";
 import { SessionView } from "./SessionView";
 import { WatchedFolders } from "./WatchedFolders";
 import type { WatchedFolderView } from "./watched";
+import { ModelManager } from "./ModelManager";
+import { SystemPanel } from "./SystemPanel";
 import { XboxOnboarding } from "./XboxOnboarding";
 import { describeWorker, fetchWorkerStatus, onWorkerStatus, type WorkerStatus } from "./worker";
 
@@ -25,12 +27,17 @@ function useWorkerStatus(): WorkerStatus | null {
   const [worker, setWorker] = useState<WorkerStatus | null>(null);
   useEffect(() => {
     let cancelled = false;
+    let receivedEvent = false;
     const unlisten = onWorkerStatus((status) => {
+      receivedEvent = true;
       if (!cancelled) setWorker(status);
     });
-    fetchWorkerStatus()
+    // Register before reading the snapshot, and keep newer live status if its
+    // event arrives while the initial request is still resolving.
+    unlisten
+      .then(() => fetchWorkerStatus())
       .then((status) => {
-        if (!cancelled) setWorker(status);
+        if (!cancelled && !receivedEvent) setWorker(status);
       })
       .catch(() => {
         // The host reports worker problems through the status itself.
@@ -102,6 +109,8 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
       <h1 id="settings-heading">Settings</h1>
       {workerReady ? (
         <>
+          <SystemPanel />
+          <ModelManager />
           {!hasXbox && <XboxOnboarding onAdded={() => setRefreshKey((k) => k + 1)} />}
           <p>
             <a href="#/calibration">Calibrate detector profile regions</a>
@@ -239,6 +248,7 @@ export function App() {
       <WorkerBanner worker={worker} />
       <div className="body">
         <main id="main" tabIndex={-1}>
+          {ready && route.view !== "settings" && <SystemPanel firstRun />}
           {route.view === "library" &&
             (ready ? (
               <LibraryView onImport={openImport} />

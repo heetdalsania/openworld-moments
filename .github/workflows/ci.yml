@@ -144,7 +144,8 @@ jobs:
 
   desktop-build:
     name: Desktop production build (Windows)
-    runs-on: windows-latest
+    runs-on: windows-2025
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: pnpm/action-setup@v6.1.1
@@ -154,8 +155,77 @@ jobs:
           cache: pnpm
       - run: rustup show active-toolchain
       - uses: Swatinem/rust-cache@v2.9.3
+        with:
+          cache-on-failure: true
+          key: packaged-windows-x64-v1
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --managed-python --locked --all-packages --group packaging --python cpython-3.12.14-windows-x86_64-none
+      - name: Verify and extract pinned media sources
+        run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/prepare-sources.py
+      - uses: actions/cache@v6.1.0
+        id: media-cache
+        with:
+          path: output/packaging/media
+          key: windows-x64-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/windows/build-media.sh') }}
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        with:
+          msystem: MINGW64
+          update: true
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-nasm mingw-w64-x86_64-pkgconf make diffutils
+      - name: Build GPL FFmpeg with libx264 only
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        shell: msys2 {0}
+        run: bash scripts/windows/build-media.sh
+      - name: Cache completed media build before downstream packaging
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          path: output/packaging/media
+          key: windows-x64-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/windows/build-media.sh') }}
+      - name: Freeze and inventory worker
+        run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
+      - name: Repeat frozen build and compare payload
+        shell: pwsh
+        run: |
+          Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-first.json
+          uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-second.json
+          python -c "import json,pathlib;d=pathlib.Path('output/packaging');a=json.loads((d/'repro-first.json').read_text());b=json.loads((d/'repro-second.json').read_text());changed=sorted(k for k in set(a['files'])|set(b['files']) if a['files'].get(k)!=b['files'].get(k));(d/'reproducibility.json').write_text(json.dumps({'frozen_payload_identical':not changed,'changed_files':changed,'installer_bit_reproducibility':'not claimed'}));assert not changed,changed"
+      - name: Probe the frozen worker outside the desktop host
+        shell: pwsh
+        working-directory: apps/desktop/src-tauri/bundle-input/runtime
+        run: |
+          python ../../../../../scripts/windows/frozen-worker-probe.py (Resolve-Path owm-worker.exe) -m openworld_moments.worker
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - run: pnpm build:windows
+      - name: Install, native WebView import/render, repair, upgrade and uninstall retention
+        shell: pwsh
+        run: scripts/windows/lifecycle-smoke.ps1
+      - name: Assemble checksums, source and notices
+        run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/artifacts.py
+      - uses: actions/upload-artifact@v7.0.2
+        if: success()
+        with:
+          name: Windows-x64-alpha-candidate
+          path: output/packaging/release/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        if: failure()
+        with:
+          name: Windows-packaging-diagnostics
+          path: |
+            output/packaging/*json
+            output/packaging/media/compiler.txt
+            output/packaging/media/build-packages.txt
+            output/packaging/freeze-work/owm-worker/warn-owm-worker.txt
+          if-no-files-found: ignore
 
   licenses:
     name: License compliance (REUSE)

@@ -1626,3 +1626,17 @@ button.link {
   align-items: flex-start;
   gap: 0.5rem;
 }
+
+/* Runtime/model metadata must remain readable at narrow widths and large text sizes. */
+.model-manager article {
+  border-top: 1px solid var(--border, #444);
+  padding-block: 1rem;
+}
+.model-manager code,
+.runtime-check code {
+  overflow-wrap: anywhere;
+}
+.model-manager button {
+  margin-inline-end: 0.5rem;
+  margin-block-start: 0.5rem;
+}

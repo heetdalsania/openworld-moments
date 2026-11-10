@@ -1,0 +1,17 @@
+{
+  "version": "0.1.0-alpha.29",
+  "bundle": {
+    "targets": ["nsis"],
+    "resources": { "bundle-input/runtime/": "runtime/" },
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": { "type": "skip" },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/installer-hooks.nsh",
+        "languages": ["English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

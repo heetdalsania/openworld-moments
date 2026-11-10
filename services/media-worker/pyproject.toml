@@ -6,6 +6,7 @@ readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "cryptography==50.0.2",
     "fastapi>=0.162.0",
     "openworld-moments-contracts",
     "tzdata>=2025.2 ; sys_platform == 'win32'",
@@ -24,6 +25,10 @@ dev = [
     "opentimelineio>=0.17,<0.19",
     "pytest>=9.2.0",
     "ruff>=0.17.3",
+]
+packaging = [
+    "playwright==1.64.1",
+    "pyinstaller==6.22.3",
 ]
 
 [tool.uv.sources]

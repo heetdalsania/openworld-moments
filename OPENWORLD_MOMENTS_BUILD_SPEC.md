@@ -1556,7 +1556,7 @@ This split should be confirmed before accepting outside contributions. A Develop
 
 - Prefer an LGPL-compatible FFmpeg distribution for packaged builds.
 - Do not bundle GPL-only codecs without deliberately accepting their license implications.
-- Proposed M29 exception (pending maintainer acceptance of [ADR-0007](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md)): retain the merged `libx264` proxy and CPU-render paths and package a GPL-enabled FFmpeg/FFprobe distribution. This is not an LGPL build. Record its exact license, configuration, immutable binary/source revisions and checksums; accompany packages with the applicable license texts, notices, corresponding source and build instructions. Reject `--enable-nonfree` builds. This exception does not change the application's existing AGPL license or authorize unrelated GPL-only components.
+- M29 exception (accepted in [ADR-0007](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md) through PR #35): retain the merged `libx264` proxy and CPU-render paths and package a GPL-enabled FFmpeg/FFprobe distribution. This is not an LGPL build. Record its exact license, configuration, immutable binary/source revisions and checksums; accompany packages with the applicable license texts, notices, corresponding source and build instructions. Reject `--enable-nonfree` builds. This exception does not change the application's existing AGPL license or authorize unrelated GPL-only components.
 - Record model licenses and source URLs in machine-readable manifests.
 - Reject model weights with unclear redistribution rights.
 - Generate a software bill of materials for every release.
@@ -1961,7 +1961,7 @@ Initial governance can be maintainer-led with:
 | Generic clippers add similar labels | Medium | Focus on session reconstruction, evidence, local ownership, and interoperability |
 | HEVC/HDR playback problems | High | Proxy generation and deterministic tone mapping |
 | Python/ML packaging becomes large | Medium | Download optional models after install; keep deterministic core lightweight |
-| FFmpeg licensing mistake | High | LGPL preference; proposed explicit M29 libx264/GPL exception in ADR-0007; exact binary/source inventory, notices, SBOM and automated license checks |
+| FFmpeg licensing mistake | High | LGPL preference; accepted explicit M29 libx264/GPL exception in ADR-0007; exact binary/source inventory, notices, SBOM and automated license checks |
 | Trademark complaint | Medium | Generic brand, factual compatibility language, no official assets |
 | Contributors submit leaked footage | High | Explicit policy, issue templates, moderation, immediate removal |
 | LAN upload is exposed | High | Disabled by default, expiring token, private-network warning, staging sandbox |

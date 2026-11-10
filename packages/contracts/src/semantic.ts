@@ -2,6 +2,8 @@
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
   PrivacyReview,
+  ModelManager,
+  SystemDoctor,
   EventExportLine,
   ExportResult,
   ProjectExport,
@@ -43,6 +45,18 @@ const EPSILON = 1e-9;
 // Python's '{:g}' formatting for the sums we report.
 function g(n: number): string {
   return Number(n.toPrecision(6)).toString();
+}
+
+function* modelManager(doc: ModelManager): Generator<string> {
+  if (new Set(doc.models.map((m) => m.name)).size !== doc.models.length)
+    yield "models: duplicate model names";
+  for (const model of doc.models)
+    if (model.downloaded_bytes > model.size_bytes) yield "downloaded_bytes: exceeds signed size";
+}
+function* systemDoctor(doc: SystemDoctor): Generator<string> {
+  if (doc.ready !== !doc.checks.some((c) => c.status === "fail")) yield "ready: must match checks";
+  if (new Set(doc.checks.map((c) => c.id)).size !== doc.checks.length)
+    yield "checks: duplicate IDs";
 }
 
 function* region(path: string, r: Region): Generator<string> {
@@ -824,6 +838,8 @@ function* privacyReview(doc: PrivacyReview): Generator<string> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "model-manager": modelManager,
+  "system-doctor": systemDoctor,
   "privacy-review": privacyReview,
   "event-export": eventExport,
   "export-result": exportResult,

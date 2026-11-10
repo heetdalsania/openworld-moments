@@ -263,20 +263,24 @@ impl<S: Sink> WatchService<S> {
         if !is_candidate(&rel, &folder.cfg.include, &folder.cfg.exclude) {
             return;
         }
-        match fsprobe::file_state(path) {
+        // Native events and scans can use different spellings of the same root
+        // (e.g. /private/var and /var). Use one spelling for pending/reported keys,
+        // without canonicalizing a file or following a source-file symlink.
+        let path = folder.cfg.path.join(&rel);
+        match fsprobe::file_state(&path) {
             FileState::Local(meta) => {
-                folder.cloud_only.remove(path);
-                if folder.reported.get(path) != Some(&meta) {
-                    folder.stabilizer.observe(path, meta, now);
+                folder.cloud_only.remove(&path);
+                if folder.reported.get(&path) != Some(&meta) {
+                    folder.stabilizer.observe(&path, meta, now);
                 }
             }
             FileState::CloudOnly => {
-                folder.stabilizer.forget(path);
-                folder.cloud_only.insert(path.to_path_buf());
+                folder.stabilizer.forget(&path);
+                folder.cloud_only.insert(path);
             }
             FileState::Absent => {
-                folder.stabilizer.forget(path);
-                folder.cloud_only.remove(path);
+                folder.stabilizer.forget(&path);
+                folder.cloud_only.remove(&path);
             }
         }
     }
@@ -461,6 +465,58 @@ impl<S: Sink> WatchService<S> {
 mod tests {
     use super::*;
     use notify::event::{CreateKind, ModifyKind, RenameMode};
+
+    struct EmptySink;
+    impl Sink for EmptySink {
+        async fn folders(&self) -> Result<Vec<FolderConfig>, SinkError> {
+            Ok(vec![])
+        }
+        async fn report_file(&self, _: i64, _: &str, _: Meta) -> Result<String, SinkError> {
+            Ok("queued".into())
+        }
+        async fn report_scan(
+            &self,
+            _: i64,
+            _: bool,
+            _: bool,
+            _: Option<serde_json::Value>,
+        ) -> Result<(), SinkError> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn root_aliases_share_one_pending_and_reported_file() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::create_dir(temp.path().join("alias")).unwrap();
+        std::fs::create_dir(temp.path().join("captures")).unwrap();
+        let root = temp.path().join("alias/../captures");
+        let file = root.join("Capture.mp4");
+        std::fs::write(&file, b"original source").unwrap();
+        let real_root = std::fs::canonicalize(&root).unwrap();
+        let real_file = real_root.join("Capture.mp4");
+        let service = WatchService::new(EmptySink, WatchConfig::default());
+        let mut folder = service.new_folder(FolderConfig {
+            id: 1,
+            path: root,
+            recursive: true,
+            include: vec![],
+            exclude: vec![],
+            enabled: true,
+        });
+        folder.real_root = Some(real_root);
+        let now = Instant::now();
+        service.observe(&mut folder, &file, now);
+        service.observe(&mut folder, &real_file, now);
+        assert_eq!(folder.stabilizer.len(), 1);
+        let due = folder.stabilizer.take_due(now + service.cfg.stable_for);
+        assert_eq!(due.len(), 1);
+        let (path, meta) = due.into_iter().next().unwrap();
+        folder.reported.insert(path, meta);
+        service.observe(&mut folder, &real_file, now + service.cfg.stable_for);
+        assert!(folder.stabilizer.is_empty());
+        assert_eq!(std::fs::read(file).unwrap(), b"original source");
+    }
 
     #[test]
     fn only_events_that_can_change_files_are_hints() {

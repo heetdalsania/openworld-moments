@@ -30,7 +30,8 @@
         "fingerprint",
         "group",
         "align",
-        "story"
+        "story",
+        "model_download"
       ]
     },
     "state": {

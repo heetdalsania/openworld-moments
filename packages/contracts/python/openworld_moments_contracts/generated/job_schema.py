@@ -54,6 +54,7 @@ class Job(BaseModel):
         "group",
         "align",
         "story",
+        "model_download",
     ]
     state: Literal[
         "queued",

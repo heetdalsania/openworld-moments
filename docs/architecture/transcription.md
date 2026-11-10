@@ -4,8 +4,8 @@ Transcription is **optional and fully local**:
 - **Engine:** the user's own [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
   executable.
 - **Model:** a model file the user downloaded and installed explicitly.
-- **Network:** the app never downloads an engine or model, and never uploads audio
-  or text.
+- **Network:** audio and text are never uploaded. M29 adds explicit, optional model
+  downloads in Settings; listing models never contacts the network.
 
 Without an engine or model, everything else keeps working and transcription
 explains what is missing.
@@ -47,8 +47,8 @@ Decision record: [ADR-0006](./adr/0006-local-transcription.md).
 - whisper.cpp and the official ggml conversions of OpenAI's Whisper weights are MIT.
 - The license a user declares at install time is recorded, but it is not a legal
   check.
-- No engine or model is committed or bundled; packaging and a model manager UI with
-  downloads are M29/M34.
+- No engine or model weights are committed or bundled. The M29 Windows model-manager
+  candidate supports curated, signed-catalog downloads; see [Windows packaging](./windows-packaging.md).
 
 ## How a session is transcribed
 

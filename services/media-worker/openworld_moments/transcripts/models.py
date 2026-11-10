@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Explicitly installed local speech models (spec 10.7). Nothing downloads, ever.
+"""Local speech-model registry (spec 10.7); this module never downloads.
 
 A model is a whisper.cpp ``ggml`` file the user obtained and installs from a local
 path (``owm models install``). It is copied into ``<library>/models/whisper/`` with a
 sidecar recording its name, size, SHA-256, declared license and install time. The
 catalog lists well-known models with their source page so users can fetch one
-themselves; listing it never contacts the network.
+themselves; listing it never contacts the network. M29 signed-catalog downloads
+are explicit jobs in the separate downloads module.
 """
 
 from __future__ import annotations
@@ -84,14 +85,21 @@ class SpeechModels:
     def _read(self, sidecar: Path) -> InstalledModel | None:
         """A sidecar whose model file is missing or resized is ignored, not trusted."""
         try:
-            if sidecar.stat().st_size > 16 * 1024:
+            if sidecar.is_symlink() or sidecar.stat().st_size > 16 * 1024:
                 return None
             doc = json.loads(sidecar.read_text("utf-8"))
             name = doc["name"]
             if not isinstance(name, str) or not NAME.fullmatch(name) or len(name) > 64:
                 return None
+            if sidecar.name != f"{name}.json" or not 1024 <= doc["size_bytes"] <= MAX_MODEL_BYTES:
+                return None
             path = self._file(name)
-            if path.is_symlink() or not path.is_file() or path.stat().st_size != doc["size_bytes"]:
+            if (
+                path.is_symlink()
+                or not path.is_file()
+                or path.stat().st_size != doc["size_bytes"]
+                or sha256_file(path) != doc["sha256"]
+            ):
                 return None
             return InstalledModel(
                 name,
@@ -114,7 +122,9 @@ class SpeechModels:
             "That speech model is not installed. Install a model explicitly to transcribe.",
         )
 
-    def install(self, source: Path, name: str, license_id: str) -> InstalledModel:
+    def install(
+        self, source: Path, name: str, license_id: str, *, expected_sha256: str | None = None
+    ) -> InstalledModel:
         """Copy a local ggml file in, after checking its name, size and magic bytes."""
         if not NAME.fullmatch(name) or len(name) > 64:
             raise TranscriptionError(
@@ -139,12 +149,17 @@ class SpeechModels:
             raise TranscriptionError(
                 "transcription.invalid_model", "That file is not a whisper.cpp ggml model."
             ) from exc
+        for directory in (self.directory.parent, self.directory):
+            if directory.is_symlink() or os.path.isjunction(directory):
+                raise TranscriptionError("models.unsafe_path", "Repair the linked model directory.")
         self.directory.mkdir(parents=True, exist_ok=True)
         fd, temp = tempfile.mkstemp(prefix=".install-", dir=self.directory)
         os.close(fd)
         try:
             shutil.copyfile(source, temp)
             digest = sha256_file(Path(temp))
+            if expected_sha256 is not None and digest != expected_sha256:
+                raise TranscriptionError("models.corrupt", "Model checksum changed during install.")
             os.replace(temp, self._file(name))
         except BaseException:
             Path(temp).unlink(missing_ok=True)
@@ -156,7 +171,13 @@ class SpeechModels:
             "license": license_id,
             "installed_at": utc_now(),
         }
-        self._sidecar(name).write_text(json.dumps(doc, indent=2) + "\n", "utf-8")
+        fd, metadata = tempfile.mkstemp(prefix=".receipt-", dir=self.directory)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(doc, indent=2) + "\n")
+            os.replace(metadata, self._sidecar(name))
+        finally:
+            Path(metadata).unlink(missing_ok=True)
         return self.get(name)
 
     def remove(self, name: str) -> None:

@@ -228,6 +228,8 @@ def main() -> None:
                                 "/v1/jobs",
                                 "/v1/profiles",
                                 "/v1/transcription/models",
+                                "/v1/system-doctor",
+                                "/v1/model-manager",
                                 "/v1/render/presets",
                                 "/v1/render/encoders",
                             }

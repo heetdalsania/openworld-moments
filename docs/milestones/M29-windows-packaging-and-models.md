@@ -9,10 +9,7 @@ Deliver a clean-machine Windows alpha package with predictable runtime dependenc
 M03, M08, M18, and M24 merged. M18 owns the speech-model registry and optional
 whisper.cpp adapter extended by this milestone.
 
-Implementation is paused for the packaging-policy decision in
-[ADR-0007](../architecture/adr/0007-windows-ffmpeg-packaging.md). Resolve and merge
-that planning correction before implementation; see the
-[M29 planning handoff](./M29-handoff.md). This does not mark M29 complete.
+The GPL packaging exception in [ADR-0007](../architecture/adr/0007-windows-ffmpeg-packaging.md) was accepted through PR #35. Implementation may proceed; M29 completion still requires every acceptance criterion and validation below.
 
 ## Required context
 
