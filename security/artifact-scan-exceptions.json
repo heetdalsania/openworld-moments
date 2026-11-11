@@ -1,0 +1,15 @@
+{
+  "description": "Documented, reviewed exceptions for scripts/security/scan_artifacts.py (M30). Each entry must still match a finding, or the scan fails as stale. Paths are matched against '<scanned folder name>/<path inside it>'.",
+  "exceptions": [
+    {
+      "kind": "home-path",
+      "path": "runtime/_internal/*",
+      "reason": "Third-party prebuilt binaries embed their upstream build machines' paths in debug and panic metadata: the python-build-standalone CPython runtime and its bundled OpenSSL, libffi and SQLite (C:\\Users\\Administrator\\AppData\\Local\\Temp\\...), and Rust-based PyPI wheels such as pydantic-core, rpds-py and cryptography (C:\\Users\\runneradmin\\.cargo\\...). They name no user or maintainer machine and contain no secrets; removing them would mean rebuilding upstream binaries."
+    },
+    {
+      "kind": "ci-workspace",
+      "path": "runtime/tools/ff*.exe",
+      "reason": "FFmpeg and FFprobe embed their configure line and default data directory, which contain this repository's public GitHub Actions workspace path (/d/a/openworld-moments/...). No personal path or secret. The binaries were qualified on Windows 11 in M29; neutralising the build prefix needs a rebuild and requalification and is deferred to the M32 release build."
+    }
+  ]
+}

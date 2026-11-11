@@ -19,6 +19,7 @@ owm = "openworld_moments.detectors.__main__:main"
 
 [dependency-groups]
 dev = [
+    "cyclonedx-python-lib[json-validation]>=11,<12",
     "httpx2>=2.16.0",
     "mypy>=2.4.1",
     "opencv-python-headless>=4.12,<5",
@@ -57,6 +58,8 @@ select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF"]
 python_version = "3.12"
 strict = true
 files = ["openworld_moments", "tests"]
+# Supply-chain scripts imported by tests/security (M30) are type-checked too.
+mypy_path = ["../../scripts/security", "../../scripts/windows"]
 
 # OpenTimelineIO (test-only validator for M27 exports) ships no type information.
 [[tool.mypy.overrides]]

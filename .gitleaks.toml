@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Secret scanning (M30). Default gitleaks rules, plus narrow allowlists for values
+# that look like keys but are content hashes. Review every new entry.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "SHA-256 content hashes stored in fields named layout_key, cache_key and input_key"
+regexTarget = "match"
+regexes = ['''(?i)"?(layout_key|cache_key|input_key)"?\s*[:=,]\s*['"]?[0-9a-f]{64}['"]?''']
+
+[[allowlists]]
+description = "M28 privacy-review digests (SHA-256) in the M27 export goldens; real worker tokens are never stored"
+regexTarget = "match"
+regexes = ['''"token"\s*:\s*"[0-9a-f]{64}"''']
+paths = ['''services/media-worker/tests/exports/goldens/''']

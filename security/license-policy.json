@@ -1,0 +1,61 @@
+{
+  "description": "License policy for shipped components (M30, spec 15.4-15.5). Enforced by scripts/security/check_licenses.py on the SBOM and on the live lockfile closures. An SPDX expression passes when every AND term and at least one OR alternative is allowed for that component.",
+  "allowed": [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "PSF-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+    "blessing",
+    "bzip2-1.0.6"
+  ],
+  "conditional": [
+    {
+      "license": "AGPL-3.0-or-later",
+      "components": [
+        "openworld-moments-worker",
+        "openworld-moments-desktop",
+        "openworld-moments-contracts"
+      ],
+      "reason": "The project's own application and worker license (spec 15.4)."
+    },
+    {
+      "license": "GPL-2.0-or-later",
+      "components": ["ffmpeg", "x264"],
+      "reason": "Accepted packaging exception, ADR-0007 (PR #35): GPL FFmpeg/FFprobe with libx264; sources, notices and build scripts ship with the package."
+    },
+    {
+      "license": "GPL-2.0-or-later WITH Bootloader-exception",
+      "components": ["pyinstaller-bootloader"],
+      "reason": "PyInstaller's bootloader exception permits distributing frozen applications under any license."
+    }
+  ],
+  "denied": [
+    "BUSL-1.1",
+    "CC-BY-NC-4.0",
+    "CC-BY-NC-SA-4.0",
+    "Commons-Clause",
+    "Elastic-2.0",
+    "SSPL-1.0",
+    "LicenseRef-proprietary",
+    "UNLICENSED"
+  ],
+  "license_overrides": [
+    {
+      "ecosystem": "pypi",
+      "name": "tzdata",
+      "license": "Apache-2.0",
+      "reason": "Windows-only dependency, not installed on non-Windows hosts that generate or check the SBOM; license from its PyPI metadata."
+    }
+  ]
+}

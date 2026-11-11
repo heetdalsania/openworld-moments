@@ -18,6 +18,7 @@ import os
 import secrets
 import shutil
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -66,6 +67,18 @@ class Upload:
         return out
 
 
+#: Client addresses tracked per session; beyond this, new addresses are refused.
+MAX_CLIENTS = 1024
+
+
+@dataclass
+class Client:
+    """Per-address request accounting (M30 rate limits)."""
+
+    recent: deque[float] = field(default_factory=deque)
+    failed: int = 0
+
+
 @dataclass
 class Session:
     token: str
@@ -80,6 +93,8 @@ class Session:
     active: int = 0
     nonce: str = field(default_factory=lambda: secrets.token_urlsafe(16))
     on_end: Callable[[str], None] = lambda _reason: None
+    clients: dict[str, Client] = field(default_factory=dict)
+    failed_total: int = 0
 
     @property
     def live(self) -> bool:
@@ -117,16 +132,62 @@ def _json(body: dict[str, Any], status: int = 200) -> Response:
 
 
 def create_app(session: Session) -> Starlette:
-    def authorized(request: Request) -> bool:
+    limits = session.limits
+    origins = frozenset(f"http://{host}" for host in session.allowed_hosts)
+
+    def client(request: Request) -> Client | None:
+        """The caller's accounting, or None when it must get no further service."""
+        address = request.client.host if request.client else ""
+        state = session.clients.get(address)
+        if state is None:
+            if len(session.clients) >= MAX_CLIENTS:
+                return None
+            state = session.clients[address] = Client()
+        return None if state.failed >= limits.max_failed_requests else state
+
+    def throttled(state: Client) -> bool:
+        now = session.clock()
+        while state.recent and now - state.recent[0] >= 60:
+            state.recent.popleft()
+        if len(state.recent) >= limits.requests_per_minute:
+            return True
+        state.recent.append(now)
+        return False
+
+    def failure(state: Client) -> Response:
+        state.failed += 1
+        session.failed_total += 1
+        if session.failed_total >= limits.max_failed_total:
+            session.end("too_many_failed_requests")
+        return _not_found()
+
+    def gate(request: Request, *, changes: bool = False) -> Response | None:
+        """Rate limits, token, host and (for state changes) origin. None means allowed."""
+        state = client(request)
+        if state is None:
+            return _not_found()
+        if throttled(state):
+            return _json(
+                {"status": "rejected", "reason": "slow_down", "message": "Too many requests."},
+                429,
+            )
         token = str(request.path_params.get("token", ""))
         host = request.headers.get("host", "")
         if session.allowed_hosts and host not in session.allowed_hosts:
-            return False
-        return hmac.compare_digest(token.encode(), session.token.encode()) and session.live
+            return failure(state)
+        if not (hmac.compare_digest(token.encode(), session.token.encode()) and session.live):
+            return failure(state)
+        origin = request.headers.get("origin")
+        if changes and origins and origin is not None and origin not in origins:
+            # A browser sending a different Origin means another site made the request.
+            return _json(
+                {"status": "rejected", "reason": "bad_origin", "message": "Wrong page."}, 403
+            )
+        return None
 
     async def page(request: Request) -> Response:
-        if not authorized(request):
-            return _not_found()
+        if (refused := gate(request)) is not None:
+            return refused
         headers = {
             **_SECURITY_HEADERS,
             "Content-Security-Policy": (
@@ -138,8 +199,8 @@ def create_app(session: Session) -> Starlette:
         return HTMLResponse(render_page(session), headers=headers)
 
     async def status(request: Request) -> Response:
-        if not authorized(request):
-            return _not_found()
+        if (refused := gate(request)) is not None:
+            return refused
         remaining = max(0, int(session.expires_at - session.clock()))
         return _json(
             {
@@ -153,19 +214,21 @@ def create_app(session: Session) -> Starlette:
         )
 
     async def finish(request: Request) -> Response:
-        if not authorized(request):
-            return _not_found()
+        if (refused := gate(request, changes=True)) is not None:
+            return refused
         session.end("finished_on_phone")
         return _json({"status": "finished"})
 
     async def upload(request: Request) -> Response:
-        if not authorized(request):
-            return _not_found()
+        if (refused := gate(request, changes=True)) is not None:
+            return refused
         index = len(session.uploads) + 1
         name = sanitize_name(request.query_params.get("name"), index)
         record: Upload | None = None
         target: Path | None = None
         try:
+            if len(session.uploads) >= limits.max_attempts:
+                raise Rejected(429, "too_many_attempts", "Too many attempts for one session.")
             if session.active >= session.limits.max_concurrent:
                 raise Rejected(429, "busy", "Wait for the current upload to finish.")
             check_name(name)
@@ -228,8 +291,10 @@ def create_app(session: Session) -> Starlette:
         )
         return _json({"status": "received", "name": record.name, "size": record.size})
 
-    async def other(_: Request) -> Response:
-        return _not_found()
+    async def other(request: Request) -> Response:
+        # Unknown paths count as guesses, like wrong tokens.
+        state = client(request)
+        return _not_found() if state is None else failure(state)
 
     routes = [
         Route("/u/{token}/", page, methods=["GET"]),
@@ -351,6 +416,9 @@ to OpenWorld Moments on your computer over this Wi-Fi network.</p>
     disk_full: "The computer is out of space.",
     storage_unavailable: "The computer could not save the file.",
     busy: "Busy, try again.",
+    too_many_attempts: "Too many attempts. Open a new upload page on the computer.",
+    slow_down: "Too many requests. Wait a minute and try again.",
+    bad_origin: "Send files from the upload page itself.",
     expired: "The session expired."
   };
   function row(file) {

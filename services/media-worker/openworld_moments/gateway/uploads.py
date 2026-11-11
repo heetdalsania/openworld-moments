@@ -27,7 +27,9 @@ _WINDOWS_RESERVED = frozenset(
         *(f"lpt{i}" for i in range(1, 10)),
     }
 )
-_UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f]')
+# Reserved and control characters, plus Unicode bidirectional controls that can make
+# a name display differently from what it is (e.g. U+202E hiding an extension, M30).
+_UNSAFE = re.compile(r'[<>:"/\\|?*\x00-\x1f\x7f\u200e\u200f\u202a-\u202e\u2066-\u2069]')
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,16 @@ class Limits:
     free_space_margin: int = 1024**3
     #: Uploads that may run at the same time.
     max_concurrent: int = 2
+    #: Upload attempts per session, refused ones included (M30: bounds the records
+    #: and folders a token holder can create by retrying rejected files).
+    max_attempts: int = 300
+    #: Requests one client address may make per minute. The phone page sends one
+    #: request per file, so this only stops floods.
+    requests_per_minute: int = 120
+    #: Wrong-token or unknown-path requests before a client address is ignored.
+    max_failed_requests: int = 20
+    #: Failed requests from all addresses together before the session ends safely.
+    max_failed_total: int = 1000
 
 
 class Rejected(Exception):

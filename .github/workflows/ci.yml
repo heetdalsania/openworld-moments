@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: pnpm/action-setup@v6.1.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
@@ -46,7 +46,7 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -93,12 +93,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: pnpm/action-setup@v6.1.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: pnpm
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -122,9 +122,9 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
       # rustup installs the toolchain pinned in rust-toolchain.toml on first use.
       - run: rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2.9.3
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # Supervisor integration tests start the real Python worker from .venv.
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
@@ -146,27 +146,32 @@ jobs:
     name: Desktop production build (Windows)
     runs-on: windows-2025
     timeout-minutes: 60
+    permissions:
+      contents: read
+      # M30: signed build-provenance attestations for release files (pushes to main only).
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: pnpm/action-setup@v6.1.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .node-version
           cache: pnpm
       - run: rustup show active-toolchain
-      - uses: Swatinem/rust-cache@v2.9.3
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           cache-on-failure: true
           key: packaged-windows-x64-v1
       - run: pnpm install --frozen-lockfile
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.7"
           enable-cache: true
           cache-dependency-glob: uv.lock
-      - run: uv sync --managed-python --locked --all-packages --group packaging --python cpython-3.12.14-windows-x86_64-none
+      - run: uv sync --managed-python --locked --all-packages --no-dev --group packaging --python cpython-3.12.14-windows-x86_64-none
       - name: Verify and extract pinned media sources
-        run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/prepare-sources.py
+        run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/windows/prepare-sources.py
       - uses: actions/cache@v6.1.0
         id: media-cache
         with:
@@ -189,12 +194,12 @@ jobs:
           path: output/packaging/media
           key: windows-x64-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/windows/build-media.sh') }}
       - name: Freeze and inventory worker
-        run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
+        run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
       - name: Repeat frozen build and compare payload
         shell: pwsh
         run: |
           Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-first.json
-          uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
+          uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/windows/freeze-worker.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Copy-Item apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/repro-second.json
           python -c "import json,pathlib;d=pathlib.Path('output/packaging');a=json.loads((d/'repro-first.json').read_text());b=json.loads((d/'repro-second.json').read_text());changed=sorted(k for k in set(a['files'])|set(b['files']) if a['files'].get(k)!=b['files'].get(k));(d/'reproducibility.json').write_text(json.dumps({'frozen_payload_identical':not changed,'changed_files':changed,'installer_bit_reproducibility':'not claimed'}));assert not changed,changed"
@@ -204,6 +209,11 @@ jobs:
         run: |
           python ../../../../../scripts/windows/frozen-worker-probe.py (Resolve-Path owm-worker.exe) -m openworld_moments.worker
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Keep build-machine paths out of Rust binaries
+        shell: pwsh
+        run: |
+          $cargo = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
+          "RUSTFLAGS=--remap-path-prefix=$cargo=/cargo --remap-path-prefix=$env:GITHUB_WORKSPACE=/build" >> $env:GITHUB_ENV
       - run: pnpm build:windows
       - name: Install, native WebView import/render, repair, upgrade and uninstall retention
         shell: pwsh
@@ -218,8 +228,26 @@ jobs:
           $hash = (Get-FileHash -LiteralPath (Join-Path $out $upgrade.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
           Set-Content -Path (Join-Path $out 'SHA256SUMS.txt') -Value "$hash  $($upgrade.Name)" -Encoding ascii
           Set-Content -Path (Join-Path $out 'README.txt') -Encoding utf8 -Value 'TEST ONLY. Same source and frozen runtime as the candidate with version 0.1.0-alpha.29.1, used solely to exercise the M29 upgrade path on a clean Windows 11 client. Never distribute.'
-      - name: Assemble checksums, source and notices
+      - name: Assemble checksums, source, notices and SBOM
         run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/artifacts.py
+      - name: Verify the SBOM against the package and scan artifacts for secrets and paths
+        shell: bash
+        run: |
+          uv run --locked --group packaging --directory services/media-worker python ../../scripts/security/verify_sbom.py \
+            --sbom ../../output/packaging/release/sbom.cdx.json \
+            --inventory ../../apps/desktop/src-tauri/bundle-input/runtime/inventory.json \
+            --runtime-dir ../../apps/desktop/src-tauri/bundle-input/runtime \
+            --release-dir ../../output/packaging/release
+          uv run --locked --group packaging --directory services/media-worker python ../../scripts/security/scan_artifacts.py \
+            ../../output/packaging/release \
+            ../../apps/desktop/src-tauri/bundle-input/runtime \
+            ../../target/x86_64-pc-windows-msvc/release/openworld-moments-desktop.exe \
+            --report ../../output/packaging/artifact-scan.json
+      - name: Attest build provenance of the release files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: output/packaging/release/*
       - uses: actions/upload-artifact@v7.0.2
         if: success()
         with:
@@ -244,12 +272,43 @@ jobs:
             output/packaging/freeze-work/owm-worker/warn-owm-worker.txt
           if-no-files-found: ignore
 
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0 # secret scanning covers the whole history
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --locked --all-packages
+      - name: Secret scan (gitleaks 8.30.1, checksum-verified)
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks git --config .gitleaks.toml --redact --no-banner .
+      - name: Install cargo-audit 0.22.2
+        run: cargo install cargo-audit --locked --version 0.22.2
+      - name: Known vulnerabilities in shipped dependencies
+        run: uv run --directory services/media-worker python ../../scripts/security/audit_dependencies.py
+      - name: License policy for shipped dependencies
+        run: uv run --directory services/media-worker python ../../scripts/security/check_licenses.py --live
+
   licenses:
     name: License compliance (REUSE)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uvx --python 3.12 --from "reuse[charset-normalizer]==6.2.0" reuse lint
 
   dco:

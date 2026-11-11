@@ -4,11 +4,34 @@
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from build_paths import redact  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "output/packaging"
 RUNTIME = ROOT / "apps/desktop/src-tauri/bundle-input/runtime"
+
+
+def write_sbom(installer: Path, release: Path) -> None:
+    """Generate the CycloneDX SBOM for this package (M30)."""
+    subprocess.run(  # noqa: S603 - fixed script and arguments
+        [
+            sys.executable,
+            str(ROOT / "scripts/security/sbom.py"),
+            "--inventory",
+            str(RUNTIME / "inventory.json"),
+            "--installer",
+            str(installer),
+            "--output",
+            str(release / "sbom.cdx.json"),
+        ],
+        check=True,
+    )
 
 
 def main() -> None:
@@ -41,8 +64,18 @@ def main() -> None:
     shutil.make_archive(str(release / "runtime-notices"), "zip", RUNTIME / "notices")
     for path in ("build-media.sh", "freeze-worker.py", "sources.json", "python-notices.json"):
         shutil.copyfile(ROOT / "scripts/windows" / path, release / path)
-    for path in ("compiler.txt", "build-packages.txt", "config.log"):
-        shutil.copyfile(OUT / "media" / path, release / path)
+    # Build notes name the CI workspace and temp folders; ship them redacted (M30).
+    # FFmpeg's config.log is not shipped: autoconf dumps the whole CI environment into
+    # it. The exact sources, build script, compiler, packages and configure line
+    # (runtime inventory) are what corresponding source needs.
+    for path in ("compiler.txt", "build-packages.txt"):
+        text = (OUT / "media" / path).read_text("utf-8", errors="replace")
+        (release / path).write_text(redact(text), encoding="utf-8")
+    # M30: a CycloneDX SBOM of exactly this package, plus the disclosure policy and
+    # verification instructions, all covered by checksums.txt below.
+    write_sbom(release / "OpenWorld-Moments_0.1.0-alpha.29_Windows_x64-setup.exe", release)
+    shutil.copyfile(ROOT / "SECURITY.md", release / "SECURITY.md")
+    shutil.copyfile(ROOT / "docs/security/release-verification.md", release / "VERIFY.md")
     files = []
     for path in sorted(release.iterdir()):
         files.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}")

@@ -58,6 +58,13 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         ROOT=tmp_path, OUT=tmp_path / "output/packaging", RUNTIME=tmp_path / "runtime"
     )
     out, runtime = module.OUT, module.RUNTIME
+    # The real generator needs the lockfiles; its own tests live in tests/security.
+    module.__dict__["write_sbom"] = lambda installer, release: (
+        release / "sbom.cdx.json"
+    ).write_text('{"bomFormat": "CycloneDX"}')
+    (tmp_path / "SECURITY.md").write_text("policy fixture")
+    (tmp_path / "docs/security").mkdir(parents=True)
+    (tmp_path / "docs/security/release-verification.md").write_text("verify fixture")
     (out / "sources").mkdir(parents=True)
     (out / "sources/source.tar.xz").write_bytes(b"source archive fixture")
     (out / "media").mkdir()
@@ -96,6 +103,8 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
     assert "checksums.txt" not in listed
     assert "runtime-notices.zip" in listed
+    assert {"sbom.cdx.json", "SECURITY.md", "VERIFY.md"} <= set(listed)
+    assert "config.log" not in listed
 
 
 def test_stdlib_archive_normalization_preserves_code_and_detects_changes(tmp_path: Path) -> None:
