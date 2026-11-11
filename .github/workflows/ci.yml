@@ -208,6 +208,16 @@ jobs:
       - name: Install, native WebView import/render, repair, upgrade and uninstall retention
         shell: pwsh
         run: scripts/windows/lifecycle-smoke.ps1
+      - name: Stage the test-only upgrade installer for client qualification
+        shell: pwsh
+        run: |
+          $upgrade = Get-ChildItem 'target/x86_64-pc-windows-msvc/release/bundle/nsis/*alpha.29.1*-setup.exe' | Select-Object -First 1
+          if (-not $upgrade) { throw 'Upgrade package missing' }
+          $out = New-Item -ItemType Directory -Force -Path 'output/packaging/upgrade-test'
+          Copy-Item -LiteralPath $upgrade.FullName -Destination $out
+          $hash = (Get-FileHash -LiteralPath (Join-Path $out $upgrade.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -Path (Join-Path $out 'SHA256SUMS.txt') -Value "$hash  $($upgrade.Name)" -Encoding ascii
+          Set-Content -Path (Join-Path $out 'README.txt') -Encoding utf8 -Value 'TEST ONLY. Same source and frozen runtime as the candidate with version 0.1.0-alpha.29.1, used solely to exercise the M29 upgrade path on a clean Windows 11 client. Never distribute.'
       - name: Assemble checksums, source and notices
         run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/artifacts.py
       - uses: actions/upload-artifact@v7.0.2
@@ -216,6 +226,13 @@ jobs:
           name: Windows-x64-alpha-candidate
           path: output/packaging/release/
           if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        if: success()
+        with:
+          name: Windows-x64-upgrade-test-only
+          path: output/packaging/upgrade-test/
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:

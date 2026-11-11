@@ -12,7 +12,7 @@ OpenWorld Moments is **not** a console mod, recorder, cheat, game-memory reader,
 
 **Foundation lane in progress. No usable application has been released yet.**
 
-M29 implementation is in progress under the accepted [GPL FFmpeg packaging decision](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md). A Windows installer candidate and optional model manager are being validated. Clean Windows 11 qualification remains required; no public alpha has been released.
+M29 is complete under the accepted [GPL FFmpeg packaging decision](./docs/architecture/adr/0007-windows-ffmpeg-packaging.md): an unsigned per-user Windows installer candidate with an optional model manager, qualified on a clean Windows 11 laptop ([report](./docs/milestones/M29-windows-client-report.md)); the post-fix retest was waived by maintainer decision. No public alpha has been released; M32 is the alpha gate.
 
 Milestone delivery:
 
@@ -29,7 +29,7 @@ Milestone delivery:
 | M07 — Watched folders and Xbox onboarding | Native folder watching with stabilization, startup and periodic reconciliation, offline backoff, and cloud-placeholder handling; watched-folder settings and an Xbox/OneDrive onboarding card in the app ([watched folders](./docs/architecture/watched-folders.md), [Xbox guide](./docs/guides/xbox-onedrive.md)) |
 | M08 — Proxies, thumbnails, and waveforms | Explainable proxy decisions; deterministic H.264 SDR proxies with LUT-based HDR tone mapping; filmstrip thumbnails and compact waveforms; cache keys with invalidation, atomic promotion, validated outputs, cancellation, and safe cleanup ([derived media](./docs/architecture/derived-media.md)) |
 | M09 — Desktop library and jobs UI | The first usable app: import by button or drag and drop, a paged library with thumbnails, clip pages that play a proxy or the original over a range-capable media protocol, automatic playback preparation, and a background-job center with progress, cancel, retry, and readable errors ([desktop UI](./docs/architecture/desktop-ui.md)) |
-| M10 — Phone QR upload (in review: real-phone smoke test on Windows pending) | "Import from phone": a temporary, separate LAN upload gateway on a chosen private address with a 256-bit, 10-minute QR link; streamed, size-limited, type-checked uploads into a fixed staging folder; managed imports of received clips ([phone upload](./docs/architecture/phone-upload.md), [guide](./docs/guides/phone-upload.md)) |
+| M10 — Phone QR upload | "Import from phone": a temporary, separate LAN upload gateway on a chosen private address with a 256-bit, 10-minute QR link; streamed, size-limited, type-checked uploads into a fixed staging folder; managed imports of received clips ([phone upload](./docs/architecture/phone-upload.md), [guide](./docs/guides/phone-upload.md)) |
 | M11 — Session grouping | Explainable capture-time estimates (filename, container, mtime, with confidence and time-zone caveats), deterministic metadata grouping into candidate sessions with per-join evidence, an idempotent recompute job, and merge/split/reorder/remove/confirm corrections that survive recomputation ([sessions](./docs/architecture/sessions.md)) |
 | M12 — Visual and audio overlap | Finds repeated replay footage between adjacent clips from fingerprints (continuous frame matching, ambiguity rejection, audio refinement), applies only confident results to the session layout, and keeps user overrides above recomputation ([overlap](./docs/architecture/overlap.md)) |
 | M13 — Virtual session timeline | A Sessions screen and a session player that plays a whole session as one gap-free timeline: clips switch seamlessly at boundaries without replaying repeated footage, which can be revealed; frame steps, keyboard controls, a track with thumbnails, waveforms, and overlap confidence, and reorder/split/merge/override corrections, with every moment traceable to its source clip ([session timeline](./docs/architecture/session-timeline.md)) |
@@ -48,7 +48,7 @@ Milestone delivery:
 | M26 — Search and collections | Local SQLite FTS5 search over clips, sessions, OCR/event labels, transcript spans and projects, kept current by triggers in the same transaction; safe query grammar, facets and filters, timestamp results that open at the matching moment, keyboard-complete Search screen, manual and rule collections that explain each match, cancellable rebuild with stale/corrupt recovery, privacy-safe clearing; 10,000-clip queries under 300 ms ([search](./docs/architecture/search.md)) |
 | M27 — Open exports and manifests | Deterministic project JSON, event JSONL, SRT/WebVTT, CSV markers, OpenTimelineIO and experimental FCPXML from the saved revision, with capability declarations and warnings instead of silent loss; render manifests with source hashes, project revision, encoder, FFmpeg, detector and profile versions; no absolute paths unless explicitly chosen ([exports](./docs/architecture/exports.md)) |
 | M28 — Privacy and spoiler review | Conservative local text/audio/spoiler findings with supporting ranges, reversible creator decisions, moving rectangular blurs and mute suggestions; current-review gates for renders and open/caption exports; text-only deletion preserves originals ([review](./docs/architecture/privacy-review.md)) |
-| M29 — Windows packaging and model manager (in progress) | Per-user NSIS candidate, bundled pinned worker/media tools, system doctor and explicit signed-catalog downloads; qualification pending ([packaging](./docs/architecture/windows-packaging.md)) |
+| M29 — Windows packaging and model manager | Per-user NSIS installer candidate, bundled pinned worker/media tools, system doctor and explicit signed-catalog model downloads with resume; clean Windows 11 client run ([packaging](./docs/architecture/windows-packaging.md), [report](./docs/milestones/M29-windows-client-report.md)) |
 
 You can import clips (by button, drag and drop, a watched folder, or from your phone over Wi-Fi), browse them in the library, and play them, with playback copies prepared automatically. Clips are grouped into play sessions that play back as one continuous timeline with repeated footage skipped; profiles can be calibrated visually and the detector runtime can infer wanted-indicator changes from a regular synthetic star/disc HUD. Local OCR can also produce confirmed banner and subtitle intervals from calibrated regions, audio analysis adds supporting loudness, silence and speech-activity evidence, and sessions can be transcribed locally with your own whisper.cpp install and model. Game compatibility remains unvalidated. Events can now be inspected, approved, rejected, corrected or added manually on the session timeline; story candidates can be generated and reviewed through the local CLI/API, and manual or existing projects can be edited visually through the Projects screen, including caption correction and simple audio gain/mute. Everything is searchable locally, results open at the matching moment, and collections keep hand-picked lists or saved searches. Development is divided into self-contained milestones intended to be completed in separate agent or contributor sessions.
 
@@ -116,6 +116,7 @@ The release roadmap now covers both Windows and macOS:
 - macOS 14+ on Apple Silicon is supported through a native `arm64` DMG.
 - macOS 14+ on supported Intel Macs is supported through a native `x86_64` DMG.
 - M39 is the final dual-platform qualification gate.
+- M40 is an optional, non-blocking Windows verification of checks waived in M29/M10.
 
 The two Mac packages are separate so neither architecture requires Rosetta and every bundled worker/media dependency remains native. Linux remains a later target. See the [macOS delivery plan](./docs/platforms/macos-delivery-plan.md) for packaging, permissions, testing, signing, and notarization details.
 
@@ -370,13 +371,13 @@ The product specification includes links to console capture documentation, exist
 
 M28 adds local privacy and spoiler review, moving blur regions, mute suggestions
 and current-review export gates (see the [M28 handoff](./docs/milestones/M28-handoff.md)).
-The current milestone is [M29 — Windows packaging and model manager](./docs/milestones/M29-windows-packaging-and-models.md). The GPL packaging plan is accepted. Finish the Windows installer/model manager and its clean Windows 11 x64 qualification before starting M30. See the [M29 handoff](./docs/milestones/M29-handoff.md) and [Windows packaging guide](./docs/architecture/windows-packaging.md).
+M29 packages the app as an unsigned per-user Windows installer with an optional model manager (see the [M29 handoff](./docs/milestones/M29-handoff.md) and [Windows packaging guide](./docs/architecture/windows-packaging.md)). The next milestones are now unblocked and independent of each other: [M30 — Security hardening and SBOM](./docs/milestones/M30-security-hardening-and-sbom.md), [M31 — Accessibility, onboarding, and documentation](./docs/milestones/M31-accessibility-onboarding-docs.md) and [M33 — macOS foundation and CI](./docs/milestones/M33-macos-foundation-and-ci.md).
 
 Text overlays and burned-in captions are recorded but not drawn yet (an explicit
 omission hook); see the [M24 handoff](./docs/milestones/M24-handoff.md) and
 [render engine](./docs/architecture/render.md).
 
-M10 still needs its real-phone smoke test on a Windows private network. Detector
+M10's post-fix multi-video phone upload and M29's single-click model cancel are verified by automated tests only; both are deferred to the non-blocking [M40 Windows verification](./docs/milestones/M40-windows-deferred-verification.md). Detector
 quality remains synthetic/local; GTA profiles are unvalidated and M18 real
 whisper.cpp recognition is unmeasured. See the [M20 handoff](./docs/milestones/M20-handoff.md),
 [story algorithm](./docs/architecture/stories.md) and [synthetic coverage report](./docs/stories/sample/report.md).

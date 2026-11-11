@@ -89,7 +89,13 @@ function JobRow({ job }: { job: Job }) {
           )}
         </div>
       )}
-      {job.state === "cancelled" && <p className="muted">Cancelled. Nothing partial was kept.</p>}
+      {job.state === "cancelled" && (
+        <p className="muted">
+          {job.kind === "model_download"
+            ? "Cancelled. The partial download is kept so you can resume it in Settings."
+            : "Cancelled. Nothing partial was kept."}
+        </p>
+      )}
       {job.kind === "import" && job.result && (
         <ImportSummary result={job.result as unknown as ImportResult} />
       )}

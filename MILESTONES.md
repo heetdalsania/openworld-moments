@@ -1,6 +1,6 @@
 # OpenWorld Moments Milestones
 
-This document is the execution index for the repository. Every implementation task is called a **milestone** and is designed to fit one focused agent or contributor session. The roadmap contains 40 milestones, M00 through M39. Each milestone should normally produce one branch, one pull request, and one mergeable increment.
+This document is the execution index for the repository. Every implementation task is called a **milestone** and is designed to fit one focused agent or contributor session. The roadmap contains 41 milestones, M00 through M40 (M40 is a non-blocking verification pass). Each milestone should normally produce one branch, one pull request, and one mergeable increment.
 
 The detailed product requirements remain in [OPENWORLD_MOMENTS_BUILD_SPEC.md](./OPENWORLD_MOMENTS_BUILD_SPEC.md). Individual briefs live in [docs/milestones](./docs/milestones/).
 
@@ -134,6 +134,8 @@ flowchart TD
     M32 --> M39[M39 Dual-platform release qualification]
     M37 --> M39
     M38 --> M39
+    M29 -.-> M40[M40 Windows deferred verification, non-blocking]
+    M10 -.-> M40
 ```
 
 ## Parallel work lanes
@@ -146,6 +148,7 @@ Once their dependencies are merged, the following milestones are intentionally p
 - M20, M21, M24, and M26 after their separate prerequisites.
 - M23, M25, M27, and M28 once the editor model/UI is stable.
 - M33 can begin after M24/M29 while independent product milestones continue.
+- M40 can run at any time after M29; nothing depends on it.
 - M35 and M36 may proceed in parallel after M34, but must coordinate bundle and capability contracts.
 
 Parallel agents must not edit the same generated contract or migration without coordinating first.
@@ -209,6 +212,7 @@ required check is skipped.
 | M37 | macOS signing, notarization, and DMGs | M30, M34–M36 | Signed and notarized native DMGs | [Open](./docs/milestones/M37-macos-signing-notarization-and-dmg.md) |
 | M38 | macOS UX, accessibility, and documentation | M31, M35, M37 | Native conventions, VoiceOver, onboarding, and guides | [Open](./docs/milestones/M38-macos-ux-accessibility-and-docs.md) |
 | M39 | Dual-platform release qualification | M32, M37, M38 | Qualified Windows and macOS release assets | [Open](./docs/milestones/M39-dual-platform-release-qualification.md) |
+| M40 | Windows deferred verification (non-blocking) | M10, M29 | Windows evidence for checks waived in M29/M10; gates nothing | [Open](./docs/milestones/M40-windows-deferred-verification.md) |
 
 ## Required quality gates by lane
 
@@ -273,7 +277,7 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M07 | Complete | [#12](https://github.com/heetdalsania/openworld-moments/pull/12) | — | Arun Velkumar | Rust watcher (notify + 15-min reconciliation, 10 s stabilization, offline backoff, cloud placeholders), worker-side folder settings and per-version file records with deduplicated imports, settings UI and Xbox/OneDrive onboarding; contracts 1.5, migration 0006 |
 | M08 | Complete | [#13](https://github.com/heetdalsania/openworld-moments/pull/13) | — | Arun Velkumar | Explainable proxy policy; deterministic H.264 SDR proxies with LUT-based (lut3d, no zimg) HDR tone mapping; filmstrip JPEGs and owm-waveform peaks; versioned recipes and cache keys, atomic key-named promotion, FFprobe and sampled-decode validation, cancellable FFmpeg with progress, link-safe cleanup; contracts 1.6, migration 0007 |
 | M09 | Complete | [#14](https://github.com/heetdalsania/openworld-moments/pull/14) | — | Arun Velkumar | App shell with Library and Settings; import by button or drag and drop; newest-first keyset-paged library; clip view playing proxy or original over an allow-listed `owm-media` Range protocol; automatic playback preparation; durable job center with live events, cancel, retry, readable errors; keyboard-complete; `worker_api` route allowlist; E2E import-to-playback test |
-| M10 | In review | [#15](https://github.com/heetdalsania/openworld-moments/pull/15) | — | Arun Velkumar | Separate LAN gateway process on one chosen private address; 256-bit token, 10-minute expiry, closes with the screen; streamed uploads with extension, magic, size, count, and free-space checks into `staging/phone/<session>/NNNN/`; managed `phone_upload` imports; threat tests and E2E. **Pending: real-phone smoke test on a Windows private network** |
+| M10 | Complete | [#15](https://github.com/heetdalsania/openworld-moments/pull/15), [#38](https://github.com/heetdalsania/openworld-moments/pull/38) | — | Arun Velkumar | Separate LAN gateway process on one chosen private address; 256-bit token, 10-minute expiry, closes with the screen; streamed uploads with extension, magic, size, count, and free-space checks into `staging/phone/<session>/NNNN/`; managed `phone_upload` imports; threat tests and E2E. Windows 11 real-phone run ([report](./docs/milestones/M29-windows-client-report.md)) found a second-upload "out of space" defect, fixed in #38 with regression tests; post-fix phone retest waived by maintainer decision (deferred to non-blocking M40) |
 | M11 | Complete | [#16](https://github.com/heetdalsania/openworld-moments/pull/16) | — | Arun Velkumar | Capture-time estimator v1 (filename patterns, container, mtime; agreement/disagreement confidence, time-zone notes, copy artefacts); `owm-metadata-gap` v1 grouping (source, format, 15-min gap, import order) with per-join evidence; idempotent `group` job; merge/split/reorder/remove/confirm corrections with a log; synthetic fixtures; contracts 1.7, migration 0008 |
 | M12 | Complete | [#18](https://github.com/heetdalsania/openworld-moments/pull/18) | — | Arun Velkumar | `owm-overlap` v1: dhash256 vote-and-verify alignment of A's tail with B's head (≥4 compared, ≥80% matching, ≥2 s unbroken run), ambiguity rejection for repeating footage, envelope cross-correlation refinement; applies only `matched` (≥0.6) or user overrides via the shared session layout; cached per pair and version; `align` job and override API; contracts 1.8, migration 0009 |
 | M13 | Complete | [#19](https://github.com/heetdalsania/openworld-moments/pull/19) | — | Arun Velkumar | Pure source ↔ virtual time mapping (`timeline.ts`; round trips within one frame at 23.976–120 fps and VFR averages); two-element `SessionPlayer` that preloads the next clip at its first unique frame, switches at boundaries without replaying hidden overlap, keeps audio with the visible clip, and keeps the moment across reveal/reorder; Sessions and session screens with track, thumbnails, waveforms, overlap confidence, reveal toggle, keyboard controls, and reorder/split/remove/merge/override/confirm; session routes and PUT allow-listed in the host; E2E against the real worker |
@@ -292,8 +296,8 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M26 | Complete | [#32](https://github.com/heetdalsania/openworld-moments/pull/32) | — | Arun Velkumar | Contracts 1.20 `search`, `search-index`, `collection`; migration 0016 trigger-maintained FTS5 index (secure-delete) over clips, sessions, effective events/OCR, transcript spans and projects; safe query grammar, filters, facets, ranking and timestamp results; keyboard search-to-playback; manual and rule collections with reasons; cancellable rebuild, stale/corrupt recovery, privacy clear; 10,000-clip p95 ≤ 138 ms on M4. See [handoff](./docs/milestones/M26-handoff.md). |
 | M27 | Complete | [#33](https://github.com/heetdalsania/openworld-moments/pull/33) | — | Arun Velkumar | Contracts 1.21 `export-result`, `project-export`, `event-export` and extended `export-manifest`; migration 0017 stored render manifests; deterministic project JSON, event JSONL, SRT/WebVTT (byte-identical to the desktop), CSV markers with formula guard, OpenTimelineIO (validated with OTIO 0.18 and `otiostat`) and experimental FCPXML; warnings for unsupported operations and missing sources; paths only on explicit opt-in; host native save. See [handoff](./docs/milestones/M27-handoff.md). |
 | M28 | Complete | [#34](https://github.com/heetdalsania/openworld-moments/pull/34) | — | Arun Velkumar | Contracts 1.22; migration 0018 hashed local review decisions; conservative OCR/caption/transcript/audio/spoiler findings, exact-range review, reversible choices, moving blur preview/render goldens, M23 mute suggestions, current-review gates for renders and project/caption/portable exports, and explicit text-only deletion. Required-tool gate, platform types, native build and synthetic Chromium walkthrough pass. See [handoff](./docs/milestones/M28-handoff.md). |
-| M29 | In progress | [#36 (candidate)](https://github.com/heetdalsania/openworld-moments/pull/36), [#35 (accepted plan)](https://github.com/heetdalsania/openworld-moments/pull/35) | — | — | GPL packaging policy accepted. Installer/model-manager implementation and clean Windows 11 validation are in progress; [handoff](./docs/milestones/M29-handoff.md). Not complete. |
-| M30–M39 | See dependency graph | — | — | — | — |
+| M29 | Complete | [#35 (plan)](https://github.com/heetdalsania/openworld-moments/pull/35), [#36](https://github.com/heetdalsania/openworld-moments/pull/36), [#37](https://github.com/heetdalsania/openworld-moments/pull/37) | — | Heet Dalsania | Per-user NSIS installer, bundled worker/FFmpeg, system doctor, signed model catalog; clean Windows 11 x64 client run ([report](./docs/milestones/M29-windows-client-report.md)) passed all M29 steps (6.2/6.3 by maintainer decision); cancel defects fixed in #37; post-fix retest waived by maintainer decision and deferred to non-blocking M40. See [handoff](./docs/milestones/M29-handoff.md). |
+| M30–M40 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 
