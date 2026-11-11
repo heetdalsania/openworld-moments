@@ -3,7 +3,7 @@ import { act, cleanup, render, renderHook, screen, within } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { JobCenter } from "./JobCenter";
-import { reloadJobs, resetJobs, useJobFeed } from "./jobs";
+import { reloadJobs, resetJobs, upsertJob, useJobFeed, useJobs } from "./jobs";
 import { resetQueries } from "./query";
 import { createHost, type FakeHost, install, job, must } from "./testing/fakeHost";
 
@@ -62,6 +62,30 @@ describe("job center", () => {
     const row = await screen.findByRole("listitem", { name: "Prepare playback: Cancelled" });
     expect(within(row).getByText(/Nothing partial was kept/)).toBeTruthy();
     expect(within(row).queryByRole("button")).toBeNull();
+  });
+
+  it("says a cancelled model download keeps its partial", async () => {
+    const cancelled = job({
+      kind: "model_download",
+      state: "cancelled",
+      params: { name: "base.en" },
+    });
+    host.route("GET /v1/jobs?limit=200", [cancelled]);
+    render(<JobCenter onClose={() => undefined} />);
+    await act(reloadJobs);
+    expect(screen.getByText(/partial download is kept so you can resume it/)).toBeTruthy();
+    expect(screen.queryByText(/Nothing partial was kept/)).toBeNull();
+  });
+
+  it("keeps a finished state when a slower cancel reply still says running", () => {
+    const running = job({ kind: "model_download", state: "analyzing", attempt: 1 });
+    const { result } = renderHook(() => useJobs());
+    act(() => upsertJob(running));
+    act(() => upsertJob({ ...running, state: "cancelled" })); // live event
+    act(() => upsertJob(running)); // stale reply to the cancel request
+    expect(result.current.jobs[0]?.state).toBe("cancelled");
+    act(() => upsertJob({ ...running, state: "queued", attempt: 2 })); // retry
+    expect(result.current.jobs[0]?.state).toBe("queued");
   });
 
   it("retries only retryable failures and hides technical details by default", async () => {

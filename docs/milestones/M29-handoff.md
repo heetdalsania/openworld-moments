@@ -128,6 +128,11 @@
     partial was kept" although the partial is kept; Cancel in Settings left the job
     "Working"; the desktop phone screen keeps the QR code at "Closes in 0:00" after
     the phone finishes.
+  - Fixes for those findings: the model-download cancel defects are fixed in #37
+    (stale cancel replies no longer overwrite a finished job; cancelled downloads
+    say their partial is kept). The phone "out of space" failure is an M10 defect,
+    fixed in [#38](https://github.com/heetdalsania/openworld-moments/pull/38).
+    The [retest](./M29-windows-rerun-prompt.md) repeats only the affected steps.
 - Follow-up milestones affected: M30, M31, M33 and M34 must respect the actual M29
   completion dependency. M32 remains the public alpha gate.
 - Screenshots, reports, or artifacts: Ignored local Settings screenshot under

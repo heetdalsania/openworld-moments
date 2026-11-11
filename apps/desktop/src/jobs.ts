@@ -102,6 +102,17 @@ export async function reloadJobs(): Promise<void> {
 /** Apply one job snapshot (from an event or an action's response). */
 export function upsertJob(job: Job): void {
   const previous = state.jobs.find((j) => j.id === job.id);
+  // A cancel reply can arrive after the live event that already finished the job.
+  // Only a requeue (retry or recovery: "queued", or a new attempt) may make a
+  // finished job active again.
+  if (
+    previous &&
+    !isActive(previous) &&
+    isActive(job) &&
+    job.state !== "queued" &&
+    (job.attempt ?? 1) <= (previous.attempt ?? 1)
+  )
+    return;
   const others = state.jobs.filter((j) => j.id !== job.id);
   set({ jobs: sorted([job, ...others]) });
   if (
