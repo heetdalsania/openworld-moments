@@ -143,7 +143,9 @@ All dependency merge commits are ancestors of the implementation base `5ca9d27`:
 
 ### Remaining qualification gate
 
-Follow the clean Windows 11 x64 matrix in the [packaging guide](../architecture/windows-packaging.md):
+Execute the [Windows client runbook](./M29-windows-client-runbook.md), which also covers
+the pending M10 real-phone smoke test. It follows the clean Windows 11 x64 matrix in the
+[packaging guide](../architecture/windows-packaging.md):
 normal-user GUI install/launch without developer tools, first-run doctor, lawful
 synthetic import/render, optional download interruption/failure/Unicode cases,
 repair/upgrade with retained database/projects/backups, uninstall/reinstall
