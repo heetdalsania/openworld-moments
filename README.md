@@ -116,6 +116,7 @@ The release roadmap now covers both Windows and macOS:
 - macOS 14+ on Apple Silicon is supported through a native `arm64` DMG.
 - macOS 14+ on supported Intel Macs is supported through a native `x86_64` DMG.
 - M39 is the final dual-platform qualification gate.
+- M40 is an optional, non-blocking Windows verification of checks waived in M29/M10.
 
 The two Mac packages are separate so neither architecture requires Rosetta and every bundled worker/media dependency remains native. Linux remains a later target. See the [macOS delivery plan](./docs/platforms/macos-delivery-plan.md) for packaging, permissions, testing, signing, and notarization details.
 
@@ -376,7 +377,7 @@ Text overlays and burned-in captions are recorded but not drawn yet (an explicit
 omission hook); see the [M24 handoff](./docs/milestones/M24-handoff.md) and
 [render engine](./docs/architecture/render.md).
 
-M10's post-fix multi-video phone upload and M29's single-click model cancel are verified by automated tests only; M32 must repeat them on a Windows client. Detector
+M10's post-fix multi-video phone upload and M29's single-click model cancel are verified by automated tests only; both are deferred to the non-blocking [M40 Windows verification](./docs/milestones/M40-windows-deferred-verification.md). Detector
 quality remains synthetic/local; GTA profiles are unvalidated and M18 real
 whisper.cpp recognition is unmeasured. See the [M20 handoff](./docs/milestones/M20-handoff.md),
 [story algorithm](./docs/architecture/stories.md) and [synthetic coverage report](./docs/stories/sample/report.md).
