@@ -172,9 +172,14 @@ def create_app(session: Session) -> Starlette:
             length = request.headers.get("content-length")
             declared = int(length) if length and length.isdigit() else None
             try:
+                # The desktop may tidy an empty staging folder between uploads;
+                # recreate it rather than misreporting a missing folder as a full disk.
+                session.staging.mkdir(parents=True, exist_ok=True)
                 free = shutil.disk_usage(session.staging).free
-            except OSError:
-                free = 0
+            except OSError as exc:
+                raise Rejected(
+                    500, "storage_unavailable", "The computer could not save the file."
+                ) from exc
             size = check_size(
                 declared,
                 limits=session.limits,
@@ -344,6 +349,7 @@ to OpenWorld Moments on your computer over this Wi-Fi network.</p>
     session_full: "This session is full.",
     too_many_files: "Too many files for one session.",
     disk_full: "The computer is out of space.",
+    storage_unavailable: "The computer could not save the file.",
     busy: "Busy, try again.",
     expired: "The session expired."
   };
