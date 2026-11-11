@@ -33,7 +33,7 @@ afterwards on the development Mac from the report this runbook produces.
 
 ## 0. Machine setup (tester)
 
-1. Create a **standard (non-administrator) local account** under Settings →
+1. Preferably create a **standard (non-administrator) local account** under Settings →
    Accounts → Other users, sign in to it, and do everything below from it.
 2. Install the Claude app in that account, open Claude Code, and clone the repo
    into `%USERPROFILE%\src\openworld-moments` (checkout the branch above).
@@ -41,19 +41,29 @@ afterwards on the development Mac from the report this runbook produces.
 
 ## 1. Preflight (agent)
 
+**Administrator-account exception (accepted by the maintainer).** The tester may
+run this from a local administrator account if UAC is on. Every step still runs
+unelevated: never choose "Run as administrator", and any UAC prompt from the
+installer or app is a Fail. The report must state that the run used an
+administrator account with UAC, not a standard user. It must list two
+standard-user behaviours this run cannot show: whether a standard user can
+approve the M10 Windows Firewall prompt (it normally needs an administrator's
+credentials), and WebView2 repair (which needs administrator rights).
+
 Run in PowerShell and record outputs:
 
 ```powershell
 winver   # tester reads edition/version/build from the dialog
 Get-ComputerInfo -Property OsName,OsVersion,OsBuildNumber,OsArchitecture,CsProcessors,CsTotalPhysicalMemory
 (Get-CimInstance Win32_Processor).Architecture   # 9 = x64; anything else: stop
-whoami /groups | Select-String 'S-1-5-32-544'      # must show nothing (not admin) or 'Deny only'
+whoami /groups | Select-String 'S-1-5-32-544'      # empty = standard user; otherwise record the admin exception
+(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System').EnableLUA   # must be 1 (UAC on)
 foreach ($t in 'python','python3','py','uv','node','pnpm','ffmpeg','ffprobe','tesseract','bash','gcc') { "$t -> $((Get-Command $t -ErrorAction SilentlyContinue).Source)" }
 (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue).pv
 Get-NetConnectionProfile | Select-Object Name,NetworkCategory
 ```
 
-Pass criteria: Windows 11, x64, standard user, no developer tools on PATH other
+Pass criteria: Windows 11, x64, UAC on, no developer tools on PATH other
 than Git's `git.exe`. A Windows Store `python.exe` alias that only opens the Store
 is acceptable — record it. If the processor is not x64 or the OS is Windows 10,
 stop: the machine cannot qualify.

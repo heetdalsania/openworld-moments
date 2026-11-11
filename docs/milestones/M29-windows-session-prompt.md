@@ -2,8 +2,8 @@
 
 Instructions for a Claude Code session on the Windows 11 test laptop. It finishes
 M29 (and the pending M10 phone test) of `heetdalsania/openworld-moments`. The
-session runs in the tester's `WindowsTest` folder, under a standard (non-admin)
-local account. Work autonomously; stop only when the tester needs to click, look
+session runs in the tester's `WindowsTest` folder, under a standard local account
+or, under the runbook's accepted exception, an administrator account with UAC on. Work autonomously; stop only when the tester needs to click, look
 at the screen or use their phone.
 
 ## Setup
@@ -26,8 +26,7 @@ at the screen or use their phone.
 ## Execute
 
 5. Follow `M29-windows-client-runbook.md` sections 1–8 exactly and in order.
-   Hard stops: the machine is not Windows 11 x64; this account is an
-   administrator; an installer checksum does not match; or
+   Hard stops: the machine is not Windows 11 x64; UAC is off; an installer checksum does not match; or
    `%APPDATA%\org.openworldmoments.desktop` already exists before step 1.
 6. Use computer-use or screenshot tools if this session has them. Otherwise tell
    the tester exactly what to click, one step at a time, and wait for their
