@@ -54,6 +54,13 @@ thumbnails, waveforms, LUT tone mapping and existing render graphs remain the
 core path. Hardware encoders absent from this minimal build are unavailable;
 the doctor reports that limitation without claiming GPU support.
 
+Since M30 each package also has a CycloneDX SBOM (`sbom.cdx.json`), `SECURITY.md` and
+`VERIFY.md`, all in `checksums.txt`. CI verifies the SBOM against the packaged files,
+scans the release, runtime and desktop binary for secrets and absolute paths, remaps
+Rust build paths, and attests provenance for `main` builds. FFmpeg's `config.log` is
+no longer shipped because autoconf dumps the CI environment into it, and the shipped
+build notes are redacted. See [security engineering](../security/README.md).
+
 Each package has checksums, the exact FFmpeg/x264 source archives, build scripts,
 compiler/package versions, runtime inventory and license notices. The inventory
 audits every native PE file as x64, hashes payload files, and omits editable-build

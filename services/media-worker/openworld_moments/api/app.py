@@ -103,6 +103,11 @@ def error_body(
     return body
 
 
+#: Largest request body the API accepts (M30 resource limit). Editor documents and
+#: other JSON requests are a few megabytes at most; media never travels in bodies.
+MAX_REQUEST_BYTES = 32 * 1024 * 1024
+
+
 class Guard:
     """Pure ASGI middleware so the same checks cover HTTP and WebSocket."""
 
@@ -121,6 +126,8 @@ class Guard:
         scope.setdefault("state", {})["correlation_id"] = correlation_id
 
         problem = self._check(scope, headers)
+        if problem is None and scope["type"] == "http":
+            problem = self._check_body(headers)
         if problem is not None:
             status, code, message = problem
             log.warning("request rejected", extra={"code": code, "correlation_id": correlation_id})
@@ -159,6 +166,17 @@ class Guard:
             value.strip().encode(), self._token
         ):
             return 401, "auth.invalid_token", "Invalid bearer token."
+        return None
+
+    @staticmethod
+    def _check_body(headers: dict[str, str]) -> tuple[int, str, str] | None:
+        """Bound request bodies (M30). JSON documents are far smaller than this; the
+        server enforces the declared length, so unbounded chunked bodies are refused."""
+        if "chunked" in headers.get("transfer-encoding", "").lower():
+            return 411, "request.length_required", "Send a Content-Length with the body."
+        length = headers.get("content-length", "")
+        if length and (not length.isdigit() or int(length) > MAX_REQUEST_BYTES):
+            return 413, "request.too_large", "The request body is too large."
         return None
 
     @staticmethod

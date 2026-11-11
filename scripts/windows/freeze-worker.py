@@ -15,6 +15,10 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from build_paths import redact  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "output" / "packaging"
 DEST = ROOT / "apps/desktop/src-tauri/bundle-input/runtime"
@@ -182,7 +186,8 @@ def main() -> None:
         output = subprocess.check_output(
             [str(DEST / f"tools/{name}.exe"), "-version"], text=True, encoding="utf-8"
         )
-        media_build[name] = output
+        # The configure line names the CI workspace; ship it without absolute paths (M30).
+        media_build[name] = redact(output)
         if "--enable-gpl" not in output or "--enable-nonfree" in output:
             raise RuntimeError("Unexpected FFmpeg licensing configuration")
         tools.append(

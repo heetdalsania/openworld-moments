@@ -461,3 +461,100 @@ def test_process_expires_on_its_own(tmp_path: Path) -> None:
     event = _event(proc)
     assert event["event"] == "error" and event["code"] == "gateway.bad_expiry"
     proc.wait(timeout=10)
+
+
+# -- M30: rate limits, attempt cap, origin and token replay ---------------------------
+
+
+def test_wrong_tokens_lock_out_that_address(client: TestClient, session: Session) -> None:
+    for _ in range(session.limits.max_failed_requests):
+        assert client.get(f"/u/{'b' * 64}/").status_code == 404
+    # The right token from the same address now gets the same plain 404.
+    locked = client.get(f"/u/{TOKEN}/")
+    assert locked.status_code == 404 and locked.text == NOT_FOUND
+    assert put(client, "a.mp4", MP4).status_code == 404
+    assert staged(session) == [] and not session.finished
+    # Another address is unaffected.
+    other = TestClient(create_app(session), client=("192.168.1.30", 50000))
+    assert other.get(f"/u/{TOKEN}/").status_code == 200
+
+
+def test_unknown_paths_count_as_guesses(client: TestClient, session: Session) -> None:
+    for i in range(session.limits.max_failed_requests):
+        client.get(f"/guess/{i}")
+    assert client.get(f"/u/{TOKEN}/").status_code == 404
+
+
+def test_mass_guessing_ends_the_session_safely(
+    session: Session, events: list[dict[str, Any]]
+) -> None:
+    session.limits = Limits(max_failed_requests=3, max_failed_total=9)
+    app = create_app(session)
+    for i in range(3):
+        guesser = TestClient(app, client=(f"192.168.1.{40 + i}", 50000))
+        for _ in range(3):
+            guesser.get(f"/u/{'c' * 64}/")
+    assert session.finished
+    assert {"event": "session_ended", "reason": "too_many_failed_requests"} in events
+    fresh = TestClient(app, client=("192.168.1.99", 50000))
+    assert fresh.get(f"/u/{TOKEN}/").status_code == 404
+
+
+def test_request_flood_is_throttled_per_minute(
+    client: TestClient, session: Session, clock: Clock
+) -> None:
+    session.limits = Limits(requests_per_minute=5)
+    app_client = TestClient(create_app(session))
+    for _ in range(5):
+        assert app_client.get(f"/u/{TOKEN}/status").status_code == 200
+    slowed = app_client.get(f"/u/{TOKEN}/status")
+    assert slowed.status_code == 429 and slowed.json()["reason"] == "slow_down"
+    clock.now += 60
+    assert app_client.get(f"/u/{TOKEN}/status").status_code == 200
+
+
+def test_rejected_retries_are_capped(client: TestClient, session: Session) -> None:
+    session.limits = Limits(max_attempts=3, max_files=3, free_space_margin=0)
+    app_client = TestClient(create_app(session))
+    # Disguised files pass the name check, so each creates a record and folder before
+    # it is refused; those are what the cap bounds.
+    for i in range(3):
+        refused = put(app_client, f"fake{i}.mp4", b"not a video at all " * 20)
+        assert refused.status_code != 200 and refused.json()["status"] == "rejected"
+    capped = put(app_client, "clip.mp4", MP4)
+    assert capped.status_code == 429 and capped.json()["reason"] == "too_many_attempts"
+    assert len(session.uploads) <= 3 and staged(session) == []
+
+
+def test_state_changes_from_another_origin_are_refused(session: Session) -> None:
+    session.allowed_hosts = frozenset({"192.168.1.20:5555"})
+    host = {"host": "192.168.1.20:5555"}
+    app_client = TestClient(create_app(session))
+    for headers in ({**host, "origin": "http://evil.example"}, {**host, "origin": "null"}):
+        refused = app_client.put(
+            f"/u/{TOKEN}/files", params={"name": "a.mp4"}, content=MP4, headers=headers
+        )
+        assert refused.status_code == 403 and refused.json()["reason"] == "bad_origin"
+        assert app_client.post(f"/u/{TOKEN}/finish", headers=headers).status_code == 403
+    assert staged(session) == [] and not session.finished
+    same = {**host, "origin": "http://192.168.1.20:5555"}
+    ok = app_client.put(f"/u/{TOKEN}/files", params={"name": "a.mp4"}, content=MP4, headers=same)
+    assert ok.status_code == 200
+    # Reading the page never needs an Origin; a non-browser client may omit it.
+    assert app_client.get(f"/u/{TOKEN}/", headers=host).status_code == 200
+
+
+def test_a_finished_sessions_token_cannot_be_replayed(
+    session: Session, clock: Clock, tmp_path: Path
+) -> None:
+    first = TestClient(create_app(session))
+    assert first.post(f"/u/{TOKEN}/finish").status_code == 200
+    assert put(first, "a.mp4", MP4).status_code == 404
+    # A new session has a new token; the old one is just another wrong token there.
+    replacement = Session(
+        token="d" * 64, staging=tmp_path / "next", expires_at=clock.now + 600, clock=clock
+    )
+    second = TestClient(create_app(replacement))
+    assert second.get(f"/u/{TOKEN}/").status_code == 404
+    assert put(second, "a.mp4", MP4).status_code == 404
+    assert second.get(f"/u/{'d' * 64}/").status_code == 200

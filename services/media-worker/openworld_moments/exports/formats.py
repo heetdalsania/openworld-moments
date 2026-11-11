@@ -73,10 +73,18 @@ def jsonl_line(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
 
 
+_WINDOWS_DEVICES = frozenset(
+    {"con", "prn", "aux", "nul", *(f"com{i}" for i in range(10)), *(f"lpt{i}" for i in range(10))}
+)
+
+
 def safe_filename(title: str, extension: str, fallback: str = "project") -> str:
     stem = re.sub(r"[^A-Za-z0-9._-]+", "-", title).strip(".-_")[:80] or fallback
     if not stem[0].isalnum():
         stem = fallback
+    # Windows treats device names as devices even with an extension (M30).
+    if stem.split(".")[0].lower() in _WINDOWS_DEVICES:
+        stem = f"{fallback}-{stem}"
     return f"{stem}.{extension}"
 
 

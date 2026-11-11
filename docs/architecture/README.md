@@ -54,4 +54,5 @@ M25 adds [vertical layouts](./vertical-layouts.md) with `vertical-1080x1920-30` 
 
 - [Privacy and spoiler review](./privacy-review.md): conservative local findings, exact-range review, reversible decisions, moving blurs, mute suggestions, export gates and text deletion.
 
+- [Security engineering](../security/README.md) (M30): [threat model](../security/threat-model.md), dependency/secret/license/static-analysis gates, CycloneDX SBOM and its verification, artifact scan, fuzz corpus and [release verification](../security/release-verification.md).
 - [Windows packaging and models](./windows-packaging.md): per-user installer, pinned frozen runtime, source/license inventory, signed optional downloads, retention and client qualification.

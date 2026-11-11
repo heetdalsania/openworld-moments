@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -162,3 +163,27 @@ def test_list_jobs_returns_contract_documents(client: TestClient) -> None:
     client.post("/v1/jobs", json={"kind": "diagnostic", "params": {"steps": 1, "step_ms": 0}})
     jobs = client.get("/v1/jobs").json()
     assert len(jobs) == 1 and load("job", jobs[0])
+
+
+def test_request_bodies_are_bounded(client: TestClient) -> None:
+    # M30: a declared length over the cap or an unbounded chunked body is refused
+    # before the route reads anything.
+    from openworld_moments.api.app import MAX_REQUEST_BYTES
+
+    too_big = client.post(
+        "/v1/jobs",
+        content=b"{}",
+        headers={"content-type": "application/json", "content-length": str(MAX_REQUEST_BYTES + 1)},
+    )
+    assert too_big.status_code == 413 and too_big.json()["code"] == "request.too_large"
+
+    def chunks() -> Iterator[bytes]:
+        yield b'{"kind": "diagnostic", '
+        yield b'"params": {}}'
+
+    chunked = client.post(
+        "/v1/jobs", content=chunks(), headers={"content-type": "application/json"}
+    )
+    assert chunked.status_code == 411 and chunked.json()["code"] == "request.length_required"
+    normal = client.post("/v1/jobs", json={"kind": "diagnostic", "params": {"steps": 1}})
+    assert normal.status_code == 201
