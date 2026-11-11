@@ -164,7 +164,7 @@
   - **M38:** reuse the setup, preferences, themes, announcer, guides structure and
     smoke harness for macOS (VoiceOver).
   - **M40:** unchanged.
-- Pull request: this PR
+- Pull request: [#40](https://github.com/heetdalsania/openworld-moments/pull/40)
 - Screenshots, reports, or artifacts:
   - `docs/guides/images/*.png`: nine screenshots, synthetic data only, no text metadata.
   - The [accessibility support matrix](../guides/accessibility.md#support-matrix).
