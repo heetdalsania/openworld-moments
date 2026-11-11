@@ -18,6 +18,7 @@ from openworld_moments_contracts.generated import (
     analysis_schema,
     collection_schema,
     derived_media_schema,
+    diagnostics_report_schema,
     editor_project_schema,
     error_schema,
     evaluation_observations_schema,
@@ -59,6 +60,7 @@ from openworld_moments_contracts.versioning import check_version
 
 #: Top-level contracts: name -> (model, carries schema_version).
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
+    "diagnostics-report": (diagnostics_report_schema.DiagnosticsReport, True),
     "model-manager": (model_manager_schema.ModelManager, True),
     "system-doctor": (system_doctor_schema.SystemDoctor, True),
     "privacy-review": (privacy_review_schema.PrivacyReview, True),

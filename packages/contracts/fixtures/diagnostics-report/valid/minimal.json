@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.24",
+  "generated_at": "2026-11-11T12:00:00Z",
+  "worker": {
+    "api_version": "1",
+    "schema_version": "1.24",
+    "worker_version": "0.1.0"
+  },
+  "system": {
+    "available": false
+  },
+  "library": {
+    "clips": 42,
+    "sessions": 5,
+    "projects": 2,
+    "renders": 3,
+    "watched_folders": 1,
+    "collections": 0,
+    "event_observations": 118,
+    "transcript_segments": 0,
+    "database_schema": 19
+  },
+  "models": [
+    {
+      "name": "tiny.en",
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "installed": false
+    }
+  ],
+  "jobs": {
+    "totals": [
+      {
+        "kind": "import",
+        "state": "ready",
+        "count": 4
+      },
+      {
+        "kind": "render",
+        "state": "failed",
+        "count": 1
+      }
+    ],
+    "recent_failures": [
+      {
+        "kind": "render",
+        "code": "render.encoder_failed",
+        "retryable": true,
+        "date": "2026-11-10"
+      }
+    ]
+  },
+  "privacy": {
+    "footage": "never included",
+    "file_names": "removed",
+    "paths": "removed",
+    "tokens": "removed",
+    "failure_messages": "omitted"
+  }
+}

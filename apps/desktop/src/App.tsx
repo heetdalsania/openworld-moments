@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useCallback, useEffect, useState } from "react";
+import { Announcer } from "./Announcer";
+import { describeError, revealLibrary } from "./api";
+import { AppearanceSettings } from "./AppearanceSettings";
 import { type AppInfo, fetchAppInfo } from "./appInfo";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { GUIDES_URL, Onboarding } from "./Onboarding";
+import { applyAppearance, getPreferences, setOnboarding, usePreferences } from "./preferences";
+import { PrivacyChoices } from "./PrivacyChoices";
+import { useAction } from "./query";
 import { CalibrationView } from "./CalibrationView";
 import { EditorView } from "./EditorView";
 import { ProjectsView } from "./ProjectsView";
@@ -99,6 +107,32 @@ function useDroppedPaths(onDrop: (paths: string[]) => void): boolean {
   return over;
 }
 
+function HelpPanel({ workerReady }: { workerReady: boolean }) {
+  const library = useAction(revealLibrary);
+  return (
+    <section className="panel" aria-labelledby="help-heading">
+      <h2 id="help-heading">Help and setup</h2>
+      <p>
+        Guides for Xbox, PlayStation, watched folders, capture cards, troubleshooting and known
+        limitations are in the project documentation: <span className="url">{GUIDES_URL}</span>
+      </p>
+      <div className="row">
+        <button type="button" onClick={() => setOnboarding("pending")}>
+          Run setup again
+        </button>
+        <button
+          type="button"
+          disabled={!workerReady || library.busy}
+          onClick={() => void library.run()}
+        >
+          Show library folder
+        </button>
+      </div>
+      {library.error && <p role="alert">{describeError(library.error)}</p>}
+    </section>
+  );
+}
+
 function SettingsView({ workerReady }: { workerReady: boolean }) {
   const [folders, setFolders] = useState<WatchedFolderView[] | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -107,6 +141,7 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
   return (
     <section className="view" aria-labelledby="settings-heading">
       <h1 id="settings-heading">Settings</h1>
+      <PrivacyChoices />
       {workerReady ? (
         <>
           <SystemPanel />
@@ -118,8 +153,13 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
           <WatchedFolders onChange={onFolders} refreshKey={refreshKey} />
         </>
       ) : (
-        <p role="status">Settings are available once the media worker is running.</p>
+        <p role="status">
+          System checks, models and watched folders are available once the media worker is running.
+        </p>
       )}
+      <AppearanceSettings />
+      <DiagnosticsPanel workerReady={workerReady} />
+      <HelpPanel workerReady={workerReady} />
     </section>
   );
 }
@@ -149,8 +189,71 @@ function WorkerBanner({ worker }: { worker: WorkerStatus | null }) {
   );
 }
 
+function Routes({
+  route,
+  ready,
+  openImport,
+}: {
+  route: Route;
+  ready: boolean;
+  openImport: () => void;
+}) {
+  return (
+    <>
+      {route.view === "library" &&
+        (ready ? (
+          <LibraryView onImport={openImport} />
+        ) : (
+          <section className="view">
+            <h1>Library</h1>
+            <p role="status">The library opens once the media worker is running.</p>
+          </section>
+        ))}
+      {route.view === "asset" && ready && (
+        <AssetView
+          key={route.id}
+          id={route.id}
+          {...(route.at !== undefined ? { at: route.at } : {})}
+        />
+      )}
+      {route.view === "sessions" &&
+        (ready ? (
+          <SessionsView />
+        ) : (
+          <section className="view">
+            <h1>Sessions</h1>
+            <p role="status">Sessions open once the media worker is running.</p>
+          </section>
+        ))}
+      {route.view === "session" && ready && (
+        <SessionView
+          key={route.id}
+          id={route.id}
+          {...(route.at !== undefined ? { at: route.at } : {})}
+        />
+      )}
+      {route.view === "projects" && <ProjectsView workerReady={ready} />}
+      {route.view === "project" && <EditorView key={route.id} id={route.id} workerReady={ready} />}
+      {route.view === "search" && <SearchView workerReady={ready} />}
+      {route.view === "calibration" && ready && <CalibrationView />}
+      {route.view === "settings" && <SettingsView workerReady={ready} />}
+      {route.view === "phone" &&
+        (ready ? (
+          <PhoneImport />
+        ) : (
+          <section className="view">
+            <h1>Import from phone</h1>
+            <p role="status">Available once the media worker is running.</p>
+          </section>
+        ))}
+    </>
+  );
+}
+
 export function App() {
   const route = useRoute();
+  const prefs = usePreferences();
+  useEffect(() => applyAppearance(getPreferences().appearance), []);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (hasUnsavedProjects()) event.preventDefault();
@@ -246,57 +349,14 @@ export function App() {
         </div>
       </header>
       <WorkerBanner worker={worker} />
+      <Announcer />
       <div className="body">
         <main id="main" tabIndex={-1}>
-          {ready && route.view !== "settings" && <SystemPanel firstRun />}
-          {route.view === "library" &&
-            (ready ? (
-              <LibraryView onImport={openImport} />
-            ) : (
-              <section className="view">
-                <h1>Library</h1>
-                <p role="status">The library opens once the media worker is running.</p>
-              </section>
-            ))}
-          {route.view === "asset" && ready && (
-            <AssetView
-              key={route.id}
-              id={route.id}
-              {...(route.at !== undefined ? { at: route.at } : {})}
-            />
+          {prefs.onboarding === "pending" ? (
+            <Onboarding workerReady={ready} onImport={openImport} />
+          ) : (
+            <Routes route={route} ready={ready} openImport={openImport} />
           )}
-          {route.view === "sessions" &&
-            (ready ? (
-              <SessionsView />
-            ) : (
-              <section className="view">
-                <h1>Sessions</h1>
-                <p role="status">Sessions open once the media worker is running.</p>
-              </section>
-            ))}
-          {route.view === "session" && ready && (
-            <SessionView
-              key={route.id}
-              id={route.id}
-              {...(route.at !== undefined ? { at: route.at } : {})}
-            />
-          )}
-          {route.view === "projects" && <ProjectsView workerReady={ready} />}
-          {route.view === "project" && (
-            <EditorView key={route.id} id={route.id} workerReady={ready} />
-          )}
-          {route.view === "search" && <SearchView workerReady={ready} />}
-          {route.view === "calibration" && ready && <CalibrationView />}
-          {route.view === "settings" && <SettingsView workerReady={ready} />}
-          {route.view === "phone" &&
-            (ready ? (
-              <PhoneImport />
-            ) : (
-              <section className="view">
-                <h1>Import from phone</h1>
-                <p role="status">Available once the media worker is running.</p>
-              </section>
-            ))}
         </main>
         {jobsOpen && (
           <div id="job-center">

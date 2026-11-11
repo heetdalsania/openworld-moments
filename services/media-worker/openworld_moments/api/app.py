@@ -33,7 +33,7 @@ from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from openworld_moments import __version__
+from openworld_moments import __version__, diagnostics
 from openworld_moments.alignment.service import Aligner
 from openworld_moments.derived.service import DerivedMedia, MediaUnavailable
 from openworld_moments.detectors.calibration import Calibration
@@ -329,6 +329,11 @@ class SubmitExport(BaseModel):
     include_paths: bool = False
 
 
+class DiagnosticsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    include_messages: bool = False
+
+
 class SubmitTranscription(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model: str
@@ -462,6 +467,44 @@ def create_app(
     @app.get("/v1/system-doctor")
     async def get_system_doctor() -> dict[str, Any]:
         return await asyncio.to_thread(doctor, engine.database.path.parent, derived_service().tools)
+
+    @app.post("/v1/diagnostics")
+    async def get_diagnostics(body: DiagnosticsRequest) -> dict[str, Any]:
+        """M31: a redacted support report; the same text is previewed and saved."""
+
+        # The job repository belongs to the event-loop thread, like the other routes.
+        jobs = engine.list(limit=200)
+
+        def build() -> dict[str, Any]:
+            try:
+                system = doctor(engine.database.path.parent, derived_service().tools)
+            except Exception:  # a broken check must not block the report
+                system = None
+            try:
+                models = manager.status()
+            except Exception:  # model status is optional in the report
+                models = None
+            report = diagnostics.build_report(
+                worker={
+                    "worker_version": __version__,
+                    "api_version": str(API_VERSION),
+                    "schema_version": str(SUPPORTED_VERSION),
+                },
+                doctor_report=system,
+                database_path=engine.database.path,
+                jobs=jobs,
+                models=models,
+                include_messages=body.include_messages,
+                secrets=[settings.token],
+            )
+            report = normalize(load("diagnostics-report", report))
+            return {
+                "report": report,
+                "content": diagnostics.render(report, [settings.token]),
+                "filename": diagnostics.filename(report),
+            }
+
+        return await asyncio.to_thread(build)
 
     @app.exception_handler(TranscriptionError)
     async def model_error(request: Request, exc: TranscriptionError) -> JSONResponse:

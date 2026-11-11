@@ -31,7 +31,7 @@ Other architecture notes:
 - [Virtual session timeline](./session-timeline.md): source ↔ virtual time mapping and its precision guarantees, the two-element session player, boundary and hidden-overlap behavior, keyboard controls, player limitations.
 - [Sessions](./sessions.md): capture-time estimation (filename patterns, confidence), metadata grouping rules and the 15-minute default gap, idempotent recompute, and durable manual corrections.
 - [Import from phone](./phone-upload.md): the separate LAN upload gateway, network model, 256-bit expiring token, limits and checks, filename rules, import handoff and staging cleanup. User guide: [Send clips from your phone](../guides/phone-upload.md).
-- [Desktop library and jobs UI](./desktop-ui.md): routes and components, the allow-listed `worker_api` bridge, the `owm-media` playback protocol, job center behavior, keyboard access, tests, player limitations.
+- [Desktop library and jobs UI](./desktop-ui.md): routes and components, the allow-listed `worker_api` bridge, the `owm-media` playback protocol, job center behavior, keyboard access, tests, player limitations. M31 adds first-run setup, privacy consent, themes, announcements, diagnostics and Show in folder; the [user guides](../guides/README.md) and [accessibility matrix](../guides/accessibility.md#support-matrix) document them.
 - [Derived media](./derived-media.md): proxy policy and preset, deterministic HDR tone mapping, filmstrip thumbnails, waveform format, cache keys and invalidation, artifact layout, cleanup, minimum FFmpeg capabilities.
 - [Safe import pipeline](./import.md): reference and managed imports, staging and atomic promotion, idempotency, provenance, missing sources and relink, error codes.
 

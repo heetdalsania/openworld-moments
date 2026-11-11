@@ -14,6 +14,7 @@ import {
   renderEncoders,
   renderPresets,
   renderProject,
+  revealRender,
   saveRenderManifest,
   toApiError,
 } from "./api";
@@ -64,6 +65,7 @@ function RenderRow({
   const manifest = useAction(async () => {
     setManifestSaved((await saveRenderManifest(record.id)).saved);
   });
+  const reveal = useAction(() => revealRender(record.id));
   return (
     <li className="render-row">
       <div>
@@ -111,10 +113,16 @@ function RenderRow({
         </button>
       )}
       {record.status === "ready" && (
-        <button type="button" disabled={manifest.busy} onClick={() => void manifest.run()}>
-          Save manifest…
-        </button>
+        <div className="row">
+          <button type="button" disabled={reveal.busy} onClick={() => void reveal.run()}>
+            Show in folder
+          </button>
+          <button type="button" disabled={manifest.busy} onClick={() => void manifest.run()}>
+            Save manifest…
+          </button>
+        </div>
       )}
+      {reveal.error && <p role="alert">{describeError(reveal.error)}</p>}
       {manifestSaved !== null && (
         <p role="status">{manifestSaved ? "Manifest saved." : "Manifest not saved."}</p>
       )}

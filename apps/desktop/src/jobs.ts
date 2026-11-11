@@ -169,6 +169,11 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Listen to job changes outside React rendering (M31 announcements). */
+export function watchJobs(listener: (jobs: Job[]) => void): () => void {
+  return subscribe(() => listener(state.jobs));
+}
+
 export function useJobs(): JobsState {
   return useSyncExternalStore(subscribe, () => state);
 }

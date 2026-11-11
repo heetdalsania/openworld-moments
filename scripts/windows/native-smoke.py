@@ -44,7 +44,7 @@ def main() -> None:
             try:
                 diagnostic["ui"] = page.evaluate(
                     "() => ({url: location.href, text: document.body.innerText.slice(0,20000), "
-                    "acknowledgement: localStorage.getItem('owm-system-check-0.1')})"
+                    "preferences: localStorage.getItem('owm.preferences.v1')})"
                 )
                 diagnostic["worker"] = page.evaluate(
                     "() => window.__TAURI_INTERNALS__.invoke('worker_status')"
@@ -110,10 +110,14 @@ def exercise(page, installed: Path, mode: str) -> None:
     doctor = api("GET", "/v1/system-doctor")
     assert doctor["packaged"] and doctor["ready"], doctor["checks"]
     if mode == "import-render":
-        page.get_by_role("heading", name="Welcome — check this computer", exact=True).wait_for(
+        # M31 first-run setup: the welcome step, then the system check, then skip the rest.
+        page.get_by_role("heading", name="Welcome to OpenWorld Moments", exact=True).wait_for(
             timeout=90000
         )
-        page.get_by_role("button", name="Continue", exact=True).click(timeout=90000)
+        page.get_by_role("button", name="Start setup", exact=True).click(timeout=90000)
+        page.get_by_role("heading", name="Welcome — check this computer", exact=True).wait_for()
+        page.get_by_text("Core checks passed", exact=True).wait_for(timeout=90000)
+        page.get_by_role("button", name="Skip setup", exact=True).click()
     # Scope to the primary navigation: an empty library also links to Settings.
     page.get_by_role("navigation", name="Primary").get_by_role(
         "link", name="Settings", exact=True

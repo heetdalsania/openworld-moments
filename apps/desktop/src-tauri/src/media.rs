@@ -26,7 +26,7 @@ pub const MAX_CHUNK: u64 = 4 * 1024 * 1024;
 /// Files up to this size are sent whole when no range is requested.
 pub const WHOLE_LIMIT: u64 = 16 * 1024 * 1024;
 
-fn is_id(segment: &str, prefix: &str) -> bool {
+pub fn is_id(segment: &str, prefix: &str) -> bool {
     segment.len() == prefix.len() + 26
         && segment.starts_with(prefix)
         && segment[prefix.len()..]
@@ -54,6 +54,8 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
     match (method, segments.as_slice()) {
         ("GET", ["", "v1", "capabilities"]) => true,
         ("GET", ["", "v1", "system-doctor" | "model-manager"]) => query.is_none(),
+        // M31: a redacted support report; saving goes through `diagnostics_export`.
+        ("POST", ["", "v1", "diagnostics"]) => query.is_none(),
         ("POST", ["", "v1", "model-manager", "download" | "pin" | "remove"]) => query.is_none(),
         ("GET", ["", "v1", "assets"]) | ("GET", ["", "v1", "jobs"]) => true,
         ("POST", ["", "v1", "imports"]) => query.is_none(),
@@ -658,5 +660,12 @@ mod tests {
             assert!(!api_route_allowed("DELETE", &path));
             assert!(!api_route_allowed("POST", &format!("{path}/extra")));
         }
+    }
+    #[test]
+    fn diagnostics_route_is_post_only_without_a_query() {
+        assert!(api_route_allowed("POST", "/v1/diagnostics"));
+        assert!(!api_route_allowed("GET", "/v1/diagnostics"));
+        assert!(!api_route_allowed("POST", "/v1/diagnostics?path=outside"));
+        assert!(!api_route_allowed("POST", "/v1/diagnostics/export"));
     }
 }

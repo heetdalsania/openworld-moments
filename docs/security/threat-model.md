@@ -38,7 +38,8 @@ token; downloaded models; release artifacts and the build pipeline that makes th
   cannot set cross-site.
 - **B3 Phone → gateway:**
   - a separate process, off by default and started only by the Import from phone
-    screen, bound to one chosen private address;
+    screen after the user has allowed phone transfer in Privacy choices (M31),
+    bound to one chosen private address;
   - a 256-bit token with a 10-minute expiry; it ends with the screen or on "I'm
     done";
   - Host allowlist, Origin check, per-address rate and lockout limits, an attempt
@@ -83,7 +84,7 @@ token; downloaded models; release artifacts and the build pipeline that makes th
 
 | # | Abuse case | Control | Evidence | Status |
 |---|---|---|---|---|
-| P1 | Gateway reachable when the user is not uploading | Process runs only while the screen is open; closes on expiry, finish or leaving | `test_process_serves_only_while_active`, M29 Windows run 8.4 | Resolved |
+| P1 | Gateway reachable when the user is not uploading | Explicit opt-in first (M31); process runs only while the screen is open; closes on expiry, finish or leaving | `test_process_serves_only_while_active`, `keeps the phone page closed until transfer is allowed` (desktop), M29 Windows run 8.4 | Resolved |
 | P2 | Guessing the token | 256-bit token, constant-time compare, identical 404s, per-address lockout after 20 failures, session ends after 1,000 (M30) | `test_wrong_tokens_and_unknown_paths_look_the_same`, `test_wrong_tokens_lock_out_that_address`, `test_mass_guessing_ends_the_session_safely` | Resolved |
 | P3 | Replaying a token after expiry or finish, or in a new session | Expiry, finished state, and a fresh token per session | `test_expired_and_finished_sessions_refuse_everything`, `test_a_finished_sessions_token_cannot_be_replayed` | Resolved |
 | P4 | Another website in the phone's browser forges uploads | The token in the path is unknown to other sites; Origin must match the gateway for state changes (M30) | `test_state_changes_from_another_origin_are_refused` | Resolved |
@@ -114,6 +115,7 @@ token; downloaded models; release artifacts and the build pipeline that makes th
 | U1 | Tampered or substituted model download | Signed catalog, pinned SHA-256 and size, range-checked resume, no activation before verification | `tests/transcripts/test_downloads.py` | Resolved |
 | U2 | A model with unclear redistribution rights | Catalog records license and source; only MIT whisper.cpp models | SBOM `machine-learning-model` entries | Resolved |
 | U3 | A malicious update | No auto-update (out of scope); users install verified packages by hand | `release-verification.md` | Accepted |
+| U4 | A model downloads without the user's informed choice | Downloads are off until allowed in Privacy choices (M31), enforced in the Install button and in `installModel`; Install remains the only action that starts one | `does not download a model until downloads are allowed` (desktop) | Resolved |
 
 ### Build, release and artifacts (B6)
 
@@ -135,6 +137,7 @@ token; downloaded models; release artifacts and the build pipeline that makes th
 | X1 | Exports leak absolute paths | Only on explicit opt-in, and only in formats that reference media (M27) | `test_no_absolute_paths_unless_explicitly_requested` | Resolved |
 | X2 | Telemetry or crash upload | None exists | Code review; no analytics dependencies in the SBOM | Resolved |
 | X3 | Plugins run arbitrary code | Plugins deferred | — | Resolved (not built) |
+| X4 | A support report leaks footage, file names, paths or tokens (M31) | Fixed `diagnostics-report` contract (counts and codes only; a schema-fixed privacy block); messages only on opt-in, redacted for paths, file names and tokens; whole text redacted again; preview before saving; the host saves it, never uploads | `tests/test_diagnostics.py`, contract fixtures | Resolved |
 
 ## Accepted risks and exceptions
 

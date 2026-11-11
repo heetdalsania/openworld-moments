@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
+  DiagnosticsReport,
   PrivacyReview,
   ModelManager,
   SystemDoctor,
@@ -52,6 +53,13 @@ function* modelManager(doc: ModelManager): Generator<string> {
     yield "models: duplicate model names";
   for (const model of doc.models)
     if (model.downloaded_bytes > model.size_bytes) yield "downloaded_bytes: exceeds signed size";
+}
+function* diagnosticsReport(doc: DiagnosticsReport): Generator<string> {
+  const omitted = doc.privacy.failure_messages === "omitted";
+  if (omitted && doc.jobs.recent_failures.some((f) => f.message !== undefined))
+    yield "jobs.recent_failures: messages present although omitted";
+  const pairs = doc.jobs.totals.map((t) => `${t.kind}\u0000${t.state}`);
+  if (new Set(pairs).size !== pairs.length) yield "jobs.totals: duplicate kind and state";
 }
 function* systemDoctor(doc: SystemDoctor): Generator<string> {
   if (doc.ready !== !doc.checks.some((c) => c.status === "fail")) yield "ready: must match checks";
@@ -838,6 +846,7 @@ function* privacyReview(doc: PrivacyReview): Generator<string> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
+  "diagnostics-report": diagnosticsReport,
   "model-manager": modelManager,
   "system-doctor": systemDoctor,
   "privacy-review": privacyReview,

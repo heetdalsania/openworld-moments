@@ -12,6 +12,7 @@ import {
   startPhone,
   stopPhone,
 } from "./phone";
+import { setPrivacy, usePreferences } from "./preferences";
 import { useAction } from "./query";
 import { routeHref } from "./route";
 
@@ -79,6 +80,7 @@ export function PhoneImport() {
     };
   }, []);
 
+  const allowed = usePreferences().privacy.phoneLan;
   const active = status?.state === "active";
   const uploads = status?.uploads ?? [];
 
@@ -97,7 +99,19 @@ export function PhoneImport() {
         the phone.
       </div>
 
-      {!active && (
+      {!active && !allowed && (
+        <div className="panel phone-consent">
+          <h2>Phone transfer is off</h2>
+          <p>
+            Allowing it lets this screen open the temporary upload page described above when you
+            choose Show QR code. You can turn it off again in Settings → Privacy choices.
+          </p>
+          <button type="button" className="primary" onClick={() => setPrivacy("phoneLan", true)}>
+            Allow phone transfer on this network
+          </button>
+        </div>
+      )}
+      {!active && allowed && (
         <div className="phone-setup">
           {interfaces === null && <p role="status">Looking for network connections…</p>}
           {interfaces?.length === 0 && (

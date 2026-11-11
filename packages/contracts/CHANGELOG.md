@@ -1,5 +1,10 @@
 # Contracts changelog
 
+## 1.24 — Diagnostics report (M31)
+
+- Add the diagnostics-report contract: versions, system check, library counts, job totals and recent failure codes. Its privacy block is fixed by the schema (no footage, file names, paths or tokens), and a semantic rule rejects failure messages unless the user opted in.
+- Existing 1.x documents remain readable.
+
 ## 1.23 — Windows runtime and optional model management (M29)
 
 - Add model-manager and system-doctor contracts, shared semantic consistency rules and fixtures.

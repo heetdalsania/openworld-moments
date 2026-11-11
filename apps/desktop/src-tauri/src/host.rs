@@ -519,6 +519,82 @@ pub async fn project_export(
     .await
 }
 
+/// M31: save the redacted diagnostics report. The user previewed the same text; the
+/// host fetches it again itself, so the webview never sends content or a path.
+#[tauri::command]
+pub async fn diagnostics_export(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    include_messages: bool,
+) -> Result<Value, Value> {
+    let body = json!({ "include_messages": include_messages });
+    save_worker_export(
+        app,
+        state,
+        reqwest::Method::POST,
+        "/v1/diagnostics".to_owned(),
+        Some(body),
+        "json",
+    )
+    .await
+}
+
+fn library_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, Value> {
+    app.path()
+        .app_data_dir()
+        .map(|dir| dir.join("library"))
+        .map_err(|_| unavailable())
+}
+
+fn reveal_failed() -> Value {
+    json!({"code":"reveal.failed","message":"The file manager could not be opened. The file is still in your library.","retryable":true})
+}
+
+/// M31: show a finished render in the file manager. The host reads the render record
+/// and checks the output is a regular file inside the library before showing it.
+#[tauri::command]
+pub async fn render_reveal(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    render_id: String,
+) -> Result<Value, Value> {
+    if !crate::media::is_id(&render_id, "job_") {
+        return Err(crate::media::route_refused());
+    }
+    let record = supervisor(&state)?
+        .request(
+            reqwest::Method::GET,
+            &format!("/v1/renders/{render_id}"),
+            None,
+            None,
+        )
+        .await
+        .map_err(to_ui_error)?;
+    let missing = || json!({"code":"render.output_missing","message":"The rendered file is no longer in the library. Render again to recreate it.","retryable":false});
+    let relative = record
+        .pointer("/output/relative_path")
+        .and_then(Value::as_str)
+        .ok_or_else(missing)?
+        .to_owned();
+    let library = library_dir(&app)?;
+    let path = crate::reveal::render_output(&library, &relative).ok_or_else(missing)?;
+    crate::reveal::show(&path, true).map_err(|_| reveal_failed())?;
+    Ok(json!({ "shown": true }))
+}
+
+/// M31: open the library folder (where imports, renders and the database live).
+#[tauri::command]
+pub fn library_reveal(app: AppHandle) -> Result<Value, Value> {
+    let library = library_dir(&app)?;
+    if !library.is_dir() {
+        return Err(
+            json!({"code":"library.unavailable","message":"The library folder has not been created yet. Start the app once the media worker is running.","retryable":true}),
+        );
+    }
+    crate::reveal::show(&library, false).map_err(|_| reveal_failed())?;
+    Ok(json!({ "shown": true }))
+}
+
 /// M27: save a completed render's stored manifest.
 #[tauri::command]
 pub async fn render_manifest_export(

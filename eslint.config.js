@@ -13,6 +13,7 @@ export default tseslint.config(
       "**/target/**",
       "**/gen/**",
       "**/node_modules/**",
+      "**/.venv/**",
       "services/**",
       "packages/contracts/src/generated/**",
       "packages/contracts/python/**",
