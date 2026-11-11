@@ -49,6 +49,7 @@ Read the complete specification, MILESTONES.md, SECURITY.md, CONTRIBUTING.md, an
 - Full CI, clean-machine matrix, release artifact verification, accessibility smoke test, and security checklist.
 - Fixture licenses/consent audit and trademark wording review.
 - Post-publication install and end-to-end smoke test from the GitHub release artifact.
+- Windows items carried from M29/M10 (retest waived there by maintainer decision): a real-phone upload of at least three videos in one session, and a single-click model-download cancel; see the [M29 retest prompt](./M29-windows-rerun-prompt.md).
 
 ## Handoff
 

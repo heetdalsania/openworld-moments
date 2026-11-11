@@ -1,8 +1,11 @@
 ## Milestone handoff
 
 - Milestone: M29 — Windows packaging and model manager
-- Outcome: Implementation candidate; **M29 is not complete** until the clean Windows
-  11 x64 lifecycle qualification below is recorded. The GPL packaging exception
+- Outcome: **Complete by maintainer decision.** A clean Windows 11 x64 client run
+  ([report](./M29-windows-client-report.md)) passed every M29 step; repair and
+  upgrade (6.2, 6.3) ran in the Claude app's container and were accepted by the
+  maintainer. Its M10 failure and model-cancel defects were fixed in #37/#38 and
+  covered by regression tests; the maintainer waived the post-fix Windows retest. The GPL packaging exception
   was accepted by merging [PR #35](https://github.com/heetdalsania/openworld-moments/pull/35).
   This branch implements that plan; it does not begin M30 or publish an alpha.
 - Files and modules changed:
@@ -154,15 +157,24 @@ All dependency merge commits are ancestors of the implementation base `5ca9d27`:
 | M18 | [#24](https://github.com/heetdalsania/openworld-moments/pull/24) | `200aaed` | `M18-handoff.md` and model registry/adapter |
 | M24 | [#30](https://github.com/heetdalsania/openworld-moments/pull/30) | `7a4233c` | `M24-handoff.md` and CPU encoder registry |
 
-### Remaining qualification gate
+### Client qualification
 
-Execute the [Windows client runbook](./M29-windows-client-runbook.md), which also covers
-the pending M10 real-phone smoke test. It follows the clean Windows 11 x64 matrix in the
-[packaging guide](../architecture/windows-packaging.md):
-normal-user GUI install/launch without developer tools, first-run doctor, lawful
-synthetic import/render, optional download interruption/failure/Unicode cases,
-repair/upgrade with retained database/projects/backups, uninstall/reinstall
-retention and separately confirmed disposable-library removal. Record OS/WebView
-versions, artifact SHA-256, results and unsigned prompts. Hosted Server CI passing
-alone does not close this gate. Keep the PR draft and M29 ledger In progress until
-that evidence is available.
+The clean Windows 11 x64 client run is recorded in the
+[client report](./M29-windows-client-report.md) (physical laptop, administrator
+account with UAC, accepted exception). All M29 lifecycle steps passed; steps 6.2
+and 6.3 are passed by maintainer decision because they ran inside the Claude
+app's MSIX container, and 7.2 later confirmed library retention on the real
+system.
+
+The run's failures were fixed with regression tests:
+
+- M10 phone upload "out of space" after the first import:
+  [#38](https://github.com/heetdalsania/openworld-moments/pull/38).
+- Model-download cancel left the job "Working" and claimed nothing partial was
+  kept: #37.
+
+**Maintainer override:** the post-fix Windows retest
+([prompt](./M29-windows-rerun-prompt.md)) was waived and has **not** been run.
+The phone upload of more than one video and the single-click model cancel are
+therefore verified by automated tests only, not on Windows hardware. M32 remains
+the public alpha gate and must exercise both on a Windows client.
