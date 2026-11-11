@@ -120,6 +120,14 @@
     use synthetic bytes and controlled HTTP interruption, never real weights.
   - Optional hardware encoders absent from the minimal source build are reported
     unavailable; the tested CPU encoder is the required fallback.
+  - Windows 11 client run ([report](./M29-windows-client-report.md)) did not fully
+    pass: in the M10 phone test a ~2 MB iPhone video was refused with "The computer
+    is out of space." while ~181 GB was free. Repair and upgrade (steps 6.2 and 6.3)
+    ran inside the Claude app's virtualized container and are recorded as passed by
+    maintainer decision. Smaller defects: the cancelled-download job says "Nothing
+    partial was kept" although the partial is kept; Cancel in Settings left the job
+    "Working"; the desktop phone screen keeps the QR code at "Closes in 0:00" after
+    the phone finishes.
 - Follow-up milestones affected: M30, M31, M33 and M34 must respect the actual M29
   completion dependency. M32 remains the public alpha gate.
 - Screenshots, reports, or artifacts: Ignored local Settings screenshot under
