@@ -8,6 +8,7 @@ import asyncio
 import http.client
 import json
 import secrets
+import shutil
 import subprocess
 import sys
 from collections.abc import MutableMapping
@@ -231,6 +232,24 @@ def test_duplicate_uploads_get_separate_folders(client: TestClient, session: Ses
         "0001/clip.mp4",
         "0002/clip.mp4",
     ]
+
+
+def test_upload_after_staging_folder_was_tidied(client: TestClient, session: Session) -> None:
+    # The desktop deletes each imported copy; a removed session folder must not be
+    # reported to the phone as a full disk (Windows client qualification, M10).
+    assert put(client, "first.mp4", MP4).status_code == 200
+    shutil.rmtree(session.staging)
+    response = put(client, "second.mp4", MP4)
+    assert response.status_code == 200, response.text
+    assert staged(session) == [session.staging / "0002" / "second.mp4"]
+
+
+def test_unavailable_storage_is_not_reported_as_full(client: TestClient, session: Session) -> None:
+    session.staging.rmdir()
+    session.staging.write_bytes(b"")  # a file where the folder should be
+    response = put(client, "clip.mp4", MP4)
+    assert response.status_code == 500
+    assert response.json()["reason"] == "storage_unavailable"
 
 
 def test_unsupported_and_disguised_files_never_stay(

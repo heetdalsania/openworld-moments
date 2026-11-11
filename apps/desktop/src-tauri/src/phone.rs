@@ -388,7 +388,18 @@ impl PhoneGateway {
                 Some(supervisor) => run_import(&supervisor, &session, seq, &path).await,
                 None => Err("worker.unavailable".to_string()),
             };
-            remove_staged(&path);
+            // The gateway keeps writing to this session's staging folder while it
+            // runs, so only an ended session's folder may go once it is empty.
+            let ended = path.parent().and_then(Path::parent).is_none_or(|folder| {
+                gateway
+                    .state
+                    .lock()
+                    .expect("phone state")
+                    .running
+                    .as_ref()
+                    .is_none_or(|r| r.staging != folder)
+            });
+            remove_staged(&path, ended);
             gateway.update(|s| {
                 if let Some(u) = s.uploads.iter_mut().find(|u| u.seq == seq) {
                     match outcome {
@@ -461,11 +472,14 @@ fn staged_path(staging: &Path, relative: &str) -> Option<PathBuf> {
     (seq_ok && name_ok).then(|| staging.join(seq).join(name))
 }
 
-fn remove_staged(path: &Path) {
+/// Delete a staged copy and its `<seq>` folder. The session folder goes too (once
+/// empty) only when `session_ended`: a live gateway still checks free space in it
+/// and writes the next upload there.
+fn remove_staged(path: &Path, session_ended: bool) {
     let _ = std::fs::remove_file(path);
     if let Some(folder) = path.parent() {
         let _ = std::fs::remove_dir(folder);
-        if let Some(session) = folder.parent() {
+        if let Some(session) = folder.parent().filter(|_| session_ended) {
             let _ = std::fs::remove_dir(session); // only once empty
         }
     }
@@ -542,6 +556,28 @@ mod tests {
         for iface in private_interfaces() {
             assert!(is_private_lan(iface.address.parse().unwrap()));
         }
+    }
+
+    #[test]
+    fn imports_keep_a_live_session_folder() {
+        let dir = std::env::temp_dir().join(format!("owm-phone-{}", std::process::id()));
+        let session = dir.join("session");
+        let first = session.join("0001").join("clip.mp4");
+        std::fs::create_dir_all(first.parent().unwrap()).unwrap();
+        std::fs::write(&first, b"video").unwrap();
+        remove_staged(&first, false);
+        assert!(!first.parent().unwrap().exists());
+        assert!(
+            session.is_dir(),
+            "a live gateway still needs its staging folder"
+        );
+
+        let second = session.join("0002").join("clip.mp4");
+        std::fs::create_dir_all(second.parent().unwrap()).unwrap();
+        std::fs::write(&second, b"video").unwrap();
+        remove_staged(&second, true);
+        assert!(!session.exists(), "an ended session leaves no empty folder");
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

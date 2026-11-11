@@ -98,9 +98,13 @@ it.
   content-addressed copy (M05), so the staged file is deleted as soon as that
   import finishes, whatever the outcome. Identical bytes resolve to the
   existing asset and show as "Already in the library".
-- **Folder cleanup:** empty per-file and session folders are removed as soon as
-  they empty. When the app starts, `library/staging/phone/` is removed entirely
-  (no session can be running then).
+- **Folder cleanup:** each per-file folder is removed with its imported copy.
+  The session folder stays while the gateway runs, because the gateway checks
+  free space in it and writes the next upload there; it is removed once the
+  session has ended and it is empty. The gateway also recreates a missing
+  staging folder, and reports a folder it cannot use as `storage_unavailable`,
+  never as `disk_full`. When the app starts, `library/staging/phone/` is removed
+  entirely (no session can be running then).
 - **The desktop shows each file's state:** receiving (percent), added to the
   library (with a link), already in the library, not added (with the reason),
   refused (type, size, not a video), or interrupted.
