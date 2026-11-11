@@ -151,7 +151,7 @@
     attestation with the release; enable private vulnerability reporting.
   - **M37 (macOS signing):** reuse the SBOM, verification and scan tooling.
   - **M40:** standard-user firewall and #38 retest.
-- Pull request: this PR
+- Pull request: [#39](https://github.com/heetdalsania/openworld-moments/pull/39)
 - Screenshots, reports, or artifacts:
   - [Threat model](../security/threat-model.md),
     [security engineering](../security/README.md) and
