@@ -30,7 +30,7 @@ getrandom = "0.4"
 hex = "0.4"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 tauri-plugin-dialog = "2"
-if-addrs = "0.13"
+if-addrs = "0.15"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 
 [dev-dependencies]
