@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.25",
+  "host_version": "0.1.0",
+  "os": {
+    "family": "windows",
+    "version": null,
+    "minimum": null
+  },
+  "architecture": {
+    "binary": "x86_64",
+    "translated": null
+  },
+  "build": {
+    "target": "x86_64-pc-windows-msvc",
+    "profile": "release",
+    "bundled_worker": true
+  },
+  "support": {
+    "level": "alpha",
+    "reasons": []
+  },
+  "directories": {
+    "convention": "windows-appdata"
+  },
+  "integrations": {
+    "file_manager": "explorer",
+    "secret_store": "none",
+    "menus": "default"
+  }
+}

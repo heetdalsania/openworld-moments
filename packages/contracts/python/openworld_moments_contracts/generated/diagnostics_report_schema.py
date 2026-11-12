@@ -7,6 +7,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import platform_capabilities_schema
+
 
 class DiagnosticsWorker(BaseModel):
     model_config = ConfigDict(
@@ -129,6 +131,12 @@ class DiagnosticsReport(BaseModel):
             title="UtcTimestamp",
         ),
     ]
+    host: Annotated[
+        platform_capabilities_schema.PlatformCapabilities | None,
+        Field(
+            description="M33: the desktop host's platform report. Absent when the worker runs without a host."
+        ),
+    ] = None
     worker: Annotated[DiagnosticsWorker, Field(title="DiagnosticsWorker")]
     system: Annotated[DiagnosticsSystem, Field(title="DiagnosticsSystem")]
     library: Annotated[DiagnosticsLibrary, Field(title="DiagnosticsLibrary")]

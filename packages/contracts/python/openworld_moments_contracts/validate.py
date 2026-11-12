@@ -36,6 +36,7 @@ from openworld_moments_contracts.generated import (
     media_asset_schema,
     model_manager_schema,
     overlap_schema,
+    platform_capabilities_schema,
     privacy_review_schema,
     profile_patch_schema,
     profile_schema,
@@ -62,6 +63,7 @@ from openworld_moments_contracts.versioning import check_version
 CONTRACTS: dict[str, tuple[type[BaseModel], bool]] = {
     "diagnostics-report": (diagnostics_report_schema.DiagnosticsReport, True),
     "model-manager": (model_manager_schema.ModelManager, True),
+    "platform-capabilities": (platform_capabilities_schema.PlatformCapabilities, True),
     "system-doctor": (system_doctor_schema.SystemDoctor, True),
     "privacy-review": (privacy_review_schema.PrivacyReview, True),
     "editor-project": (editor_project_schema.EditorProject, True),

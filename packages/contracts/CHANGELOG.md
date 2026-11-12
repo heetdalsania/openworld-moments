@@ -1,5 +1,11 @@
 # Contracts changelog
 
+## 1.25 — Platform capabilities (M33)
+
+- Add the platform-capabilities contract, written by the desktop host: OS family and version, the supported minimum, binary architecture, translation (Rosetta), build target and profile, support level with reasons, directory convention and integrations. It carries no paths, names or identifiers. Semantic rules tie the support level to its reasons and the directory convention and file manager to the OS family.
+- The diagnostics report may embed it as `host`; the embedded report follows the same rules.
+- Existing 1.x documents remain readable.
+
 ## 1.24 — Diagnostics report (M31)
 
 - Add the diagnostics-report contract: versions, system check, library counts, job totals and recent failure codes. Its privacy block is fixed by the schema (no footage, file names, paths or tokens), and a semantic rule rejects failure messages unless the user opted in.

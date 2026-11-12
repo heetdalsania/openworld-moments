@@ -4,6 +4,7 @@
 import type { ErrorObject, ValidateFunction } from "ajv/dist/2020.js";
 import diagnosticsReport from "../schemas/diagnostics-report.schema.json" with { type: "json" };
 import modelManager from "../schemas/model-manager.schema.json" with { type: "json" };
+import platformCapabilities from "../schemas/platform-capabilities.schema.json" with { type: "json" };
 import systemDoctor from "../schemas/system-doctor.schema.json" with { type: "json" };
 import privacyReview from "../schemas/privacy-review.schema.json" with { type: "json" };
 import editorProject from "../schemas/editor-project.schema.json" with { type: "json" };
@@ -47,6 +48,7 @@ import type {
   PrivacyReview,
   DiagnosticsReport,
   ModelManager,
+  PlatformCapabilities,
   SystemDoctor,
   EditorProject,
   StoryCandidate,
@@ -91,6 +93,7 @@ import { checkVersion } from "./versioning.ts";
 export interface ContractTypes {
   "diagnostics-report": DiagnosticsReport;
   "model-manager": ModelManager;
+  "platform-capabilities": PlatformCapabilities;
   "system-doctor": SystemDoctor;
   "privacy-review": PrivacyReview;
   "editor-project": EditorProject;
@@ -135,6 +138,7 @@ export type ContractName = keyof ContractTypes;
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
   "diagnostics-report": [diagnosticsReport, true],
   "model-manager": [modelManager, true],
+  "platform-capabilities": [platformCapabilities, true],
   "system-doctor": [systemDoctor, true],
   "privacy-review": [privacyReview, true],
   "editor-project": [editorProject, true],

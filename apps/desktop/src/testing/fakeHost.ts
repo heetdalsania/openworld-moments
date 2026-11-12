@@ -12,6 +12,8 @@ export interface FakeHost {
   calls: { method: string; path: string; body: unknown }[];
   listeners: Map<string, Listener[]>;
   worker: unknown;
+  /** The `platform_info` answer (M33); a Windows x64 alpha build by default. */
+  platform: unknown;
   emit: (name: string, payload: unknown) => void;
   route: (key: string, handler: Handler | unknown) => void;
   posts: (path: string) => unknown[];
@@ -23,6 +25,7 @@ export function createHost(): FakeHost {
     calls: [],
     listeners: new Map(),
     worker: { status: "ready", port: 1, pid: 1, restarts: 0 },
+    platform: windowsPlatform(),
     emit(name, payload) {
       for (const listener of host.listeners.get(name) ?? []) listener({ payload });
     },
@@ -36,6 +39,19 @@ export function createHost(): FakeHost {
   return host;
 }
 
+export function windowsPlatform(): Record<string, unknown> {
+  return {
+    schema_version: "1.25",
+    host_version: "0.1.0",
+    os: { family: "windows", version: null, minimum: null },
+    architecture: { binary: "x86_64", translated: null },
+    build: { target: "x86_64-pc-windows-msvc", profile: "release", bundled_worker: true },
+    support: { level: "alpha", reasons: [] },
+    directories: { convention: "windows-appdata" },
+    integrations: { file_manager: "explorer", secret_store: "none", menus: "default" },
+  };
+}
+
 /** Wire `host` into the mocked Tauri modules. */
 export function install(
   host: FakeHost,
@@ -45,6 +61,7 @@ export function install(
     if (command === "app_info") {
       return Promise.resolve({ name: "OpenWorld Moments", version: "0.0.0", stage: "planning" });
     }
+    if (command === "platform_info") return Promise.resolve(host.platform);
     if (command === "worker_status") return Promise.resolve(host.worker);
     if (command === "watched_folders_list") return Promise.resolve({ folders: [], status: [] });
     if (command === "worker_api") {

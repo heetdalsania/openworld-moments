@@ -23,10 +23,11 @@ pub const PHONE_EVENT: &str = "phone://status";
 /// The phone import session manager, present when a worker is configured.
 pub type Phone = Option<PhoneGateway>;
 
-/// Where the worker comes from. `OWM_WORKER_PYTHON` overrides; debug builds fall
-/// back to the repository's virtualenv. Packaged builds bundle a worker in M29.
+/// Where the worker comes from. Builds that bundle a worker (the Windows release, and
+/// macOS from M34) start it from the bundle; `OWM_WORKER_PYTHON` overrides; debug builds
+/// fall back to the repository's virtualenv. Every path is absolute: no shell `PATH`.
 fn worker_command<R: Runtime>(app: &AppHandle<R>) -> Option<WorkerCommand> {
-    if cfg!(target_os = "windows") && !cfg!(debug_assertions) {
+    if crate::platform::bundled_worker(&crate::platform::facts()) {
         let runtime = app.path().resource_dir().ok()?.join("runtime");
         return Some(WorkerCommand {
             program: runtime.join("owm-worker.exe"),
@@ -41,12 +42,7 @@ fn worker_command<R: Runtime>(app: &AppHandle<R>) -> Option<WorkerCommand> {
             if !cfg!(debug_assertions) {
                 return None;
             }
-            let venv = if cfg!(windows) {
-                ".venv/Scripts/python.exe"
-            } else {
-                ".venv/bin/python"
-            };
-            Some(repo.join(venv)).filter(|p| p.exists())
+            Some(crate::platform::venv_python(&repo)).filter(|p| p.exists())
         })?;
     Some(WorkerCommand {
         program: python,
@@ -62,7 +58,7 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::E
         app.manage(None::<PhoneGateway> as Phone);
         return Ok(());
     };
-    let library = app.path().app_data_dir()?.join("library");
+    let library = crate::platform::app_dirs(app)?.library();
     // No phone session runs yet: leftovers are from a crash.
     let phone_staging = library.join("staging").join("phone");
     crate::phone::clean_staging(&phone_staging);
@@ -223,6 +219,7 @@ pub async fn worker_cancel_job(
 /// [`crate::media::api_route_allowed`] pass; the token stays in the host.
 #[tauri::command]
 pub async fn worker_api(
+    app: AppHandle,
     state: State<'_, Option<Supervisor>>,
     method: String,
     path: String,
@@ -231,6 +228,11 @@ pub async fn worker_api(
     if !crate::media::api_route_allowed(&method, &path) {
         return Err(crate::media::route_refused());
     }
+    let body = if method == "POST" && path == "/v1/diagnostics" {
+        Some(with_host_platform(&app, body))
+    } else {
+        body
+    };
     let method = match method.as_str() {
         "GET" => reqwest::Method::GET,
         "POST" => reqwest::Method::POST,
@@ -527,7 +529,7 @@ pub async fn diagnostics_export(
     state: State<'_, Option<Supervisor>>,
     include_messages: bool,
 ) -> Result<Value, Value> {
-    let body = json!({ "include_messages": include_messages });
+    let body = with_host_platform(&app, Some(json!({ "include_messages": include_messages })));
     save_worker_export(
         app,
         state,
@@ -539,10 +541,28 @@ pub async fn diagnostics_export(
     .await
 }
 
+/// M33: diagnostics carry the host's platform report. The host writes it, replacing
+/// anything the webview sent, so the preview and the saved file show the same facts.
+fn with_host_platform<R: Runtime>(app: &AppHandle<R>, body: Option<Value>) -> Value {
+    let version = app.package_info().version.to_string();
+    host_platform_body(
+        body,
+        crate::platform::capabilities(&version, &crate::platform::facts()),
+    )
+}
+
+fn host_platform_body(body: Option<Value>, host: Value) -> Value {
+    let mut body = match body {
+        Some(Value::Object(map)) => map,
+        _ => serde_json::Map::new(),
+    };
+    body.insert("host".to_owned(), host);
+    Value::Object(body)
+}
+
 fn library_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, Value> {
-    app.path()
-        .app_data_dir()
-        .map(|dir| dir.join("library"))
+    crate::platform::app_dirs(app)
+        .map(|dirs| dirs.library())
         .map_err(|_| unavailable())
 }
 
@@ -654,6 +674,24 @@ async fn calibration_save(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn diagnostics_body_gets_the_host_report_and_keeps_the_choice() {
+        let host = json!({"schema_version": "1.25"});
+        let body = host_platform_body(
+            Some(json!({"include_messages": true, "host": "fake"})),
+            host.clone(),
+        );
+        assert_eq!(body, json!({"include_messages": true, "host": host}));
+        assert_eq!(
+            host_platform_body(None, host.clone()),
+            json!({"host": host})
+        );
+        assert_eq!(
+            host_platform_body(Some(json!([1])), host.clone()),
+            json!({"host": host})
+        );
+    }
 
     #[test]
     fn export_extensions_are_fixed_per_format() {

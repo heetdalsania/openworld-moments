@@ -1,0 +1,34 @@
+{
+  "description": "only native x86_64 and aarch64",
+  "expect": "schema",
+  "document": {
+    "schema_version": "1.25",
+    "host_version": "0.1.0",
+    "os": {
+      "family": "macos",
+      "version": "15.2",
+      "minimum": "14.0"
+    },
+    "architecture": {
+      "binary": "universal",
+      "translated": false
+    },
+    "build": {
+      "target": "aarch64-apple-darwin",
+      "profile": "release",
+      "bundled_worker": false
+    },
+    "support": {
+      "level": "development",
+      "reasons": ["macos-preview"]
+    },
+    "directories": {
+      "convention": "macos-standard"
+    },
+    "integrations": {
+      "file_manager": "finder",
+      "secret_store": "none",
+      "menus": "default"
+    }
+  }
+}

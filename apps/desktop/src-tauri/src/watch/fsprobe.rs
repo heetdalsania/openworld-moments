@@ -30,22 +30,8 @@ pub fn mtime_ns(meta: &fs::Metadata) -> i128 {
     }
 }
 
-#[cfg(windows)]
 fn is_cloud_placeholder(meta: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
-    const FILE_ATTRIBUTE_OFFLINE: u32 = 0x0000_1000;
-    const FILE_ATTRIBUTE_RECALL_ON_OPEN: u32 = 0x0004_0000;
-    const FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS: u32 = 0x0040_0000;
-    meta.file_attributes()
-        & (FILE_ATTRIBUTE_OFFLINE
-            | FILE_ATTRIBUTE_RECALL_ON_OPEN
-            | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
-        != 0
-}
-
-#[cfg(not(windows))]
-fn is_cloud_placeholder(_meta: &fs::Metadata) -> bool {
-    false
+    crate::platform::is_cloud_placeholder(meta)
 }
 
 /// Metadata of a file without following symlinks (watched folders never follow links).

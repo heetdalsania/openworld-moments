@@ -1,0 +1,35 @@
+{
+  "description": "an alpha target carries no reasons",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.25",
+    "host_version": "0.1.0",
+    "os": {
+      "family": "macos",
+      "version": "15.2",
+      "minimum": "14.0"
+    },
+    "architecture": {
+      "binary": "aarch64",
+      "translated": false
+    },
+    "build": {
+      "target": "aarch64-apple-darwin",
+      "profile": "release",
+      "bundled_worker": false
+    },
+    "support": {
+      "level": "alpha",
+      "reasons": ["macos-preview"]
+    },
+    "directories": {
+      "convention": "macos-standard"
+    },
+    "integrations": {
+      "file_manager": "finder",
+      "secret_store": "none",
+      "menus": "default"
+    }
+  },
+  "message_contains": "alpha"
+}

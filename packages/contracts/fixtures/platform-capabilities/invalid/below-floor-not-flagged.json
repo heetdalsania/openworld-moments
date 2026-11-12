@@ -1,0 +1,35 @@
+{
+  "description": "an OS older than the minimum must be flagged",
+  "expect": "semantic",
+  "document": {
+    "schema_version": "1.25",
+    "host_version": "0.1.0",
+    "os": {
+      "family": "macos",
+      "version": "13.6",
+      "minimum": "14.0"
+    },
+    "architecture": {
+      "binary": "aarch64",
+      "translated": false
+    },
+    "build": {
+      "target": "aarch64-apple-darwin",
+      "profile": "release",
+      "bundled_worker": false
+    },
+    "support": {
+      "level": "development",
+      "reasons": ["macos-preview"]
+    },
+    "directories": {
+      "convention": "macos-standard"
+    },
+    "integrations": {
+      "file_manager": "finder",
+      "secret_store": "none",
+      "menus": "default"
+    }
+  },
+  "message_contains": "os-below-minimum"
+}

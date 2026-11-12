@@ -28,7 +28,7 @@ from typing import Annotated, Any, Literal
 from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from openworld_moments_contracts import load, normalize
+from openworld_moments_contracts import ContractError, load, normalize
 from openworld_moments_contracts.versioning import SUPPORTED_VERSION
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -332,6 +332,8 @@ class SubmitExport(BaseModel):
 class DiagnosticsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     include_messages: bool = False
+    # M33: written by the desktop host (platform-capabilities contract), never the UI.
+    host: dict[str, Any] | None = None
 
 
 class SubmitTranscription(BaseModel):
@@ -474,6 +476,12 @@ def create_app(
 
         # The job repository belongs to the event-loop thread, like the other routes.
         jobs = engine.list(limit=200)
+        host: dict[str, Any] | None = None
+        if body.host is not None:
+            try:
+                host = normalize(load("platform-capabilities", body.host))
+            except ContractError:  # a malformed host report is left out, not fatal
+                host = None
 
         def build() -> dict[str, Any]:
             try:
@@ -496,6 +504,7 @@ def create_app(
                 models=models,
                 include_messages=body.include_messages,
                 secrets=[settings.token],
+                host=host,
             )
             report = normalize(load("diagnostics-report", report))
             return {

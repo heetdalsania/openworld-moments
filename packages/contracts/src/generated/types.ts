@@ -319,6 +319,7 @@ export interface ContractsBundle {
   "media-asset"?: MediaAsset;
   "model-manager"?: ModelManager;
   overlap?: AssetOverlap;
+  "platform-capabilities"?: PlatformCapabilities1;
   "privacy-review"?: PrivacyReview;
   "profile-patch"?: ProfilePatch;
   profile?: Profile;
@@ -1025,6 +1026,7 @@ export interface DerivedCleanupResult {
 export interface DiagnosticsReport {
   schema_version: string;
   generated_at: UtcTimestamp;
+  host?: PlatformCapabilities;
   worker: DiagnosticsWorker;
   system: DiagnosticsSystem;
   library: DiagnosticsLibrary;
@@ -1034,6 +1036,378 @@ export interface DiagnosticsReport {
   models: DiagnosticsModel[];
   jobs: DiagnosticsJobs;
   privacy: DiagnosticsPrivacy;
+}
+/**
+ * M33: the desktop host's platform report. Absent when the worker runs without a host.
+ */
+export interface PlatformCapabilities {
+  schema_version: string;
+  host_version: string;
+  os: PlatformOs;
+  architecture: PlatformArchitecture;
+  build: PlatformBuild;
+  support: PlatformSupport;
+  directories: PlatformDirectories;
+  integrations: PlatformIntegrations;
+}
+export interface PlatformOs {
+  family: "windows" | "macos" | "linux";
+  /**
+   * Marketing version such as 15.2, or null when the host does not read it (Windows reports it in the system check).
+   */
+  version: string | null;
+  /**
+   * Oldest release this build supports, or null when no floor is enforced.
+   */
+  minimum: string | null;
+}
+export interface PlatformArchitecture {
+  /**
+   * CPU architecture the host executable was built for.
+   */
+  binary: "x86_64" | "aarch64";
+  /**
+   * True when the executable runs under translation (Rosetta 2); null when unknown.
+   */
+  translated: boolean | null;
+}
+export interface PlatformBuild {
+  /**
+   * Rust target triple of the host.
+   */
+  target: string;
+  profile: "debug" | "release";
+  /**
+   * Whether this build looks for a worker inside the application bundle.
+   */
+  bundled_worker: boolean;
+}
+export interface PlatformSupport {
+  /**
+   * alpha: a supported alpha target; development: works but is not a supported release; unsupported: this build should not be used here.
+   */
+  level: "alpha" | "development" | "unsupported";
+  /**
+   * @maxItems 8
+   */
+  reasons:
+    | []
+    | [
+        | "debug-build"
+        | "macos-preview"
+        | "linux-development"
+        | "os-below-minimum"
+        | "translated"
+        | "architecture-unsupported"
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ]
+    | [
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        ),
+        (
+          | "debug-build"
+          | "macos-preview"
+          | "linux-development"
+          | "os-below-minimum"
+          | "translated"
+          | "architecture-unsupported"
+        )
+      ];
+}
+/**
+ * Which convention application data follows. The paths themselves are never reported.
+ */
+export interface PlatformDirectories {
+  convention: "windows-appdata" | "macos-standard" | "xdg";
+}
+export interface PlatformIntegrations {
+  file_manager: "explorer" | "finder" | "xdg-open";
+  /**
+   * Where persistent secrets would be kept. Nothing persists a secret yet.
+   */
+  secret_store: "none" | "keychain" | "credential-manager" | "secret-service";
+  menus: "none" | "default" | "native";
 }
 export interface DiagnosticsWorker {
   api_version: string;
@@ -3147,6 +3521,19 @@ export interface AlignResult {
  */
 export interface OverlapOverride {
   overlap_ms: TimelineMs | null;
+}
+/**
+ * What the desktop host knows about the computer and build it runs on (M33). Written by the host, never by the worker. Carries no paths, user names or hardware identifiers.
+ */
+export interface PlatformCapabilities1 {
+  schema_version: string;
+  host_version: string;
+  os: PlatformOs;
+  architecture: PlatformArchitecture;
+  build: PlatformBuild;
+  support: PlatformSupport;
+  directories: PlatformDirectories;
+  integrations: PlatformIntegrations;
 }
 export interface PrivacyReview {
   schema_version: string;

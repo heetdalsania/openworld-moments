@@ -13,6 +13,7 @@ open it in the same pull request as the change it justifies.
 | [0005](./adr/0005-local-ocr.md) | Local region OCR with Tesseract | M17 implementation |
 | [0006](./adr/0006-local-transcription.md) | Optional local transcription with whisper.cpp | M18 implementation |
 | [0007](./adr/0007-windows-ffmpeg-packaging.md) | GPL Windows FFmpeg packaging exception | Accepted in PR #35 |
+| [0008](./adr/0008-macos-distribution.md) | macOS: separate native DMGs, direct download, Hardened Runtime, no App Sandbox | Proposed in M33 |
 
 Other architecture notes:
 

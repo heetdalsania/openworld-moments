@@ -102,6 +102,7 @@ Supporting modules:
 | `route.ts` | Hash router |
 | `preferences.ts` | M31 per-user preferences under `owm.preferences.v1`: setup state, privacy consent (`phoneLan`, `modelDownloads`, both off by default), appearance (theme, text size, motion). Malformed data falls back to the safe defaults. `requireConsent` guards `startPhone` and `installModel` |
 | `a11y.ts` | M31 `useDialogFocus`: focus in, Tab trap, Escape, focus returned to the opener |
+| `platform.ts` | M33 `platformInfo()` reads the host's `platform-capabilities` report (`invoke("platform_info")`, contract-checked) and names the OS, build architecture and support level in the system check, with plain-language notes for macOS previews, Rosetta and old systems |
 | `timeline.ts` | Source ↔ virtual session time mapping (M13) |
 | `player.ts` | `SessionPlayer`: two-element playback across clip boundaries (M13) |
 
