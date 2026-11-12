@@ -120,6 +120,10 @@
     test library was removed afterwards.
   - **Browser smoke:** 29 of 29 checks pass; the guide screenshot shows the new line.
   - **Goldens:** the export goldens were regenerated for the 1.25 version string.
+  - **Artifact scan fix (found by CI):** the first Windows packaging run failed the M30
+    artifact scan. Making worker selection a runtime check left the development
+    checkout path (`CARGO_MANIFEST_DIR`) in release binaries. The path is now compiled
+    into debug builds only; a rebuilt macOS release binary contains no checkout path.
 - Decisions made:
   - **macOS 14.0 floor** for both architectures (verification record). The highest
     floor found is `opencv-python-headless` on Intel at exactly 14.0 (development

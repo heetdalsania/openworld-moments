@@ -35,20 +35,34 @@ fn worker_command<R: Runtime>(app: &AppHandle<R>) -> Option<WorkerCommand> {
             cwd: Some(runtime),
         });
     }
-    let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let repo = development_repo();
     let python = std::env::var_os("OWM_WORKER_PYTHON")
         .map(PathBuf::from)
         .or_else(|| {
-            if !cfg!(debug_assertions) {
-                return None;
-            }
-            Some(crate::platform::venv_python(&repo)).filter(|p| p.exists())
+            let venv = crate::platform::venv_python(repo.as_ref()?);
+            venv.exists().then_some(venv)
         })?;
     Some(WorkerCommand {
         program: python,
         args: vec!["-m".into(), "openworld_moments.worker".into()],
-        cwd: Some(repo.join("services/media-worker")).filter(|p| p.exists()),
+        cwd: repo
+            .map(|r| r.join("services/media-worker"))
+            .filter(|p| p.exists()),
     })
+}
+
+/// The source checkout, in debug builds only. Release binaries must not contain the
+/// build machine's paths (M30 artifact scan), so the path is compiled out entirely
+/// instead of being left to dead-code elimination.
+fn development_repo() -> Option<PathBuf> {
+    #[cfg(debug_assertions)]
+    {
+        Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."))
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        None
+    }
 }
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
