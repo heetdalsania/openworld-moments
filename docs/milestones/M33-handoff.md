@@ -169,7 +169,7 @@
     ADR-0008.
   - **M38:** native menus (`menus: native`), and macOS wording for the system-check
     notes.
-- Pull request: to be linked
+- Pull request: [#51](https://github.com/heetdalsania/openworld-moments/pull/51)
 - Screenshots, reports, or artifacts:
   - CI artifacts `macOS-arm64-unsigned-dev` and `macOS-x86_64-unsigned-dev` (zip,
     `build-info-<arch>.json`, `SHA256SUMS.txt`).
