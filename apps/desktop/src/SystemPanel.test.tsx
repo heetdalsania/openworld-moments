@@ -60,3 +60,61 @@ it("reports unavailable checks in Settings", async () => {
   render(<SystemPanel />);
   expect((await screen.findByRole("alert")).textContent).toContain("Worker unavailable");
 });
+
+function mac(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    schema_version: "1.25",
+    host_version: "0.1.0",
+    os: { family: "macos", version: "15.2", minimum: "14.0" },
+    architecture: { binary: "aarch64", translated: false },
+    build: { target: "aarch64-apple-darwin", profile: "release", bundled_worker: false },
+    support: { level: "development", reasons: ["macos-preview"] },
+    directories: { convention: "macos-standard" },
+    integrations: { file_manager: "finder", secret_store: "none", menus: "default" },
+    ...overrides,
+  };
+}
+
+it("names the Windows alpha build without extra notes", async () => {
+  render(<SystemPanel />);
+  expect(await screen.findByText("Windows · x64 build · version 0.1.0 · Alpha")).toBeTruthy();
+  expect(screen.queryByText(/previews/)).toBeNull();
+});
+
+it("shows the Mac architecture and that macOS is a preview, even without a worker", async () => {
+  host.platform = mac();
+  host.route("GET /v1/system-doctor", () => {
+    throw { message: "Worker unavailable", retryable: true };
+  });
+  render(<SystemPanel />);
+  expect(
+    await screen.findByText(
+      "macOS 15.2 · Apple Silicon (arm64) build · version 0.1.0 · Development build",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByText(/macOS builds are previews/)).toBeTruthy();
+  expect(screen.queryByRole("alert", { name: /Rosetta/ })).toBeNull();
+});
+
+it("warns when the Intel build runs under Rosetta", async () => {
+  host.platform = mac({
+    architecture: { binary: "x86_64", translated: true },
+    build: { target: "x86_64-apple-darwin", profile: "release", bundled_worker: false },
+    support: { level: "unsupported", reasons: ["macos-preview", "translated"] },
+  });
+  render(<SystemPanel />);
+  expect(
+    await screen.findByText(/Intel \(x86_64\) build · version 0.1.0 · Not supported/),
+  ).toBeTruthy();
+  const alerts = await screen.findAllByRole("alert");
+  expect(
+    alerts.some((a) => /Download the Apple Silicon \(arm64\) build/.test(a.textContent ?? "")),
+  ).toBe(true);
+});
+
+it("ignores a platform report that breaks the contract", async () => {
+  host.platform = mac({ data_dir: "/Users/someone" });
+  render(<SystemPanel />);
+  expect(await screen.findByText("Core checks passed")).toBeTruthy();
+  expect(screen.queryByText(/Apple Silicon/)).toBeNull();
+});

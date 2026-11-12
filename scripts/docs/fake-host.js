@@ -165,6 +165,17 @@
       version: "0.1.0-alpha.31",
       stage: "documentation screenshot",
     }),
+    // M33: the Windows guides show the Windows x64 alpha build.
+    platform_info: () => ({
+      schema_version: "1.25",
+      host_version: "0.1.0-alpha.31",
+      os: { family: "windows", version: null, minimum: null },
+      architecture: { binary: "x86_64", translated: null },
+      build: { target: "x86_64-pc-windows-msvc", profile: "release", bundled_worker: true },
+      support: { level: "alpha", reasons: [] },
+      directories: { convention: "windows-appdata" },
+      integrations: { file_manager: "explorer", secret_store: "none", menus: "default" },
+    }),
     worker_status: () => ({ status: "ready", port: 1, pid: 1, restarts: 0 }),
     worker_list_jobs: () => [],
     watched_folders_list: () => ({ folders: [], status: [] }),

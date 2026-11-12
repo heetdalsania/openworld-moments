@@ -189,3 +189,49 @@ def test_api_previews_exactly_what_is_saved(tmp_path: Path) -> None:
 
         refused = client.post("/v1/diagnostics", json={"include_paths": True})
         assert refused.status_code == 422
+
+
+HOST_FIXTURES = Path(__file__).resolve().parents[3] / "packages/contracts/fixtures"
+
+
+def test_api_embeds_a_valid_host_report_and_drops_a_malformed_one(tmp_path: Path) -> None:
+    """M33: the desktop host adds its platform report; a bad one never blocks support."""
+    from openworld_moments.api.app import ApiSettings, create_app
+    from openworld_moments.jobs.engine import JobEngine
+    from openworld_moments.jobs.handlers import BUILTIN_HANDLERS
+
+    host = json.loads(
+        (HOST_FIXTURES / "platform-capabilities/valid/macos-intel.json").read_text("utf-8")
+    )
+    token = secrets.token_hex(32)
+    database = Database.open(tmp_path / "database.sqlite3")
+    settings = ApiSettings(
+        token=token, allowed_hosts=frozenset({"testserver"}), require_loopback_peer=False
+    )
+    with TestClient(create_app(JobEngine(database, BUILTIN_HANDLERS), settings)) as client:
+        client.headers["Authorization"] = f"Bearer {token}"
+        body = client.post("/v1/diagnostics", json={"host": host}).json()
+        load("diagnostics-report", body["report"])
+        assert body["report"]["host"] == host
+        assert json.loads(body["content"])["host"]["architecture"]["binary"] == "x86_64"
+
+        inconsistent = {**host, "architecture": {"binary": "x86_64", "translated": True}}
+        for bad in (inconsistent, {**host, "data_dir": "/Users/alex"}, {"os": "macos"}):
+            response = client.post("/v1/diagnostics", json={"host": bad})
+            assert response.status_code == 200
+            assert "host" not in response.json()["report"]
+            assert "/Users/alex" not in response.json()["content"]
+
+
+def test_report_without_a_host_matches_the_m31_shape(tmp_path: Path) -> None:
+    report = diagnostics.build_report(
+        worker={"worker_version": "0", "api_version": "1", "schema_version": "1.25"},
+        doctor_report=None,
+        database_path=tmp_path / "missing.sqlite3",
+        jobs=[],
+        models=None,
+        include_messages=False,
+    )
+    assert "host" not in report
+    assert list(report)[:2] == ["schema_version", "generated_at"]
+    load("diagnostics-report", report)

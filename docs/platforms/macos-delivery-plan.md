@@ -20,6 +20,8 @@ This plan extends the existing Windows-first roadmap without renumbering milesto
 
 Separate native DMGs are deliberate. They avoid requiring Rosetta and avoid the extra failure modes of merging the Tauri host, Python worker, FFmpeg, and every native model dependency into one universal binary. A universal DMG can be evaluated after both native packages are reliable.
 
+M33 verified the floor and the build matrix: see the [OS floor record](./macos-os-floor.md), [ADR-0008](../architecture/adr/0008-macos-distribution.md), the [platform interfaces](./platform-interfaces.md) and the [development shell guide](./macos-development-shell.md).
+
 The minimum macOS version is a release policy, not a hard-coded assumption. M33 must verify it against Tauri, WebKit, Rust, the packaged Python runtime, FFmpeg, ONNX Runtime, OCR, and transcription dependencies before locking the value. Raising the floor requires a documented compatibility decision.
 
 ## Distribution decision

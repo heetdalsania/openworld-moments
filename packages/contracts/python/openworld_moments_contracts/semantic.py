@@ -47,6 +47,45 @@ def _diagnostics_report(doc: Document) -> Iterable[str]:
     pairs = [(t["kind"], t["state"]) for t in doc["jobs"]["totals"]]
     if len(pairs) != len(set(pairs)):
         yield "jobs.totals: duplicate kind and state"
+    if "host" in doc:
+        for issue in _platform_capabilities(doc["host"]):
+            yield f"host.{issue}"
+
+
+_BLOCKING = {"os-below-minimum", "translated", "architecture-unsupported"}
+_FAMILY = {
+    "windows": ("windows-appdata", "explorer"),
+    "macos": ("macos-standard", "finder"),
+    "linux": ("xdg", "xdg-open"),
+}
+
+
+def _release(text: str) -> tuple[int, ...]:
+    parts = [int(p) for p in text.split(".")]
+    return tuple(parts + [0] * (3 - len(parts)))
+
+
+def _platform_capabilities(doc: Document) -> Iterable[str]:
+    level, reasons = doc["support"]["level"], set(doc["support"]["reasons"])
+    if (level == "unsupported") != bool(reasons & _BLOCKING):
+        yield "support.level: unsupported exactly when a blocking reason is present"
+    if level == "alpha" and reasons:
+        yield "support.reasons: an alpha target carries no reasons"
+    if level == "development" and not reasons:
+        yield "support.reasons: a development target needs a reason"
+    if (doc["architecture"]["translated"] is True) != ("translated" in reasons):
+        yield "support.reasons: translated must match architecture.translated"
+    if (doc["build"]["profile"] == "debug") != ("debug-build" in reasons):
+        yield "support.reasons: debug-build must match build.profile"
+    version, minimum = doc["os"]["version"], doc["os"]["minimum"]
+    below = version is not None and minimum is not None and _release(version) < _release(minimum)
+    if below != ("os-below-minimum" in reasons):
+        yield "support.reasons: os-below-minimum must match os.version and os.minimum"
+    convention, file_manager = _FAMILY[doc["os"]["family"]]
+    if doc["directories"]["convention"] != convention:
+        yield f"directories.convention: {doc['os']['family']} uses {convention}"
+    if doc["integrations"]["file_manager"] != file_manager:
+        yield f"integrations.file_manager: {doc['os']['family']} uses {file_manager}"
 
 
 def _system_doctor(doc: Document) -> Iterable[str]:
@@ -735,6 +774,7 @@ def _privacy_review(doc: Document) -> Iterable[str]:
 
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
     "diagnostics-report": _diagnostics_report,
+    "platform-capabilities": _platform_capabilities,
     "model-manager": _model_manager,
     "system-doctor": _system_doctor,
     "privacy-review": _privacy_review,

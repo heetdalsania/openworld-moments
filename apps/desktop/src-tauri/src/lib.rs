@@ -12,6 +12,7 @@ pub mod calibration;
 mod host;
 pub mod media;
 pub mod phone;
+pub mod platform;
 pub mod reveal;
 pub mod watch;
 pub mod worker;
@@ -25,6 +26,24 @@ pub struct AppInfo {
     pub name: &'static str,
     pub version: String,
     pub stage: &'static str,
+}
+
+/// What the window calls this build. Windows release builds are the unsigned alpha
+/// candidate (unchanged since M29); macOS release shells are development builds until
+/// M37 signs them and M39 qualifies them.
+pub fn stage(facts: &platform::Facts) -> &'static str {
+    match (facts.family, facts.debug) {
+        (_, true) => STAGE,
+        (platform::Family::Windows, false) => "unsigned alpha candidate",
+        (platform::Family::Macos, false) => "unsigned development build",
+        (platform::Family::Linux, false) => STAGE,
+    }
+}
+
+/// `--version-report`: print the platform capabilities and exit without opening a
+/// window. Used by CI on each architecture and by the physical launch smoke test.
+pub fn version_report_requested<I: IntoIterator<Item = std::ffi::OsString>>(args: I) -> bool {
+    args.into_iter().skip(1).any(|a| a == "--version-report")
 }
 
 /// Returns the host's identity. Kept free of Tauri types so it is unit-testable.
@@ -42,15 +61,28 @@ mod commands {
     pub fn app_info(app: tauri::AppHandle) -> super::AppInfo {
         let mut info = super::app_info();
         info.version = app.package_info().version.to_string();
-        if cfg!(target_os = "windows") && !cfg!(debug_assertions) {
-            info.stage = "unsigned alpha candidate";
-        }
+        info.stage = super::stage(&crate::platform::facts());
         info
+    }
+
+    /// M33: the `platform-capabilities` document, exposed as `invoke("platform_info")`.
+    #[tauri::command]
+    pub fn platform_info(app: tauri::AppHandle) -> serde_json::Value {
+        let version = app.package_info().version.to_string();
+        crate::platform::capabilities(&version, &crate::platform::facts())
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    // M33: report the platform and exit, before any window or worker starts. The version
+    // is the application's (from the Tauri configuration), as in the About text.
+    if version_report_requested(std::env::args_os()) {
+        let version = context.package_info().version.to_string();
+        println!("{}", platform::version_report(&version, &platform::facts()));
+        return;
+    }
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .register_asynchronous_uri_scheme_protocol(media::SCHEME, |ctx, request, responder| {
@@ -59,6 +91,7 @@ pub fn run() {
         .setup(|app| host::setup(app.handle()))
         .invoke_handler(tauri::generate_handler![
             commands::app_info,
+            commands::platform_info,
             host::worker_status,
             host::worker_start_diagnostic,
             host::worker_cancel_job,
@@ -81,7 +114,7 @@ pub fn run() {
             host::watched_folder_remove,
             host::watched_folder_files,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building OpenWorld Moments")
         .run(host::on_run_event);
 }
@@ -96,6 +129,34 @@ mod tests {
         assert_eq!(info.name, "OpenWorld Moments");
         assert_eq!(info.stage, "planning");
         assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn stage_names_each_build() {
+        let mut facts = platform::facts();
+        facts.debug = true;
+        assert_eq!(stage(&facts), STAGE);
+        facts.debug = false;
+        facts.family = platform::Family::Windows;
+        assert_eq!(stage(&facts), "unsigned alpha candidate");
+        facts.family = platform::Family::Macos;
+        assert_eq!(stage(&facts), "unsigned development build");
+    }
+
+    #[test]
+    fn version_report_flag_is_exact_and_ignores_the_program_name() {
+        let args = |list: &[&str]| {
+            list.iter()
+                .map(std::ffi::OsString::from)
+                .collect::<Vec<_>>()
+        };
+        assert!(version_report_requested(args(&["app", "--version-report"])));
+        assert!(!version_report_requested(args(&["--version-report"])));
+        assert!(!version_report_requested(args(&[
+            "app",
+            "--version-reports"
+        ])));
+        assert!(!version_report_requested(args(&["app"])));
     }
 
     #[test]

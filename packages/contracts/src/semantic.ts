@@ -2,6 +2,7 @@
 // Rules JSON Schema cannot express. Mirrors semantic.py; shared fixtures keep them aligned.
 import type {
   DiagnosticsReport,
+  PlatformCapabilities,
   PrivacyReview,
   ModelManager,
   SystemDoctor,
@@ -60,6 +61,47 @@ function* diagnosticsReport(doc: DiagnosticsReport): Generator<string> {
     yield "jobs.recent_failures: messages present although omitted";
   const pairs = doc.jobs.totals.map((t) => `${t.kind}\u0000${t.state}`);
   if (new Set(pairs).size !== pairs.length) yield "jobs.totals: duplicate kind and state";
+  if (doc.host !== undefined)
+    for (const issue of platformCapabilities(doc.host)) yield `host.${issue}`;
+}
+const BLOCKING = new Set(["os-below-minimum", "translated", "architecture-unsupported"]);
+const FAMILY: Record<string, readonly [string, string]> = {
+  windows: ["windows-appdata", "explorer"],
+  macos: ["macos-standard", "finder"],
+  linux: ["xdg", "xdg-open"],
+};
+function release(text: string): [number, number, number] {
+  const [major = 0, minor = 0, patch = 0] = text.split(".").map(Number);
+  return [major, minor, patch];
+}
+function olderThan(a: [number, number, number], b: [number, number, number]): boolean {
+  for (const [x, y] of a.map((value, i) => [value, b[i] ?? 0] as const)) if (x !== y) return x < y;
+  return false;
+}
+function* platformCapabilities(doc: PlatformCapabilities): Generator<string> {
+  const level = doc.support.level;
+  const reasons = new Set<string>(doc.support.reasons);
+  const blocking = [...reasons].some((r) => BLOCKING.has(r));
+  if ((level === "unsupported") !== blocking)
+    yield "support.level: unsupported exactly when a blocking reason is present";
+  if (level === "alpha" && reasons.size > 0)
+    yield "support.reasons: an alpha target carries no reasons";
+  if (level === "development" && reasons.size === 0)
+    yield "support.reasons: a development target needs a reason";
+  if ((doc.architecture.translated === true) !== reasons.has("translated"))
+    yield "support.reasons: translated must match architecture.translated";
+  if ((doc.build.profile === "debug") !== reasons.has("debug-build"))
+    yield "support.reasons: debug-build must match build.profile";
+  const { version, minimum } = doc.os;
+  const below =
+    version !== null && minimum !== null && olderThan(release(version), release(minimum));
+  if (below !== reasons.has("os-below-minimum"))
+    yield "support.reasons: os-below-minimum must match os.version and os.minimum";
+  const [convention, fileManager] = FAMILY[doc.os.family] ?? ["", ""];
+  if (doc.directories.convention !== convention)
+    yield `directories.convention: ${doc.os.family} uses ${convention}`;
+  if (doc.integrations.file_manager !== fileManager)
+    yield `integrations.file_manager: ${doc.os.family} uses ${fileManager}`;
 }
 function* systemDoctor(doc: SystemDoctor): Generator<string> {
   if (doc.ready !== !doc.checks.some((c) => c.status === "fail")) yield "ready: must match checks";
@@ -847,6 +889,7 @@ function* privacyReview(doc: PrivacyReview): Generator<string> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each rule narrows its own input
 const RULES: Record<string, (doc: any) => Iterable<string>> = {
   "diagnostics-report": diagnosticsReport,
+  "platform-capabilities": platformCapabilities,
   "model-manager": modelManager,
   "system-doctor": systemDoctor,
   "privacy-review": privacyReview,

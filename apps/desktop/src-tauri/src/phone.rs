@@ -234,8 +234,7 @@ impl PhoneGateway {
         if let Some(cwd) = &command.cwd {
             process.current_dir(cwd);
         }
-        #[cfg(windows)]
-        process.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        crate::platform::hide_console(&mut process);
         let mut child = match process.spawn() {
             Ok(child) => child,
             Err(_) => {

@@ -5,7 +5,9 @@ The report is built from facts the worker already has, never from footage:
 
 * app, runtime and tool versions plus the system check;
 * counts of what is in the library (no titles, names, paths or hashes of media);
-* job totals by kind and state, and recent failures by error code.
+* job totals by kind and state, and recent failures by error code;
+* the desktop host's platform report (M33): OS family and version, architecture,
+  translation, build target and support level. It has no paths or identifiers.
 
 Failure messages are left out by default because they can mention file names. When the
 user opts in, each message is still passed through the path/token redactor and a file
@@ -26,7 +28,7 @@ from typing import Any
 
 from openworld_moments.redaction import Redactor
 
-SCHEMA_VERSION = "1.24"
+SCHEMA_VERSION = "1.25"
 RECENT_FAILURES = 20
 MAX_MESSAGE = 300
 
@@ -163,6 +165,7 @@ def build_report(
     include_messages: bool,
     secrets: Iterable[str] = (),
     now: datetime | None = None,
+    host: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     redactor = Redactor(secrets)
     generated = (now or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
@@ -193,9 +196,14 @@ def build_report(
                 ],
             }
         )
-    return {
+    report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": generated.isoformat().replace("+00:00", "Z"),
+    }
+    if host is not None:
+        # M33: the desktop host's platform report, already contract-checked by the caller.
+        report["host"] = dict(host)
+    return report | {
         "worker": {key: str(value)[:100] for key, value in sorted(worker.items())},
         "system": system,
         "library": library_counts(database_path),

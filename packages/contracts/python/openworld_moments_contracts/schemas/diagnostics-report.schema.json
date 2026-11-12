@@ -23,6 +23,10 @@
     "generated_at": {
       "$ref": "common.schema.json#/$defs/UtcTimestamp"
     },
+    "host": {
+      "description": "M33: the desktop host's platform report. Absent when the worker runs without a host.",
+      "$ref": "platform-capabilities.schema.json"
+    },
     "worker": {
       "title": "DiagnosticsWorker",
       "type": "object",

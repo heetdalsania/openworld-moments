@@ -53,41 +53,7 @@ pub fn render_output(library: &Path, relative: &str) -> Option<PathBuf> {
 
 /// The file manager command that shows `target`, selecting it when `select` is true.
 pub fn command(target: &Path, select: bool) -> Command {
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        let root = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
-        let mut command = Command::new(Path::new(&root).join("explorer.exe"));
-        // Explorer parses its own command line: `/select,"<path>"`. Windows paths cannot
-        // contain quotes, and the path comes from the host, not the webview.
-        let path = target.as_os_str().to_string_lossy();
-        if select {
-            command.raw_arg(format!("/select,\"{path}\""));
-        } else {
-            command.raw_arg(format!("\"{path}\""));
-        }
-        command
-    }
-    #[cfg(target_os = "macos")]
-    {
-        let mut command = Command::new("/usr/bin/open");
-        if select {
-            command.arg("-R");
-        }
-        command.arg("--").arg(target);
-        command
-    }
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    {
-        let folder = if select {
-            target.parent().unwrap_or(target)
-        } else {
-            target
-        };
-        let mut command = Command::new("xdg-open");
-        command.arg(folder);
-        command
-    }
+    crate::platform::reveal_command(target, select)
 }
 
 /// Start the file manager and reap it in the background; its exit code is not meaningful

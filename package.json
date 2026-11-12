@@ -38,6 +38,8 @@
     "contracts:generate": "uv run --locked --directory packages/contracts/python python scripts/generate.py && pnpm --filter @openworld-moments/contracts run generate",
     "contracts:check": "pnpm run contracts:generate && node packages/contracts/scripts/check-drift.mjs",
     "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run contracts:check",
+    "build:macos:arm64": "python3 scripts/macos/build-shell.py --arch arm64",
+    "build:macos:x86_64": "python3 scripts/macos/build-shell.py --arch x86_64",
     "build:windows": "pnpm --filter @openworld-moments/desktop run tauri build --config src-tauri/tauri.packaged.conf.json --target x86_64-pc-windows-msvc --bundles nsis"
   },
   "devDependencies": {
