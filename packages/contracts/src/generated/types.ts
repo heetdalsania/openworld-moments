@@ -300,6 +300,7 @@ export interface ContractsBundle {
   analysis?: AnalysisResult;
   collection?: Collection;
   "derived-media"?: AssetDerivedMedia;
+  "diagnostics-report"?: DiagnosticsReport;
   "editor-project"?: EditorProject;
   error?: ErrorInfo;
   "evaluation-observations"?: EvaluationObservations;
@@ -1017,6 +1018,335 @@ export interface DerivedCleanupResult {
   removed_dirs: number;
   freed_bytes: number;
   skipped_links: number;
+}
+/**
+ * M31 support report. Never contains footage, file names, paths or tokens; failure messages only on opt-in, redacted.
+ */
+export interface DiagnosticsReport {
+  schema_version: string;
+  generated_at: UtcTimestamp;
+  worker: DiagnosticsWorker;
+  system: DiagnosticsSystem;
+  library: DiagnosticsLibrary;
+  /**
+   * @maxItems 64
+   */
+  models: DiagnosticsModel[];
+  jobs: DiagnosticsJobs;
+  privacy: DiagnosticsPrivacy;
+}
+export interface DiagnosticsWorker {
+  api_version: string;
+  schema_version: string;
+  worker_version: string;
+}
+export interface DiagnosticsSystem {
+  available: boolean;
+  ready?: boolean;
+  packaged?: boolean;
+  platform?: string;
+  architecture?: string;
+  free_mib?: number;
+  /**
+   * @maxItems 64
+   */
+  checks?: DiagnosticsCheck[];
+  /**
+   * @maxItems 32
+   */
+  tools?: DiagnosticsTool[];
+}
+export interface DiagnosticsCheck {
+  id: string;
+  status: "pass" | "warn" | "fail";
+  message: string;
+}
+export interface DiagnosticsTool {
+  name: string;
+  version: string;
+  origin: string;
+}
+export interface DiagnosticsLibrary {
+  clips: number | null;
+  sessions: number | null;
+  projects: number | null;
+  renders: number | null;
+  watched_folders: number | null;
+  collections: number | null;
+  event_observations: number | null;
+  transcript_segments: number | null;
+  database_schema: number | null;
+}
+export interface DiagnosticsModel {
+  name: string;
+  revision: string;
+  installed: boolean;
+}
+export interface DiagnosticsJobs {
+  /**
+   * @maxItems 256
+   */
+  totals: DiagnosticsJobTotal[];
+  /**
+   * @maxItems 20
+   */
+  recent_failures:
+    | []
+    | [DiagnosticsFailure]
+    | [DiagnosticsFailure, DiagnosticsFailure]
+    | [DiagnosticsFailure, DiagnosticsFailure, DiagnosticsFailure]
+    | [DiagnosticsFailure, DiagnosticsFailure, DiagnosticsFailure, DiagnosticsFailure]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ]
+    | [
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure,
+        DiagnosticsFailure
+      ];
+}
+export interface DiagnosticsJobTotal {
+  kind: string;
+  state: string;
+  count: number;
+}
+export interface DiagnosticsFailure {
+  kind: string;
+  code: string;
+  retryable: boolean;
+  date: string;
+  message?: string;
+}
+export interface DiagnosticsPrivacy {
+  footage: "never included";
+  file_names: "removed";
+  paths: "removed";
+  tokens: "removed";
+  failure_messages: "omitted" | "included, redacted";
 }
 /**
  * M21 versioned single-track editor document and portable JSON format. No local paths. Legacy Project documents migrate explicitly into model_version 1.

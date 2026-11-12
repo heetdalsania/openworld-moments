@@ -12,6 +12,7 @@ pub mod calibration;
 mod host;
 pub mod media;
 pub mod phone;
+pub mod reveal;
 pub mod watch;
 pub mod worker;
 
@@ -65,6 +66,9 @@ pub fn run() {
             host::worker_api,
             host::project_export,
             host::render_manifest_export,
+            host::diagnostics_export,
+            host::render_reveal,
+            host::library_reveal,
             host::calibration_export_patch,
             host::calibration_export_sample,
             host::phone_interfaces,

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { open } from "@tauri-apps/plugin-dialog";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { describeError, type ImportMode, startImport } from "./api";
 import { upsertJob } from "./jobs";
+import { useDialogFocus } from "./a11y";
 import { useAction } from "./query";
 
 const VIDEO_EXTENSIONS = ["mp4", "m4v", "mov", "mkv", "webm", "ts", "m2ts", "avi"];
 const MODE_KEY = "owm.import.mode";
 
-function savedMode(): ImportMode {
+export function savedMode(): ImportMode {
   try {
     return window.localStorage.getItem(MODE_KEY) === "managed" ? "managed" : "reference";
   } catch {
@@ -16,7 +17,7 @@ function savedMode(): ImportMode {
   }
 }
 
-function saveMode(mode: ImportMode): void {
+export function saveMode(mode: ImportMode): void {
   try {
     window.localStorage.setItem(MODE_KEY, mode);
   } catch {
@@ -50,19 +51,13 @@ export function ImportPanel({
   const [mode, setMode] = useState<ImportMode>(savedMode);
   const headingId = useId();
   const firstButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLElement>(null);
   const submit = useAction(async () => {
     const job = await startImport(paths, mode);
     upsertJob(job);
   });
 
-  useEffect(() => {
-    firstButton.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useDialogFocus(dialog, onClose, firstButton);
 
   async function choose(directory: boolean) {
     const choice = await open({
@@ -85,7 +80,13 @@ export function ImportPanel({
 
   return (
     <div className="overlay">
-      <section role="dialog" aria-modal="true" aria-labelledby={headingId} className="dialog">
+      <section
+        ref={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        className="dialog"
+      >
         <h2 id={headingId}>Import media</h2>
         <p className="muted">
           Choose video files or folders. Folders are searched for supported videos, including

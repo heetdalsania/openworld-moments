@@ -2,7 +2,7 @@
 // Export panel (M24) through the fake host: render the saved revision, encoder
 // availability and quality notes, explicit text omission, results with validation,
 // an explicit CPU fallback after a hardware failure, and errors.
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EditorProject } from "@openworld-moments/contracts";
@@ -213,6 +213,50 @@ describe("export panel", () => {
     expect(within(list).getByText(`renders/${PID}/${JOB}.mp4`)).toBeTruthy();
     expect(within(list).getByText(/revision 4/)).toBeTruthy();
     expect(within(list).getByText(/tone-mapped/)).toBeTruthy();
+  });
+
+  it("renders and locates the output with the keyboard alone (M31)", async () => {
+    const base = invoke.getMockImplementation();
+    invoke.mockImplementation((command: string, args?: Record<string, unknown>) =>
+      command === "render_reveal" ? Promise.resolve({ shown: true }) : base?.(command, args),
+    );
+    const user = userEvent.setup();
+    const flush = panel();
+    const start = await screen.findByRole("button", { name: "Render" });
+    await waitFor(() => expect((start as HTMLButtonElement).disabled).toBe(false));
+    start.focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(host.posts(`/v1/projects/${PID}/render`)).toHaveLength(1));
+    expect(flush).toHaveBeenCalled();
+
+    // The finished render, as the list shows it after the job completes.
+    renders = [readyRecord()];
+    cleanup();
+    resetQueries();
+    panel();
+    const reveal = await screen.findByRole("button", { name: "Show in folder" });
+    reveal.focus();
+    await user.keyboard("{Enter}");
+    expect(invoke).toHaveBeenCalledWith("render_reveal", { renderId: JOB });
+  });
+
+  it("shows a finished render in the file manager through the host (M31)", async () => {
+    renders = [readyRecord()];
+    const base = invoke.getMockImplementation();
+    invoke.mockImplementation((command: string, args?: Record<string, unknown>) => {
+      if (command === "render_reveal") {
+        return args?.renderId === JOB
+          ? Promise.resolve({ shown: true })
+          : Promise.reject({ code: "render.output_missing", message: "Gone", retryable: false });
+      }
+      return base?.(command, args);
+    });
+    const user = userEvent.setup();
+    panel();
+    const list = await screen.findByRole("list", { name: "Renders" });
+    await user.click(within(list).getByRole("button", { name: "Show in folder" }));
+    expect(invoke).toHaveBeenCalledWith("render_reveal", { renderId: JOB });
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("offers the CPU encoder after a hardware failure, never switching silently", async () => {

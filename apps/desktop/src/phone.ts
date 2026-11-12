@@ -3,6 +3,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { toApiError } from "./api";
+import { requireConsent } from "./preferences";
 
 export const PHONE_EVENT = "phone://status";
 
@@ -58,7 +59,9 @@ export function phoneStatus(): Promise<PhoneStatus> {
   return call("phone_status");
 }
 
-export function startPhone(address: string, port?: number): Promise<PhoneStatus> {
+export async function startPhone(address: string, port?: number): Promise<PhoneStatus> {
+  // M31: the LAN page needs an explicit opt-in, checked here as well as in the screen.
+  requireConsent("phoneLan");
   return call("phone_start", { address, port: port ?? null });
 }
 

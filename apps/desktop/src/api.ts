@@ -2,6 +2,7 @@
 // Typed client for the worker API. Requests go through the host's `worker_api` command,
 // which only forwards allow-listed routes; the worker token never reaches the UI.
 import { invoke } from "@tauri-apps/api/core";
+import { requireConsent } from "./preferences";
 import type {
   EventReview,
   EventReviewItem,
@@ -74,7 +75,9 @@ export function systemDoctor(): Promise<SystemDoctor> {
 export function managedModels(): Promise<ModelManager> {
   return call("GET", "/v1/model-manager");
 }
-export function installModel(name: string): Promise<Job> {
+export async function installModel(name: string): Promise<Job> {
+  // M31: downloads need an explicit opt-in, checked here as well as in the screen.
+  requireConsent("modelDownloads");
   return call("POST", "/v1/model-manager/download", { name });
 }
 export function pinModel(name: string, sha256: string): Promise<ModelManager> {
@@ -489,3 +492,44 @@ export const clearPrivacy = (id: string): Promise<{ deleted: boolean }> =>
   call("DELETE", `/v1/projects/${id}/privacy-review`);
 export const deletePrivacyText = (id: string): Promise<{ deleted: boolean }> =>
   call("DELETE", `/v1/projects/${id}/privacy-text`);
+
+// -- diagnostics and locating files (M31) ----------------------------------------------
+export type { DiagnosticsReport } from "@openworld-moments/contracts";
+import type { DiagnosticsReport } from "@openworld-moments/contracts";
+
+export interface DiagnosticsPreview {
+  report: DiagnosticsReport;
+  /** Exactly the text that is saved. */
+  content: string;
+  filename: string;
+}
+
+export const previewDiagnostics = (includeMessages: boolean): Promise<DiagnosticsPreview> =>
+  call("POST", "/v1/diagnostics", { include_messages: includeMessages });
+
+/** The host fetches the report again and asks where to save it; nothing else is sent. */
+export async function saveDiagnostics(includeMessages: boolean): Promise<SavedExport> {
+  try {
+    return await invoke<SavedExport>("diagnostics_export", { includeMessages });
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+/** Show a finished render in the system file manager. */
+export async function revealRender(renderId: string): Promise<void> {
+  try {
+    await invoke("render_reveal", { renderId });
+  } catch (error) {
+    throw toApiError(error);
+  }
+}
+
+/** Open the library folder (imports, renders and the database) in the file manager. */
+export async function revealLibrary(): Promise<void> {
+  try {
+    await invoke("library_reveal");
+  } catch (error) {
+    throw toApiError(error);
+  }
+}

@@ -1,5 +1,8 @@
 # Xbox captures through OneDrive
 
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
+> **Last checked:** 2026-11-11 (M31).
+
 OpenWorld Moments can import your Xbox game clips automatically. It does this
 by watching a folder on your computer that OneDrive keeps in sync.
 
@@ -20,9 +23,10 @@ anywhere, and it never moves, renames, or deletes your files.
    choose **Always keep on this device**. Otherwise OneDrive may only list the
    clips without downloading them, and OpenWorld Moments waits for the download
    instead of starting it.
-4. **Choose the folder in OpenWorld Moments.** Use **Choose captures folder…**
-   on the Xbox card, or **Watched folders → Add folder…** with the source set to
-   *Xbox (OneDrive)*.
+4. **Choose the folder in OpenWorld Moments.** Use **Choose Xbox captures folder…**
+   in first-run setup, **Choose captures folder…** on the Xbox card in Settings, or
+   **Watched folders → Add folder…** with the source set to *Xbox (OneDrive)*. See
+   [Watched folders](./watched-folders.md).
 
 ## What happens next
 

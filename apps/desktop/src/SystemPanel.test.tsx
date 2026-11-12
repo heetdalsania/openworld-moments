@@ -35,24 +35,23 @@ afterEach(() => {
   resetQueries();
   localStorage.clear();
 });
-it("shows first-run capabilities and retains an explicit acknowledgement", async () => {
-  render(<SystemPanel firstRun />);
+it("shows capabilities with each status in words", async () => {
+  render(<SystemPanel />);
   expect(await screen.findByText("Core checks passed")).toBeTruthy();
-  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-  expect(screen.queryByRole("region", { name: "System check" })).toBeNull();
-  expect(localStorage.getItem("owm-system-check-0.1")).toBe("reviewed");
+  expect(screen.getByText("Passed: codecs")).toBeTruthy();
+  expect(screen.getByRole("region", { name: "System check" })).toBeTruthy();
 });
-it("blocks Continue when required capabilities fail and displays repair guidance", async () => {
+it("explains failed checks and can run again", async () => {
   report = {
     ...report,
     ready: false,
     checks: [{ id: "codecs", status: "fail", message: "Repair the packaged FFmpeg" }],
   };
-  render(<SystemPanel firstRun />);
+  render(<SystemPanel heading="This computer" />);
   expect(await screen.findByText(/Repair the packaged FFmpeg/)).toBeTruthy();
-  expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
+  expect(screen.getByText("Failed: codecs")).toBeTruthy();
+  expect(screen.getByText("Repair the failed checks before importing")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "Run system check again" }));
 });
 it("reports unavailable checks in Settings", async () => {
   host.route("GET /v1/system-doctor", () => {

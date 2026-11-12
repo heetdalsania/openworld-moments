@@ -2,6 +2,7 @@
 // Single entry point for reading contract documents: version → schema → semantics.
 // Mirrors validate.py.
 import type { ErrorObject, ValidateFunction } from "ajv/dist/2020.js";
+import diagnosticsReport from "../schemas/diagnostics-report.schema.json" with { type: "json" };
 import modelManager from "../schemas/model-manager.schema.json" with { type: "json" };
 import systemDoctor from "../schemas/system-doctor.schema.json" with { type: "json" };
 import privacyReview from "../schemas/privacy-review.schema.json" with { type: "json" };
@@ -44,6 +45,7 @@ import compiledValidators from "./generated/validators.js";
 import { ContractError } from "./errors.ts";
 import type {
   PrivacyReview,
+  DiagnosticsReport,
   ModelManager,
   SystemDoctor,
   EditorProject,
@@ -87,6 +89,7 @@ import { checkVersion } from "./versioning.ts";
 
 /** Top-level contracts and their TypeScript types. */
 export interface ContractTypes {
+  "diagnostics-report": DiagnosticsReport;
   "model-manager": ModelManager;
   "system-doctor": SystemDoctor;
   "privacy-review": PrivacyReview;
@@ -130,6 +133,7 @@ export type ContractName = keyof ContractTypes;
 
 /** Top-level contracts: name -> [schema, carries schema_version]. */
 export const CONTRACTS: Record<ContractName, readonly [object, boolean]> = {
+  "diagnostics-report": [diagnosticsReport, true],
   "model-manager": [modelManager, true],
   "system-doctor": [systemDoctor, true],
   "privacy-review": [privacyReview, true],

@@ -96,8 +96,9 @@ selected by `build:windows`.
 
 CI uses pinned `windows-2025`, freezes twice and compares payload hashes, builds
 NSIS, then installs into a Unicode scratch path. It uses real WebView2/Tauri IPC
-to check the doctor/catalog, import synthetic media and render a privacy-reviewed
-project with bundled tools. It repairs the same version, builds a test-only higher
+to check the doctor/catalog, walk the M31 first-run setup to its system check and
+skip the rest, import synthetic media and render a privacy-reviewed project with
+bundled tools. It repairs the same version, builds a test-only higher
 version (`0.1.0-alpha.29.1`), checks saved projects/renders after upgrade and verifies
 uninstall retention. It refuses to run against an existing library. CDP is enabled
 only by the CI harness, never in product defaults. Elevated hosted runners ignore

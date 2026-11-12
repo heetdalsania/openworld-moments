@@ -40,6 +40,15 @@ def _model_manager(doc: Document) -> Iterable[str]:
             yield "downloaded_bytes: exceeds signed size"
 
 
+def _diagnostics_report(doc: Document) -> Iterable[str]:
+    omitted = doc["privacy"]["failure_messages"] == "omitted"
+    if omitted and any("message" in f for f in doc["jobs"]["recent_failures"]):
+        yield "jobs.recent_failures: messages present although omitted"
+    pairs = [(t["kind"], t["state"]) for t in doc["jobs"]["totals"]]
+    if len(pairs) != len(set(pairs)):
+        yield "jobs.totals: duplicate kind and state"
+
+
 def _system_doctor(doc: Document) -> Iterable[str]:
     if doc["ready"] != (not any(c["status"] == "fail" for c in doc["checks"])):
         yield "ready: must match checks"
@@ -725,6 +734,7 @@ def _privacy_review(doc: Document) -> Iterable[str]:
 
 
 RULES: dict[str, Callable[[Document], Iterable[str]]] = {
+    "diagnostics-report": _diagnostics_report,
     "model-manager": _model_manager,
     "system-doctor": _system_doctor,
     "privacy-review": _privacy_review,

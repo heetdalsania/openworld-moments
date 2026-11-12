@@ -68,6 +68,7 @@ that created them, and every event and log line for that job carries it.
 |---|---|---|
 | GET | `/v1/health` | `{status, api_version, schema_version, worker_version, pid}` |
 | GET | `/v1/capabilities?refresh=bool` | Media tool report, same as `doctor --json` (see [media](./media.md)) |
+| POST | `/v1/diagnostics` | M31 support report `{include_messages}` → `{report, content, filename}`: a `diagnostics-report` (1.24) with versions, system check, library counts, job totals and recent failure codes; no footage, names, paths or tokens; messages only on opt-in, redacted. `content` is the exact text previewed and saved (the host saves it through `diagnostics_export`) |
 | GET | `/v1/jobs?limit=N` | Newest jobs (contract `Job[]`) |
 | POST | `/v1/jobs` | `{kind, params, idempotency_key?}` → 201 `Job` (state `queued`), or 200 with the earlier job for the same key |
 | GET | `/v1/jobs/{id}` | `Job` |

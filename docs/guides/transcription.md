@@ -1,5 +1,8 @@
 # Local transcription
 
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
+> **Last checked:** 2026-11-11 (M31).
+
 OpenWorld Moments can turn the speech in a session into timed text: your voice chat,
 commentary, or the game's dialogue. Transcription is **optional** and runs **only on
 your computer**:
@@ -35,10 +38,13 @@ your computer**:
 
 ## Install models from Settings
 
-The Windows alpha candidate also offers **Settings → Optional speech models**.
-Choose **Install tiny.en** or **Install base.en** after reviewing the size, source,
-MIT license, pinned revision and checksum. This is the only action that starts a
-download. Audio and transcripts are never sent to the model host.
+In the Windows alpha you don't need a terminal for models. Model downloads are off
+until you allow them: in **Settings → Privacy choices**, tick **Allow optional
+speech-model downloads** (or choose **Allow optional model downloads** in
+**Settings → Optional speech models**). Then choose **Install tiny.en** or
+**Install base.en** after reviewing the size, source, MIT license, pinned revision and
+checksum. Install is the only action that starts a download. Audio and transcripts are
+never sent to the model host.
 
 The app checks space, verifies the signed catalog and checks the completed file's
 SHA-256 before showing **Verified installed**. Cancelled/interrupted bytes can be
@@ -77,7 +83,8 @@ Repeated footage that the session hides is not transcribed twice.
 |---|---|
 | Install whisper.cpp (whisper-cli) to enable optional local transcription | whisper.cpp is not on your PATH; install it or set `OWM_WHISPER` |
 | This whisper.cpp build does not support full JSON output | Update whisper.cpp |
-| No speech model is installed | Choose Install in Settings, or use `owm models install` |
+| No speech model is installed | Allow model downloads in Settings → Privacy choices, then choose Install |
+| *Model downloads are off* | Allow them in Settings → Privacy choices |
 | The installed model file changed | The model file was modified; install it again |
 | This clip has no audio | Nothing to transcribe in that clip; the others still are |
 

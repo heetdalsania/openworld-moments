@@ -1,4 +1,7 @@
-# Send clips from your phone (PS5 and other phone clips)
+# PlayStation and other phone clips
+
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
+> **Last checked:** 2026-11-11 (M31).
 
 OpenWorld Moments can receive clips from your phone over your home Wi-Fi. You
 don't need a cable, a cloud service, or an app on the phone, just its browser.
@@ -12,6 +15,12 @@ don't need a cable, a cloud service, or an app on the phone, just its browser.
 2. **Join the same network.** Put the computer and the phone on the same
    trusted network, such as your home Wi-Fi.
 3. **Open the screen.** In OpenWorld Moments, choose **Import from phone**.
+   The first time, phone transfer is off: read what it does, then choose **Allow
+   phone transfer on this network** (or turn it on in **Settings → Privacy
+   choices**). You can turn it off again there at any time.
+
+   ![Phone transfer stays off until you allow it](./images/phone-consent.png)
+
 4. **Pick the network connection** your phone uses (usually your Wi-Fi), then
    choose **Show QR code**.
 5. **Scan the code** with the phone's camera to open the upload page in the

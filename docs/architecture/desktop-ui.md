@@ -68,7 +68,7 @@ Routes are hash-based, so reloading the window returns to the same screen.
 | `#/projects` | `ProjectsView` | Paged saved projects and retained unsaved drafts ([focused editor](./focused-editor.md)) |
 | `#/project/<id>` | `EditorView` (Export panel includes `OpenExports` and per-render manifest saving, M27) | Source-mapped preview, cut inspector and track, command-only editing, undo/redo, autosave/recovery and read-only event context ([focused editor](./focused-editor.md)) |
 | `#/calibration` | `CalibrationView` | Profile defaults, local ROI overrides, frame capture, crop and built-in preview, media-free patch import/export ([calibration](./profile-calibration.md)) |
-| `#/settings` | `SettingsView` (in `App.tsx`) | Watched folders and Xbox onboarding (M07) |
+| `#/settings` | `SettingsView` (in `App.tsx`) | Privacy choices, system check, optional models, Xbox onboarding and watched folders (M07), display and motion, diagnostics, and Help and setup (run setup again, show library folder) (M31) |
 | `#/phone` | `PhoneImport` | Import from phone (M10): network choice, security warning, QR code, countdown, per-file status; leaving the screen closes the upload page ([phone upload](./phone-upload.md)) |
 
 The session screen also offers manual range-to-project creation (`CreateProject`).
@@ -84,6 +84,12 @@ Global, in `App.tsx`:
 - **Background jobs:** toggles `JobCenter`, with a running count.
 - **Worker banner:** starting, restarting (jobs are kept), or failed.
 - **Skip to content** link.
+- **First-run setup** (M31, `Onboarding`): while `onboarding` is `pending` in the
+  preferences, setup replaces the routed screen. Steps: welcome (what the app never
+  does), system check, import methods and default mode, privacy choices, display, done.
+  Every step can be skipped; choices save as they are made.
+- **Announcer** (M31): one polite and one assertive live region. Jobs seen running
+  in this session are announced when they finish, are cancelled or fail.
 
 Supporting modules:
 
@@ -94,6 +100,8 @@ Supporting modules:
 | `jobs.ts` | Durable job store. Loaded from `GET /v1/jobs` at start, after a worker (re)start, and on resync; live events update it. Finished imports refresh the library, finished `proxy` jobs refresh that asset |
 | `media.ts` | `owm-media` URLs, waveform parsing (`owm-waveform` v1), durations |
 | `route.ts` | Hash router |
+| `preferences.ts` | M31 per-user preferences under `owm.preferences.v1`: setup state, privacy consent (`phoneLan`, `modelDownloads`, both off by default), appearance (theme, text size, motion). Malformed data falls back to the safe defaults. `requireConsent` guards `startPhone` and `installModel` |
+| `a11y.ts` | M31 `useDialogFocus`: focus in, Tab trap, Escape, focus returned to the opener |
 | `timeline.ts` | Source ↔ virtual session time mapping (M13) |
 | `player.ts` | `SessionPlayer`: two-element playback across clip boundaries (M13) |
 
@@ -138,9 +146,21 @@ Supporting modules:
   4. view controls;
   5. clip cards.
 
-  Focus rings are always visible (`:focus-visible`).
+  Focus rings are always visible (`:focus-visible`; date fields use `:focus`).
 - **Dialogs:** the import dialog is labelled (`role="dialog"`, `aria-modal`),
-  moves focus to its first button, and closes with Escape.
+  moves focus to its first button, keeps Tab inside, closes with Escape and returns
+  focus to the control that opened it (M31).
+- **Themes (M31):** `data-theme` on the root (`light`, `dark`, `high-contrast`) over
+  the system scheme; `prefers-contrast: more` and `forced-colors: active` are
+  honored. Token contrast is tested (AA, AAA for high contrast).
+- **Text size and motion (M31):** the root font size scales rem-based layout
+  (100–200%); `data-motion="reduce"` and `prefers-reduced-motion` disable
+  transitions. The top bar wraps, so 200% text, 200% zoom and 400 px windows do not
+  scroll sideways.
+- **Checks:** `accessibility.test.tsx` runs axe-core on the primary screens and every
+  setup step; `scripts/docs/a11y-smoke.py` measures keyboard focus, zoom, narrow
+  windows, forced colors and reduced motion in Chrome. See the
+  [accessibility guide](../guides/accessibility.md#support-matrix).
 - **Labels:** progress bars carry labels and value text. Status changes use
   `role="status"`, errors `role="alert"`. Thumbnails in the filmstrip are buttons
   named "Jump to m:ss", and the waveform has an image label.

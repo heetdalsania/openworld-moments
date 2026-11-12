@@ -89,7 +89,7 @@ summary:focus-visible {
   --surface: color-mix(in srgb, var(--fg) 4%, var(--bg));
   --accent: #3b5bdb;
   --accent-fg: #ffffff;
-  --warn: #b35c00;
+  --warn: #9a4f00;
   --focus: #4c6ef5;
 }
 
@@ -160,8 +160,9 @@ a {
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.5rem 1.5rem;
   padding: 0.6rem 1.25rem;
   border-bottom: 1px solid var(--line);
 }
@@ -172,7 +173,8 @@ a {
 
 .topbar nav {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
 }
 
 .topbar nav a {
@@ -189,6 +191,7 @@ a {
 .topbar .actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -1639,4 +1642,222 @@ button.link {
 .model-manager button {
   margin-inline-end: 0.5rem;
   margin-block-start: 0.5rem;
+}
+
+/* -- M31: themes, contrast, motion and setup ------------------------------------ */
+
+/* Explicit themes override the system preference (attribute selectors win over :root). */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f6f4;
+  --fg: #1d1d1b;
+  --muted: #5d5d58;
+  --accent: #3b5bdb;
+  --accent-fg: #ffffff;
+  --warn: #9a4f00;
+  --focus: #3b5bdb;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #161615;
+  --fg: #ececea;
+  --muted: #a3a39d;
+  --accent: #748ffc;
+  --accent-fg: #10131f;
+  --warn: #ffb35c;
+  --focus: #91a7ff;
+}
+
+:root[data-theme="high-contrast"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --fg: #ffffff;
+  --muted: #e6e6e6;
+  --accent: #ffd43b;
+  --accent-fg: #000000;
+  --warn: #ffa94d;
+  --focus: #66d9ff;
+  --line: #ffffff;
+  --surface: #000000;
+}
+
+@media (prefers-contrast: more) {
+  :root:not([data-theme]) {
+    --muted: var(--fg);
+    --line: color-mix(in srgb, var(--fg) 70%, transparent);
+  }
+}
+
+:root[data-theme="high-contrast"] a,
+:root[data-theme="high-contrast"] button.link {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+:root[data-theme="high-contrast"] button,
+:root[data-theme="high-contrast"] .button,
+:root[data-theme="high-contrast"] select,
+:root[data-theme="high-contrast"] input,
+:root[data-theme="high-contrast"] .panel,
+:root[data-theme="high-contrast"] .notice-box {
+  border: 2px solid var(--line);
+}
+
+:root[data-theme="high-contrast"] [aria-current="page"],
+:root[data-theme="high-contrast"] [aria-pressed="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Windows contrast themes: let system colors through and keep every control outlined. */
+@media (forced-colors: active) {
+  button,
+  .button,
+  select,
+  input,
+  .panel,
+  .notice-box,
+  .banner,
+  .dialog {
+    border: 1px solid CanvasText;
+  }
+  *:focus-visible {
+    outline: 3px solid Highlight;
+  }
+  [aria-current="page"],
+  [aria-current="step"],
+  [aria-pressed="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  button:disabled {
+    color: GrayText;
+    border-color: GrayText;
+  }
+}
+
+/* Reduced motion: from the system, or chosen in Settings. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.onboarding-flow {
+  max-width: 52rem;
+}
+
+.onboarding-flow h1:focus {
+  outline: none;
+}
+
+.onboarding-flow h1:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.setup-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  padding: 0;
+  margin: 0 0 1rem;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.setup-steps [aria-current="step"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.setup-step-state {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.setup-nav {
+  margin-top: 1rem;
+}
+
+.methods > li {
+  margin-bottom: 0.75rem;
+}
+
+.privacy-choices fieldset,
+.onboarding-flow fieldset {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+}
+
+.privacy-choice + .privacy-choice {
+  margin-top: 0.75rem;
+}
+
+.privacy-choices .check,
+.onboarding-flow .check,
+.appearance .check,
+.diagnostics .check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.privacy-choices .check input,
+.onboarding-flow .check input,
+.appearance .check input,
+.diagnostics .check input {
+  margin-top: 0.3rem;
+}
+
+.diagnostics-preview {
+  max-height: 24rem;
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.checks {
+  padding-left: 1.25rem;
+}
+
+/* Date fields focus an inner segment, so :focus-visible never matches the input. */
+input[type="date"]:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }

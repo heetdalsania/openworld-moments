@@ -50,7 +50,7 @@ def test_supported_versions_pass(version: str) -> None:
         ({"schema_version": "1"}, "malformed"),
         ({"schema_version": "01.0"}, "malformed"),
         ({"schema_version": "0.9"}, "older than the supported 1.x"),
-        ({"schema_version": "1.24"}, "reads up to 1.23"),
+        ({"schema_version": "1.25"}, "reads up to 1.24"),
         ({"schema_version": "2.0"}, "newer OpenWorld Moments"),
     ],
 )

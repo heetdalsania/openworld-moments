@@ -9,6 +9,7 @@ import {
   removeModel,
 } from "./api";
 import { isActive, upsertJob, useJobs } from "./jobs";
+import { setPrivacy, usePreferences } from "./preferences";
 import { invalidate, useAction, useQuery } from "./query";
 
 export function ModelManager() {
@@ -30,6 +31,7 @@ export function ModelManager() {
   );
   const error = models.error ?? action.error;
   const downloading = jobs.some((job) => job.kind === "model_download" && isActive(job));
+  const allowed = usePreferences().privacy.modelDownloads;
   return (
     <section aria-label="Optional models" className="panel model-manager">
       <h2>Optional speech models</h2>
@@ -39,6 +41,17 @@ export function ModelManager() {
         uploaded. Transcription also needs a local whisper.cpp engine; the Transcript panel reports
         engine availability.
       </p>
+      {!allowed && (
+        <div className="notice-box" role="note">
+          <p>
+            <strong>Model downloads are off.</strong> Installing a model downloads it from the
+            source listed below over your internet connection. Nothing from your library is sent.
+          </p>
+          <button type="button" onClick={() => setPrivacy("modelDownloads", true)}>
+            Allow optional model downloads
+          </button>
+        </div>
+      )}
       {models.loading && <p role="status">Verifying catalog and installed checksums…</p>}
       {error && <p role="alert">{describeError(error)}</p>}
       {models.data?.models.length === 0 && <p>No optional models are listed in this catalog.</p>}
@@ -82,7 +95,7 @@ export function ModelManager() {
               )}
               {!running && !installed && (
                 <button
-                  disabled={action.busy || models.loading || downloading}
+                  disabled={!allowed || action.busy || models.loading || downloading}
                   onClick={() => void action.run("install", model.name)}
                 >
                   {model.downloaded_bytes ? "Resume install" : "Install"} {model.name}
