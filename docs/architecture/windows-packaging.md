@@ -46,6 +46,11 @@ console windows. Corrupt/missing runtime files fail startup with a repair error.
 | OCR / transcription engines | Optional external installations | Not bundled; existing detector/Transcript panels report unavailability |
 | Model weights | Explicit optional downloads only | No weights or footage in the installer or repository |
 
+Since M34 the freeze steps shared with macOS (PyInstaller arguments, stdlib ZIP
+canonicalization, notices, inventory) live in `scripts/packaging/runtime_bundle.py`;
+the Windows release ships it with `freeze-worker.py` as corresponding source, and each
+bundled tool's inventory entry records its `architecture`.
+
 `sources.json` pins the binary-producing source archives and checksums. The
 extractor bounds archive size/count and rejects traversal and links. The media
 build disables autodetected external libraries and network protocols, enables
@@ -124,7 +129,7 @@ refusal remain active.
 | Method | Route | Behavior |
 |---|---|---|
 | GET | `/v1/system-doctor` | Local storage, write permissions, loopback ports, SQLite/FTS5, codecs, real CPU/hardware test encodes, catalog signature and runtime inventory |
-| GET | `/v1/model-manager` | Offline signature/checksum checks, signed model size/license/source/revision, required disk estimate, partial bytes, active checksum and retained versions |
+| GET | `/v1/model-manager` | Offline signature/checksum checks, signed model size/license/source/revision, required disk estimate, partial bytes, active checksum and retained versions; since M34 also `platforms` and `compatible` (incompatible downloads are refused with `models.incompatible_platform`) |
 | POST | `/v1/model-manager/download` | `{name}` from the bundled catalog → durable `model_download` job, with immutable checksum in stored params |
 | POST | `/v1/model-manager/pin` | `{name,sha256}` → explicitly activate a hash-verified retained version |
 | POST | `/v1/model-manager/remove` | `{name}` → remove that curated model, its versions and partial bytes; media/transcripts stay |

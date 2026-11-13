@@ -1,0 +1,10 @@
+{
+  "description": "Documented, reviewed exceptions for scripts/security/scan_artifacts.py (M30). Each entry must still match a finding, or the scan fails as stale. Paths are matched against '<scanned folder name>/<path inside it>'.",
+  "exceptions": [
+    {
+      "kind": "home-path",
+      "path": "runtime/_internal/*",
+      "reason": "Third-party prebuilt macOS wheels embed their upstream CI build paths in debug and panic metadata or bundled SBOMs: cffi and websockets (/Users/runner/work/...), and Rust-based wheels such as cryptography, pydantic-core and rpds-py (/Users/runner/.cargo/...). They name no user or maintainer machine and contain no secrets; removing them would mean rebuilding upstream binaries. Our own host, worker and FFmpeg builds are kept free of build paths (M34)."
+    }
+  ]
+}

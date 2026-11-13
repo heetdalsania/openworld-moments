@@ -38,6 +38,11 @@ def _model_manager(doc: Document) -> Iterable[str]:
     for model in doc["models"]:
         if model["downloaded_bytes"] > model["size_bytes"]:
             yield "downloaded_bytes: exceeds signed size"
+        platforms = model.get("platforms", [])
+        if "any" in platforms and len(platforms) > 1:
+            yield "platforms: any must be the only entry"
+        if platforms == ["any"] and model.get("compatible") is False:
+            yield "compatible: a model for any platform is compatible"
 
 
 def _diagnostics_report(doc: Document) -> Iterable[str]:

@@ -28,7 +28,7 @@ from typing import Any
 
 from openworld_moments.redaction import Redactor
 
-SCHEMA_VERSION = "1.25"
+SCHEMA_VERSION = "1.26"
 RECENT_FAILURES = 20
 MAX_MESSAGE = 300
 

@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.26",
+  "ready": true,
+  "packaged": true,
+  "platform": "Windows",
+  "architecture": "AMD64",
+  "free_bytes": 1073741824,
+  "checks": [
+    {
+      "id": "codecs",
+      "status": "pass",
+      "message": "CPU codec test passed"
+    }
+  ],
+  "tools": [
+    {
+      "name": "Worker",
+      "version": "0.0.0",
+      "origin": "development",
+      "license": "AGPL-3.0-or-later"
+    },
+    {
+      "name": "ffmpeg",
+      "version": "ffmpeg version 9.0.2",
+      "origin": "bundle",
+      "license": "GPL-2.0-or-later",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "architecture": "arm64"
+    }
+  ]
+}

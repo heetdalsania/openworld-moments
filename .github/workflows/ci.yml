@@ -143,20 +143,22 @@ jobs:
           OWM_REQUIRE_FFMPEG: "1" # the E2E test fails instead of skipping without FFmpeg
 
   macos:
-    # M33: native development shells for Apple Silicon and Intel. Pinned runner images
-    # (never macos-latest); each architecture builds and caches on its own native runner.
-    # macos-15-intel is GitHub's last Intel image (supported until about August 2027).
-    name: macOS shell (${{ matrix.arch }})
+    # M33/M34: native packaged development builds for Apple Silicon and Intel. Pinned
+    # runner images (never macos-latest); each architecture builds and caches on its own
+    # native runner. macos-15-intel is GitHub's last Intel image (until about August 2027).
+    name: macOS build (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: arm64
             runner: macos-15
+            python: cpython-3.12.14-macos-aarch64-none
           - arch: x86_64
             runner: macos-15-intel
+            python: cpython-3.12.14-macos-x86_64-none
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Runner is the architecture this job builds
@@ -172,31 +174,81 @@ jobs:
       - run: rustup show active-toolchain
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          key: macos-${{ matrix.arch }}-v1
+          key: macos-${{ matrix.arch }}-v2
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          version: "0.13.7"
           enable-cache: true
           cache-dependency-glob: uv.lock
-          cache-suffix: macos-${{ matrix.arch }}
-      # Supervisor tests start the real worker. Runtime packages only: dev tools are not
-      # needed here, and cryptography ships no Intel macOS wheel, so on Intel it is built
-      # from source against Homebrew's OpenSSL (recorded in docs/platforms/macos-os-floor.md).
-      - name: Worker environment (runtime packages)
+          cache-suffix: macos-${{ matrix.arch }}-v2
+      # cryptography ships no Intel macOS wheel. On Intel it is built from source and
+      # linked statically against a pinned OpenSSL LTS built for macOS 14 (Homebrew's
+      # targets the runner's macOS and would be loaded from outside the app).
+      - uses: actions/cache@v6.1.0
+        if: matrix.arch == 'x86_64'
+        id: openssl-cache
+        with:
+          path: output/packaging/openssl-x86_64
+          key: macos-x86_64-openssl-${{ hashFiles('scripts/macos/openssl.json', 'scripts/macos/build-openssl.sh') }}
+      - name: Static OpenSSL for macOS 14 (Intel)
+        if: matrix.arch == 'x86_64' && steps.openssl-cache.outputs.cache-hit != 'true'
+        run: bash scripts/macos/build-openssl.sh x86_64
+      # The pinned python-build-standalone runtime that is frozen into the app (M34).
+      # Runtime and packaging packages only.
+      - name: Worker environment (managed CPython 3.12.14, runtime packages)
         run: |
+          EXTRA=""
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            OPENSSL_DIR="$(brew --prefix openssl@3)"
-            export OPENSSL_DIR
+            OPENSSL_DIR="$GITHUB_WORKSPACE/output/packaging/openssl-x86_64"
+            OPENSSL_STATIC=1
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            export OPENSSL_DIR OPENSSL_STATIC MACOSX_DEPLOYMENT_TARGET
+            EXTRA="--refresh-package cryptography"  # never reuse a cached dynamic build
           fi
-          uv sync --locked --all-packages --no-dev
+          uv sync $EXTRA --managed-python --locked --all-packages --no-dev --group packaging --python ${{ matrix.python }}
       - run: pnpm install --frozen-lockfile
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      # Media E2E tests skip without FFmpeg; bundled media tools arrive in M34.
       - run: cargo test --workspace --locked
       - run: pnpm --filter @openworld-moments/desktop test
+      - name: Verify and extract pinned media sources
+        run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/windows/prepare-sources.py
+      - uses: actions/cache@v6.1.0
+        id: media-cache
+        with:
+          path: output/packaging/media
+          key: macos-${{ matrix.arch }}-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/macos/build-media.sh') }}
+      - name: Build FFmpeg and FFprobe with libx264 only (macOS 14+)
+        if: steps.media-cache.outputs.cache-hit != 'true'
+        run: |
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then brew install nasm; fi
+          bash scripts/macos/build-media.sh ${{ matrix.arch }}
+      - name: Freeze, audit and inventory the worker
+        run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/macos/freeze-worker.py
+      - name: Host lifecycle, crash recovery and import tests against the frozen worker
+        env:
+          OWM_REQUIRE_FFMPEG: "1"
+        run: |
+          RUNTIME="$GITHUB_WORKSPACE/apps/desktop/src-tauri/bundle-input/runtime"
+          OWM_WORKER_PYTHON="$RUNTIME/owm-worker" PATH="$RUNTIME/tools:$PATH" \
+            cargo test --locked -p openworld-moments-desktop --test supervisor --test library_e2e --test session_e2e
       - name: Keep build-machine paths out of the Rust binary
         run: echo "RUSTFLAGS=--remap-path-prefix=$HOME/.cargo=/cargo --remap-path-prefix=$GITHUB_WORKSPACE=/build" >> "$GITHUB_ENV"
-      - name: Build, verify Mach-O architecture and run the version report
+      - name: Build the app, verify every Mach-O file and run the version report
         run: python3 scripts/macos/build-shell.py --arch ${{ matrix.arch }}
+      - name: Bundled runtime smoke (empty environment, Unicode paths, CPU render, damage)
+        run: python3 scripts/macos/runtime-smoke.py "target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app/Contents/Resources/runtime"
+      - name: SBOM for this architecture, verified against the runtime; secret and path scan
+        run: |
+          RUNTIME=../../apps/desktop/src-tauri/bundle-input/runtime
+          OUT=../../output/packaging/macos
+          RUN="uv run --locked --no-dev --group packaging --with cyclonedx-python-lib[json-validation]==11.12.0 --directory services/media-worker python"
+          $RUN ../../scripts/security/sbom.py --inventory $RUNTIME/inventory.json --output $OUT/sbom-macos-${{ matrix.arch }}.cdx.json
+          $RUN ../../scripts/security/verify_sbom.py --sbom $OUT/sbom-macos-${{ matrix.arch }}.cdx.json --inventory $RUNTIME/inventory.json --runtime-dir $RUNTIME
+          $RUN ../../scripts/security/scan_artifacts.py $RUNTIME \
+            "../../target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/openworld-moments-desktop" \
+            --exceptions ../../security/artifact-scan-exceptions-macos.json --report $OUT/artifact-scan.json
+          cp apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/macos/runtime-inventory-${{ matrix.arch }}.json
+          cp output/packaging/macos-runtime-smoke.json output/packaging/macos/runtime-smoke-${{ matrix.arch }}.json
       - uses: actions/upload-artifact@v7.0.2
         if: success()
         with:

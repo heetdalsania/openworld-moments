@@ -92,6 +92,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 300
+          },
+          "architecture": {
+            "description": "M34: CPU architecture of a bundled native tool.",
+            "enum": ["x86_64", "arm64"]
           }
         }
       }

@@ -64,6 +64,8 @@ def main() -> None:
     shutil.make_archive(str(release / "runtime-notices"), "zip", RUNTIME / "notices")
     for path in ("build-media.sh", "freeze-worker.py", "sources.json", "python-notices.json"):
         shutil.copyfile(ROOT / "scripts/windows" / path, release / path)
+    # M34: the freeze steps shared with macOS are part of the corresponding source.
+    shutil.copyfile(ROOT / "scripts/packaging/runtime_bundle.py", release / "runtime_bundle.py")
     # Build notes name the CI workspace and temp folders; ship them redacted (M30).
     # FFmpeg's config.log is not shipped: autoconf dumps the whole CI environment into
     # it. The exact sources, build script, compiler, packages and configure line

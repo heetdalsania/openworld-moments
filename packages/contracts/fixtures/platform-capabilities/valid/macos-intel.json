@@ -13,7 +13,7 @@
   "build": {
     "target": "x86_64-apple-darwin",
     "profile": "release",
-    "bundled_worker": false
+    "bundled_worker": true
   },
   "support": {
     "level": "development",

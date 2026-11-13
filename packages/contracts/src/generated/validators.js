@@ -27987,9 +27987,10 @@ return errors === 0;
 validate189.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const contractValidator21 = validate194;
-const schema411 = {"title":"ModelManager","type":"object","additionalProperties":false,"required":["schema_version","catalog_version","models"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.[0-9]+$"},"catalog_version":{"type":"integer","minimum":1},"models":{"type":"array","maxItems":64,"items":{"title":"ManagedModel","type":"object","additionalProperties":false,"required":["name","revision","size_bytes","sha256","license","source_url","downloaded_bytes","disk_required_bytes","active_sha256","versions"],"properties":{"name":{"type":"string","pattern":"^[a-z0-9]+(?:[._-][a-z0-9]+)*$","maxLength":64},"revision":{"type":"string","pattern":"^[a-f0-9]{40}$"},"size_bytes":{"type":"integer","minimum":1024,"maximum":4294967296},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"license":{"const":"MIT"},"source_url":{"type":"string","minLength":1,"maxLength":300},"downloaded_bytes":{"type":"integer","minimum":0},"disk_required_bytes":{"type":"integer","minimum":0},"active_sha256":{"anyOf":[{"type":"string","pattern":"^[a-f0-9]{64}$"},{"type":"null"}]},"versions":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}}}},"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/model-manager.schema.json"};
+const schema411 = {"title":"ModelManager","type":"object","additionalProperties":false,"required":["schema_version","catalog_version","models"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.[0-9]+$"},"catalog_version":{"type":"integer","minimum":1},"models":{"type":"array","maxItems":64,"items":{"title":"ManagedModel","type":"object","additionalProperties":false,"required":["name","revision","size_bytes","sha256","license","source_url","downloaded_bytes","disk_required_bytes","active_sha256","versions"],"properties":{"name":{"type":"string","pattern":"^[a-z0-9]+(?:[._-][a-z0-9]+)*$","maxLength":64},"revision":{"type":"string","pattern":"^[a-f0-9]{40}$"},"size_bytes":{"type":"integer","minimum":1024,"maximum":4294967296},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"license":{"const":"MIT"},"source_url":{"type":"string","minLength":1,"maxLength":300},"downloaded_bytes":{"type":"integer","minimum":0},"disk_required_bytes":{"type":"integer","minimum":0},"active_sha256":{"anyOf":[{"type":"string","pattern":"^[a-f0-9]{64}$"},{"type":"null"}]},"versions":{"type":"array","maxItems":64,"uniqueItems":true,"items":{"type":"string","pattern":"^[a-f0-9]{64}$"}},"platforms":{"description":"M34: platforms the artifact runs on (os-arch, or any). Absent means any.","type":"array","minItems":1,"maxItems":8,"uniqueItems":true,"items":{"type":"string","pattern":"^(any|(macos|windows|linux)-(arm64|x86_64))$"}},"compatible":{"description":"M34: whether this computer can install the artifact. Absent means compatible.","type":"boolean"}}}}},"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/model-manager.schema.json"};
 const pattern212 = new RegExp("^[a-z0-9]+(?:[._-][a-z0-9]+)*$", "u");
 const pattern213 = new RegExp("^[a-f0-9]{40}$", "u");
+const pattern217 = new RegExp("^(any|(macos|windows|linux)-(arm64|x86_64))$", "u");
 
 function validate194(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 /*# sourceURL="https://github.com/heetdalsania/openworld-moments/contracts/model-manager.schema.json" */;
@@ -28580,9 +28581,11 @@ vErrors.push(err46);
 errors++;
 }
 }
-}
-else {
-const err47 = {instancePath:instancePath+"/models/" + i0,schemaPath:"#/properties/models/items/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(data3.platforms !== undefined){
+let data15 = data3.platforms;
+if(Array.isArray(data15)){
+if(data15.length > 8){
+const err47 = {instancePath:instancePath+"/models/" + i0+"/platforms",schemaPath:"#/properties/models/items/properties/platforms/maxItems",keyword:"maxItems",params:{limit: 8},message:"must NOT have more than 8 items"};
 if(vErrors === null){
 vErrors = [err47];
 }
@@ -28591,10 +28594,8 @@ vErrors.push(err47);
 }
 errors++;
 }
-}
-}
-else {
-const err48 = {instancePath:instancePath+"/models",schemaPath:"#/properties/models/type",keyword:"type",params:{type: "array"},message:"must be array"};
+if(data15.length < 1){
+const err48 = {instancePath:instancePath+"/models/" + i0+"/platforms",schemaPath:"#/properties/models/items/properties/platforms/minItems",keyword:"minItems",params:{limit: 1},message:"must NOT have fewer than 1 items"};
 if(vErrors === null){
 vErrors = [err48];
 }
@@ -28603,15 +28604,112 @@ vErrors.push(err48);
 }
 errors++;
 }
-}
-}
-else {
-const err49 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+const len2 = data15.length;
+for(let i3=0; i3<len2; i3++){
+let data16 = data15[i3];
+if(typeof data16 === "string"){
+if(!pattern217.test(data16)){
+const err49 = {instancePath:instancePath+"/models/" + i0+"/platforms/" + i3,schemaPath:"#/properties/models/items/properties/platforms/items/pattern",keyword:"pattern",params:{pattern: "^(any|(macos|windows|linux)-(arm64|x86_64))$"},message:"must match pattern \""+"^(any|(macos|windows|linux)-(arm64|x86_64))$"+"\""};
 if(vErrors === null){
 vErrors = [err49];
 }
 else {
 vErrors.push(err49);
+}
+errors++;
+}
+}
+else {
+const err50 = {instancePath:instancePath+"/models/" + i0+"/platforms/" + i3,schemaPath:"#/properties/models/items/properties/platforms/items/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err50];
+}
+else {
+vErrors.push(err50);
+}
+errors++;
+}
+}
+let i4 = data15.length;
+let j1;
+if(i4 > 1){
+const indices1 = {};
+for(;i4--;){
+let item1 = data15[i4];
+if(typeof item1 !== "string"){
+continue;
+}
+if(typeof indices1[item1] == "number"){
+j1 = indices1[item1];
+const err51 = {instancePath:instancePath+"/models/" + i0+"/platforms",schemaPath:"#/properties/models/items/properties/platforms/uniqueItems",keyword:"uniqueItems",params:{i: i4, j: j1},message:"must NOT have duplicate items (items ## "+j1+" and "+i4+" are identical)"};
+if(vErrors === null){
+vErrors = [err51];
+}
+else {
+vErrors.push(err51);
+}
+errors++;
+break;
+}
+indices1[item1] = i4;
+}
+}
+}
+else {
+const err52 = {instancePath:instancePath+"/models/" + i0+"/platforms",schemaPath:"#/properties/models/items/properties/platforms/type",keyword:"type",params:{type: "array"},message:"must be array"};
+if(vErrors === null){
+vErrors = [err52];
+}
+else {
+vErrors.push(err52);
+}
+errors++;
+}
+}
+if(data3.compatible !== undefined){
+if(typeof data3.compatible !== "boolean"){
+const err53 = {instancePath:instancePath+"/models/" + i0+"/compatible",schemaPath:"#/properties/models/items/properties/compatible/type",keyword:"type",params:{type: "boolean"},message:"must be boolean"};
+if(vErrors === null){
+vErrors = [err53];
+}
+else {
+vErrors.push(err53);
+}
+errors++;
+}
+}
+}
+else {
+const err54 = {instancePath:instancePath+"/models/" + i0,schemaPath:"#/properties/models/items/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err54];
+}
+else {
+vErrors.push(err54);
+}
+errors++;
+}
+}
+}
+else {
+const err55 = {instancePath:instancePath+"/models",schemaPath:"#/properties/models/type",keyword:"type",params:{type: "array"},message:"must be array"};
+if(vErrors === null){
+vErrors = [err55];
+}
+else {
+vErrors.push(err55);
+}
+errors++;
+}
+}
+}
+else {
+const err56 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err56];
+}
+else {
+vErrors.push(err56);
 }
 errors++;
 }
@@ -46279,7 +46377,7 @@ const schema464 = {"$schema":"https://json-schema.org/draft/2020-12/schema","$id
 const schema465 = {"title":"SpeechEngineStatus","type":"object","additionalProperties":false,"required":["available"],"properties":{"available":{"type":"boolean"},"version":{"type":"string","minLength":1,"maxLength":64},"reason":{"type":"string","maxLength":300,"description":"Why the engine is unavailable, in plain language. No paths."}}};
 const schema466 = {"title":"InstalledSpeechModel","type":"object","additionalProperties":false,"required":["name","size_bytes","sha256","license","installed_at"],"properties":{"name":{"$ref":"transcript.schema.json#/$defs/SpeechModelName"},"size_bytes":{"type":"integer","minimum":1},"sha256":{"$ref":"common.schema.json#/$defs/Sha256"},"license":{"type":"string","minLength":1,"maxLength":100,"description":"License identifier recorded at installation; not a legal clearance check."},"installed_at":{"$ref":"common.schema.json#/$defs/UtcTimestamp"}}};
 const schema485 = {"title":"SpeechModelName","description":"Local speech-model name, e.g. 'base.en'. Never a path or URL.","type":"string","maxLength":64,"pattern":"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"};
-const pattern260 = new RegExp("^[a-z0-9]+(?:[-_.][a-z0-9]+)*$", "u");
+const pattern261 = new RegExp("^[a-z0-9]+(?:[-_.][a-z0-9]+)*$", "u");
 
 function validate214(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -46367,7 +46465,7 @@ vErrors.push(err6);
 }
 errors++;
 }
-if(!pattern260.test(data0)){
+if(!pattern261.test(data0)){
 const err7 = {instancePath:instancePath+"/name",schemaPath:"transcript.schema.json#/$defs/SpeechModelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"},message:"must match pattern \""+"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"+"\""};
 if(vErrors === null){
 vErrors = [err7];
@@ -46516,7 +46614,7 @@ return errors === 0;
 validate214.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 const schema491 = {"title":"SpeechModelCatalogEntry","description":"A known model the user may install manually. Listing it never downloads it.","type":"object","additionalProperties":false,"required":["name","approx_size_bytes","languages","license","source_url"],"properties":{"name":{"$ref":"transcript.schema.json#/$defs/SpeechModelName"},"approx_size_bytes":{"type":"integer","minimum":1},"languages":{"enum":["en","multilingual"]},"license":{"type":"string","minLength":1,"maxLength":100},"source_url":{"type":"string","maxLength":300,"pattern":"^https://"}}};
-const pattern268 = new RegExp("^https://", "u");
+const pattern269 = new RegExp("^https://", "u");
 
 function validate223(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -46604,7 +46702,7 @@ vErrors.push(err6);
 }
 errors++;
 }
-if(!pattern260.test(data0)){
+if(!pattern261.test(data0)){
 const err7 = {instancePath:instancePath+"/name",schemaPath:"transcript.schema.json#/$defs/SpeechModelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"},message:"must match pattern \""+"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"+"\""};
 if(vErrors === null){
 vErrors = [err7];
@@ -46712,7 +46810,7 @@ vErrors.push(err15);
 }
 errors++;
 }
-if(!pattern268.test(data4)){
+if(!pattern269.test(data4)){
 const err16 = {instancePath:instancePath+"/source_url",schemaPath:"#/properties/source_url/pattern",keyword:"pattern",params:{pattern: "^https://"},message:"must match pattern \""+"^https://"+"\""};
 if(vErrors === null){
 vErrors = [err16];
@@ -47031,7 +47129,7 @@ validate213.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false}
 
 export const contractValidator36 = validate225;
 const schema493 = {"title":"StoryCandidate","type":"object","additionalProperties":false,"required":["schema_version","id","session_id","generator","input_key","layout_key","preset","options","start_ms","end_ms","source_events","source_ranges","beats","alternatives","score","score_components","metrics","warnings"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.(0|[1-9][0-9]*)$"},"id":{"$ref":"common.schema.json#/$defs/ProjectId"},"session_id":{"$ref":"common.schema.json#/$defs/SessionId"},"generator":{"title":"StoryGenerator","type":"object","additionalProperties":false,"required":["id","version"],"properties":{"id":{"const":"owm-story"},"version":{"type":"string","pattern":"^[0-9]+\\.[0-9]+\\.[0-9]+$"}}},"input_key":{"type":"string","pattern":"^[a-f0-9]{64}$"},"layout_key":{"type":"string","pattern":"^[a-f0-9]{64}$"},"preset":{"enum":["moment","short","extended_short","highlight"]},"options":{"title":"StoryOptions","type":"object","additionalProperties":false,"required":["pre_roll_ms","post_roll_ms","merge_gap_ms","avoid_spoilers","allow_unreviewed"],"properties":{"pre_roll_ms":{"type":"integer","minimum":0,"maximum":60000},"post_roll_ms":{"type":"integer","minimum":0,"maximum":60000},"merge_gap_ms":{"type":"integer","minimum":0,"maximum":30000},"avoid_spoilers":{"type":"boolean"},"allow_unreviewed":{"type":"boolean"}}},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_events":{"type":"array","maxItems":5000,"minItems":1,"items":{"title":"StorySourceEvent","type":"object","additionalProperties":false,"required":["event_id","revision","type","start_ms","end_ms","review_state","confidence"],"properties":{"event_id":{"$ref":"common.schema.json#/$defs/EventId"},"revision":{"type":"integer","minimum":0},"type":{"type":"string","maxLength":128,"pattern":"^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"review_state":{"enum":["unreviewed","confirmed","corrected","rejected"]},"confidence":{"type":"number","minimum":0,"maximum":1}}}},"source_ranges":{"type":"array","maxItems":1000,"minItems":1,"items":{"$ref":"#/$defs/StorySourceRange"}},"beats":{"type":"array","maxItems":5000,"minItems":1,"items":{"title":"StoryBeat","type":"object","additionalProperties":false,"required":["kind","start_ms","end_ms","event_ids","basis"],"properties":{"kind":{"enum":["setup","incident","escalation","payoff","reaction"]},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"event_ids":{"type":"array","maxItems":5000,"uniqueItems":true,"items":{"$ref":"common.schema.json#/$defs/EventId"}},"basis":{"enum":["context","event","audio","transcript"]}}}},"alternatives":{"type":"array","maxItems":2,"minItems":0,"items":{"title":"StoryAlternative","type":"object","additionalProperties":false,"required":["kind","start_ms","end_ms","source_ranges","speech_truncated"],"properties":{"kind":{"enum":["short","long"]},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_ranges":{"type":"array","maxItems":1000,"minItems":1,"items":{"$ref":"#/$defs/StorySourceRange"}},"speech_truncated":{"type":"boolean"}}}},"score":{"type":"number","minimum":-1,"maximum":1},"score_components":{"title":"StoryScoreComponents","type":"object","additionalProperties":false,"required":["event_confidence","setup_coverage","payoff_coverage","reaction_evidence","continuity_score","duplicate_penalty","dead_air_penalty","truncation_penalty","spoiler_risk_penalty","rejection_penalty","missing_payoff_penalty"],"properties":{"event_confidence":{"type":"number","minimum":-1,"maximum":1},"setup_coverage":{"type":"number","minimum":-1,"maximum":1},"payoff_coverage":{"type":"number","minimum":-1,"maximum":1},"reaction_evidence":{"type":"number","minimum":-1,"maximum":1},"continuity_score":{"type":"number","minimum":-1,"maximum":1},"duplicate_penalty":{"type":"number","minimum":-1,"maximum":1},"dead_air_penalty":{"type":"number","minimum":-1,"maximum":1},"truncation_penalty":{"type":"number","minimum":-1,"maximum":1},"spoiler_risk_penalty":{"type":"number","minimum":-1,"maximum":1},"rejection_penalty":{"type":"number","minimum":-1,"maximum":1},"missing_payoff_penalty":{"type":"number","minimum":-1,"maximum":1}}},"metrics":{"title":"StoryCoverage","type":"object","additionalProperties":false,"required":["setup_coverage","payoff_coverage","speech_truncations","duplicate_ms"],"properties":{"setup_coverage":{"type":"number","minimum":0,"maximum":1},"payoff_coverage":{"type":"number","minimum":0,"maximum":1},"speech_truncations":{"type":"integer","minimum":0},"duplicate_ms":{"const":0}}},"warnings":{"type":"array","uniqueItems":true,"maxItems":8,"items":{"enum":["missing_payoff","duration_pressure","speech_truncated","below_minimum","unreviewed_seed"]}}},"$defs":{"StorySourceRange":{"title":"StorySourceRange","type":"object","additionalProperties":false,"required":["asset_id","source_in_ms","source_out_ms","session_start_ms","session_end_ms"],"properties":{"asset_id":{"$ref":"common.schema.json#/$defs/AssetId"},"source_in_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_out_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"session_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"session_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"}}}},"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/story-candidate.schema.json"};
-const pattern272 = new RegExp("^[0-9]+\\.[0-9]+\\.[0-9]+$", "u");
+const pattern273 = new RegExp("^[0-9]+\\.[0-9]+\\.[0-9]+$", "u");
 const schema501 = {"title":"StorySourceRange","type":"object","additionalProperties":false,"required":["asset_id","source_in_ms","source_out_ms","session_start_ms","session_end_ms"],"properties":{"asset_id":{"$ref":"common.schema.json#/$defs/AssetId"},"source_in_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_out_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"session_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"session_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"}}};
 
 function validate226(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
@@ -47578,7 +47676,7 @@ errors++;
 if(data3.version !== undefined){
 let data5 = data3.version;
 if(typeof data5 === "string"){
-if(!pattern272.test(data5)){
+if(!pattern273.test(data5)){
 const err29 = {instancePath:instancePath+"/generator/version",schemaPath:"#/properties/generator/properties/version/pattern",keyword:"pattern",params:{pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"},message:"must match pattern \""+"^[0-9]+\\.[0-9]+\\.[0-9]+$"+"\""};
 if(vErrors === null){
 vErrors = [err29];
@@ -49802,7 +49900,7 @@ errors++;
 if(data2.version !== undefined){
 let data4 = data2.version;
 if(typeof data4 === "string"){
-if(!pattern272.test(data4)){
+if(!pattern273.test(data4)){
 const err18 = {instancePath:instancePath+"/generator/version",schemaPath:"#/properties/generator/properties/version/pattern",keyword:"pattern",params:{pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"},message:"must match pattern \""+"^[0-9]+\\.[0-9]+\\.[0-9]+$"+"\""};
 if(vErrors === null){
 vErrors = [err18];
@@ -50162,7 +50260,7 @@ return errors === 0;
 validate229.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const contractValidator38 = validate231;
-const schema516 = {"title":"SystemDoctor","type":"object","additionalProperties":false,"required":["schema_version","ready","packaged","platform","architecture","free_bytes","checks","tools"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.[0-9]+$"},"ready":{"type":"boolean"},"packaged":{"type":"boolean"},"platform":{"type":"string","minLength":1,"maxLength":300},"architecture":{"type":"string","minLength":1,"maxLength":300},"free_bytes":{"type":"integer","minimum":0},"checks":{"type":"array","maxItems":64,"items":{"title":"SystemCheck","type":"object","additionalProperties":false,"required":["id","status","message"],"properties":{"id":{"type":"string","minLength":1,"maxLength":300},"status":{"enum":["pass","warn","fail"]},"message":{"type":"string","minLength":1,"maxLength":300}}}},"tools":{"type":"array","maxItems":32,"items":{"title":"RuntimeTool","type":"object","additionalProperties":false,"required":["name","version","origin","license"],"properties":{"name":{"type":"string","minLength":1,"maxLength":300},"version":{"type":"string","minLength":1,"maxLength":300},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"origin":{"enum":["bundle","development"]},"license":{"type":"string","minLength":1,"maxLength":300}}}}},"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/system-doctor.schema.json"};
+const schema516 = {"title":"SystemDoctor","type":"object","additionalProperties":false,"required":["schema_version","ready","packaged","platform","architecture","free_bytes","checks","tools"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.[0-9]+$"},"ready":{"type":"boolean"},"packaged":{"type":"boolean"},"platform":{"type":"string","minLength":1,"maxLength":300},"architecture":{"type":"string","minLength":1,"maxLength":300},"free_bytes":{"type":"integer","minimum":0},"checks":{"type":"array","maxItems":64,"items":{"title":"SystemCheck","type":"object","additionalProperties":false,"required":["id","status","message"],"properties":{"id":{"type":"string","minLength":1,"maxLength":300},"status":{"enum":["pass","warn","fail"]},"message":{"type":"string","minLength":1,"maxLength":300}}}},"tools":{"type":"array","maxItems":32,"items":{"title":"RuntimeTool","type":"object","additionalProperties":false,"required":["name","version","origin","license"],"properties":{"name":{"type":"string","minLength":1,"maxLength":300},"version":{"type":"string","minLength":1,"maxLength":300},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"origin":{"enum":["bundle","development"]},"license":{"type":"string","minLength":1,"maxLength":300},"architecture":{"description":"M34: CPU architecture of a bundled native tool.","enum":["x86_64","arm64"]}}}}},"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/system-doctor.schema.json"};
 
 function validate231(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 /*# sourceURL="https://github.com/heetdalsania/openworld-moments/contracts/system-doctor.schema.json" */;
@@ -50636,7 +50734,7 @@ vErrors.push(err39);
 errors++;
 }
 for(const key2 in data12){
-if(!(((((key2 === "name") || (key2 === "version")) || (key2 === "sha256")) || (key2 === "origin")) || (key2 === "license"))){
+if(!((((((key2 === "name") || (key2 === "version")) || (key2 === "sha256")) || (key2 === "origin")) || (key2 === "license")) || (key2 === "architecture"))){
 const err40 = {instancePath:instancePath+"/tools/" + i1,schemaPath:"#/properties/tools/items/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key2},message:"must NOT have additional properties"};
 if(vErrors === null){
 vErrors = [err40];
@@ -50790,9 +50888,10 @@ vErrors.push(err52);
 errors++;
 }
 }
-}
-else {
-const err53 = {instancePath:instancePath+"/tools/" + i1,schemaPath:"#/properties/tools/items/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(data12.architecture !== undefined){
+let data18 = data12.architecture;
+if(!((data18 === "x86_64") || (data18 === "arm64"))){
+const err53 = {instancePath:instancePath+"/tools/" + i1+"/architecture",schemaPath:"#/properties/tools/items/properties/architecture/enum",keyword:"enum",params:{allowedValues: schema516.properties.tools.items.properties.architecture.enum},message:"must be equal to one of the allowed values"};
 if(vErrors === null){
 vErrors = [err53];
 }
@@ -50804,7 +50903,7 @@ errors++;
 }
 }
 else {
-const err54 = {instancePath:instancePath+"/tools",schemaPath:"#/properties/tools/type",keyword:"type",params:{type: "array"},message:"must be array"};
+const err54 = {instancePath:instancePath+"/tools/" + i1,schemaPath:"#/properties/tools/items/type",keyword:"type",params:{type: "object"},message:"must be object"};
 if(vErrors === null){
 vErrors = [err54];
 }
@@ -50816,12 +50915,24 @@ errors++;
 }
 }
 else {
-const err55 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+const err55 = {instancePath:instancePath+"/tools",schemaPath:"#/properties/tools/type",keyword:"type",params:{type: "array"},message:"must be array"};
 if(vErrors === null){
 vErrors = [err55];
 }
 else {
 vErrors.push(err55);
+}
+errors++;
+}
+}
+}
+else {
+const err56 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err56];
+}
+else {
+vErrors.push(err56);
 }
 errors++;
 }
@@ -50834,7 +50945,7 @@ export const contractValidator39 = validate215;
 const schema467 = {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://github.com/heetdalsania/openworld-moments/contracts/transcript.schema.json","title":"Transcript","description":"A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.","type":"object","additionalProperties":false,"required":["schema_version","session_id","segments"],"properties":{"schema_version":{"type":"string","pattern":"^1\\.(0|[1-9][0-9]*)$"},"session_id":{"$ref":"common.schema.json#/$defs/SessionId"},"segments":{"type":"array","items":{"$ref":"#/$defs/TranscriptSegment"}}},"$defs":{"TranscriptSegment":{"title":"TranscriptSegment","description":"One FTS-ready span of transcribed speech from one clip.","type":"object","additionalProperties":false,"required":["id","asset_id","start_ms","end_ms","source_start_ms","source_end_ms","text","confidence","words","transcriber"],"properties":{"id":{"type":"integer","minimum":1},"asset_id":{"$ref":"common.schema.json#/$defs/AssetId"},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Unique (virtual) session time, M13."},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"text":{"type":"string","minLength":1,"maxLength":2000},"language":{"oneOf":[{"$ref":"#/$defs/SpeechLanguage"},{"type":"null"}]},"confidence":{"$ref":"common.schema.json#/$defs/Confidence","description":"Mean word probability reported by the engine; a heuristic, not a calibrated accuracy."},"words":{"type":"array","maxItems":1000,"items":{"$ref":"#/$defs/TranscriptWord"}},"transcriber":{"$ref":"#/$defs/Transcriber"}}},"TranscriptWord":{"title":"TranscriptWord","type":"object","additionalProperties":false,"required":["text","start_ms","end_ms","source_start_ms","source_end_ms","confidence"],"properties":{"text":{"type":"string","minLength":1,"maxLength":200},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Unique (virtual) session time, M13."},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Time in the segment's source clip."},"source_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"confidence":{"$ref":"common.schema.json#/$defs/Confidence"}}},"Transcriber":{"title":"Transcriber","description":"What produced the text: enough to reproduce or invalidate it, with no paths.","type":"object","additionalProperties":false,"required":["engine","engine_version","engine_sha256","model","model_sha256","transcriber_version"],"properties":{"engine":{"const":"whisper.cpp"},"engine_version":{"type":"string","minLength":1,"maxLength":64},"engine_sha256":{"$ref":"common.schema.json#/$defs/Sha256"},"model":{"$ref":"#/$defs/SpeechModelName"},"model_sha256":{"$ref":"common.schema.json#/$defs/Sha256"},"transcriber_version":{"$ref":"common.schema.json#/$defs/SemVer"},"requested_language":{"description":"'auto' or a language code.","type":"string","pattern":"^(auto|[a-z]{2,3})$"}}},"SpeechModelName":{"title":"SpeechModelName","description":"Local speech-model name, e.g. 'base.en'. Never a path or URL.","type":"string","maxLength":64,"pattern":"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"},"SpeechLanguage":{"title":"SpeechLanguage","description":"Spoken-language code reported or requested for transcription (ISO 639-1/639-3 as whisper.cpp names them).","type":"string","pattern":"^[a-z]{2,3}$"}}};
 const schema469 = {"title":"TranscriptSegment","description":"One FTS-ready span of transcribed speech from one clip.","type":"object","additionalProperties":false,"required":["id","asset_id","start_ms","end_ms","source_start_ms","source_end_ms","text","confidence","words","transcriber"],"properties":{"id":{"type":"integer","minimum":1},"asset_id":{"$ref":"common.schema.json#/$defs/AssetId"},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Unique (virtual) session time, M13."},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"text":{"type":"string","minLength":1,"maxLength":2000},"language":{"oneOf":[{"$ref":"#/$defs/SpeechLanguage"},{"type":"null"}]},"confidence":{"$ref":"common.schema.json#/$defs/Confidence","description":"Mean word probability reported by the engine; a heuristic, not a calibrated accuracy."},"words":{"type":"array","maxItems":1000,"items":{"$ref":"#/$defs/TranscriptWord"}},"transcriber":{"$ref":"#/$defs/Transcriber"}}};
 const schema475 = {"title":"SpeechLanguage","description":"Spoken-language code reported or requested for transcription (ISO 639-1/639-3 as whisper.cpp names them).","type":"string","pattern":"^[a-z]{2,3}$"};
-const pattern258 = new RegExp("^[a-z]{2,3}$", "u");
+const pattern259 = new RegExp("^[a-z]{2,3}$", "u");
 const schema477 = {"title":"TranscriptWord","type":"object","additionalProperties":false,"required":["text","start_ms","end_ms","source_start_ms","source_end_ms","confidence"],"properties":{"text":{"type":"string","minLength":1,"maxLength":200},"start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Unique (virtual) session time, M13."},"end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"source_start_ms":{"$ref":"common.schema.json#/$defs/TimelineMs","description":"Time in the segment's source clip."},"source_end_ms":{"$ref":"common.schema.json#/$defs/TimelineMs"},"confidence":{"$ref":"common.schema.json#/$defs/Confidence"}}};
 
 function validate217(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
@@ -51107,7 +51218,7 @@ return errors === 0;
 validate217.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 const schema483 = {"title":"Transcriber","description":"What produced the text: enough to reproduce or invalidate it, with no paths.","type":"object","additionalProperties":false,"required":["engine","engine_version","engine_sha256","model","model_sha256","transcriber_version"],"properties":{"engine":{"const":"whisper.cpp"},"engine_version":{"type":"string","minLength":1,"maxLength":64},"engine_sha256":{"$ref":"common.schema.json#/$defs/Sha256"},"model":{"$ref":"#/$defs/SpeechModelName"},"model_sha256":{"$ref":"common.schema.json#/$defs/Sha256"},"transcriber_version":{"$ref":"common.schema.json#/$defs/SemVer"},"requested_language":{"description":"'auto' or a language code.","type":"string","pattern":"^(auto|[a-z]{2,3})$"}}};
-const pattern263 = new RegExp("^(auto|[a-z]{2,3})$", "u");
+const pattern264 = new RegExp("^(auto|[a-z]{2,3})$", "u");
 
 function validate219(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -51277,7 +51388,7 @@ vErrors.push(err13);
 }
 errors++;
 }
-if(!pattern260.test(data3)){
+if(!pattern261.test(data3)){
 const err14 = {instancePath:instancePath+"/model",schemaPath:"#/$defs/SpeechModelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"},message:"must match pattern \""+"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"+"\""};
 if(vErrors === null){
 vErrors = [err14];
@@ -51352,7 +51463,7 @@ errors++;
 if(data.requested_language !== undefined){
 let data6 = data.requested_language;
 if(typeof data6 === "string"){
-if(!pattern263.test(data6)){
+if(!pattern264.test(data6)){
 const err20 = {instancePath:instancePath+"/requested_language",schemaPath:"#/properties/requested_language/pattern",keyword:"pattern",params:{pattern: "^(auto|[a-z]{2,3})$"},message:"must match pattern \""+"^(auto|[a-z]{2,3})$"+"\""};
 if(vErrors === null){
 vErrors = [err20];
@@ -51706,7 +51817,7 @@ let valid6 = false;
 let passing0 = null;
 const _errs23 = errors;
 if(typeof data7 === "string"){
-if(!pattern258.test(data7)){
+if(!pattern259.test(data7)){
 const err26 = {instancePath:instancePath+"/language",schemaPath:"#/$defs/SpeechLanguage/pattern",keyword:"pattern",params:{pattern: "^[a-z]{2,3}$"},message:"must match pattern \""+"^[a-z]{2,3}$"+"\""};
 if(vErrors === null){
 vErrors = [err26];
@@ -52236,7 +52347,7 @@ errors++;
 if(data.language !== undefined){
 let data7 = data.language;
 if(typeof data7 === "string"){
-if(!pattern258.test(data7)){
+if(!pattern259.test(data7)){
 const err14 = {instancePath:instancePath+"/language",schemaPath:"transcript.schema.json#/$defs/SpeechLanguage/pattern",keyword:"pattern",params:{pattern: "^[a-z]{2,3}$"},message:"must match pattern \""+"^[a-z]{2,3}$"+"\""};
 if(vErrors === null){
 vErrors = [err14];
@@ -52408,7 +52519,7 @@ vErrors.push(err9);
 }
 errors++;
 }
-if(!pattern260.test(data2)){
+if(!pattern261.test(data2)){
 const err10 = {instancePath:instancePath+"/model",schemaPath:"transcript.schema.json#/$defs/SpeechModelName/pattern",keyword:"pattern",params:{pattern: "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"},message:"must match pattern \""+"^[a-z0-9]+(?:[-_.][a-z0-9]+)*$"+"\""};
 if(vErrors === null){
 vErrors = [err10];

@@ -54,6 +54,13 @@ function* modelManager(doc: ModelManager): Generator<string> {
     yield "models: duplicate model names";
   for (const model of doc.models)
     if (model.downloaded_bytes > model.size_bytes) yield "downloaded_bytes: exceeds signed size";
+  for (const model of doc.models) {
+    const platforms: string[] = model.platforms ?? [];
+    if (platforms.includes("any") && platforms.length > 1)
+      yield "platforms: any must be the only entry";
+    if (platforms.length === 1 && platforms[0] === "any" && model.compatible === false)
+      yield "compatible: a model for any platform is compatible";
+  }
 }
 function* diagnosticsReport(doc: DiagnosticsReport): Generator<string> {
   const omitted = doc.privacy.failure_messages === "omitted";

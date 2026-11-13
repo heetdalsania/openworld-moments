@@ -313,3 +313,106 @@ def test_dangling_partial_cannot_create_external_file(manager: Downloads) -> Non
         manager.run("tiny.en", threading.Event(), progress)
     assert error.value.code == "models.unsafe_path"
     assert not target.exists()
+
+
+# -- M34: platform compatibility ------------------------------------------------------
+
+
+def other_platform() -> str:
+    from openworld_moments.native import runtime_platform
+
+    current = runtime_platform()
+    return "windows-x86_64" if current != "windows-x86_64" else "macos-arm64"
+
+
+def platform_manager(tmp_path: Path, platforms: list[str] | None) -> Downloads:
+    library = tmp_path / "library"
+    library.mkdir()
+    model = read_catalog().models[0].model_dump()
+    model.update(size_bytes=len(CONTENT), sha256=DIGEST, platforms=platforms)
+    catalog = Catalog.model_validate({"version": 1, "models": [model]})
+    calls: list[str] = []
+
+    def opener(url: str, _offset: int) -> Response:
+        calls.append(url)
+        return Response(CONTENT)
+
+    manager = Downloads(library, catalog=catalog, opener=opener)
+    manager.calls = calls  # type: ignore[attr-defined]
+    return manager
+
+
+def test_bundled_catalog_declares_no_platform_and_stays_signed() -> None:
+    """The signed catalog's bytes are unchanged, so its models install everywhere."""
+    assert all(model.platforms is None for model in read_catalog().models)
+
+
+def test_incompatible_artifact_is_refused_before_any_network_use(tmp_path: Path) -> None:
+    from openworld_moments.native import runtime_platform
+
+    manager = platform_manager(tmp_path, [other_platform()])
+    status = manager.status()
+    load("model-manager", status)
+    assert status["models"][0]["compatible"] is False
+    assert status["models"][0]["platforms"] == [other_platform()]
+    with pytest.raises(TranscriptionError, match="Choose a model made for this computer") as err:
+        manager.run("tiny.en", threading.Event(), progress)
+    assert err.value.code == "models.incompatible_platform"
+    assert runtime_platform() in err.value.message
+    with pytest.raises(TranscriptionError, match="made for this computer"):
+        manager.activate("tiny.en", DIGEST)
+    assert manager.calls == []  # type: ignore[attr-defined]
+    assert not manager.models.installed()
+    manager.change("tiny.en", None)  # removal still works for an incompatible entry
+
+
+@pytest.mark.parametrize("platforms", [None, ["any"], "current"])
+def test_compatible_artifact_installs(tmp_path: Path, platforms: Any) -> None:
+    from openworld_moments.native import runtime_platform
+
+    declared = [runtime_platform(), other_platform()] if platforms == "current" else platforms
+    manager = platform_manager(tmp_path, declared)
+    manager.run("tiny.en", threading.Event(), progress)
+    status = manager.status()
+    load("model-manager", status)
+    assert status["models"][0]["compatible"] is True
+    assert status["models"][0]["active_sha256"] == DIGEST
+    assert ("platforms" in status["models"][0]) == bool(declared)
+
+
+@pytest.mark.parametrize("bad", [["macos-universal"], ["MACOS-ARM64"], [], ["any"] * 9])
+def test_catalog_rejects_malformed_platforms(bad: list[str]) -> None:
+    from pydantic import ValidationError
+
+    model = read_catalog().models[0].model_dump()
+    model["platforms"] = bad
+    with pytest.raises(ValidationError):
+        Catalog.model_validate({"version": 1, "models": [model]})
+
+
+def test_api_refuses_an_incompatible_model_before_creating_a_job(tmp_path: Path) -> None:
+    import secrets
+
+    from fastapi.testclient import TestClient
+
+    from openworld_moments.api.app import ApiSettings, create_app
+    from openworld_moments.jobs.engine import JobEngine
+    from openworld_moments.jobs.handlers import BUILTIN_HANDLERS
+    from openworld_moments.storage import Database
+
+    manager = platform_manager(tmp_path, [other_platform()])
+    database = Database.open(manager.library / "database.sqlite3")
+    token = secrets.token_hex(32)
+    settings = ApiSettings(
+        token=token, allowed_hosts=frozenset({"testserver"}), require_loopback_peer=False
+    )
+    app = create_app(JobEngine(database, BUILTIN_HANDLERS), settings, downloads=manager)
+    with TestClient(app) as client:
+        client.headers["Authorization"] = f"Bearer {token}"
+        response = client.post("/v1/model-manager/download", json={"name": "tiny.en"})
+        assert response.status_code == 409
+        assert response.json()["code"] == "models.incompatible_platform"
+        assert client.get("/v1/jobs").json() == []
+        status = client.get("/v1/model-manager").json()
+        assert status["models"][0]["compatible"] is False
+    assert manager.calls == []  # type: ignore[attr-defined]

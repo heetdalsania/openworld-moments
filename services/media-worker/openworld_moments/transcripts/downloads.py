@@ -19,6 +19,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from openworld_moments.native import compatible, runtime_platform
 from openworld_moments.storage import utc_now
 from openworld_moments.transcripts.catalog import Catalog, ModelEntry, read_catalog
 from openworld_moments.transcripts.models import SpeechModels
@@ -97,6 +98,17 @@ class Downloads:
                 return entry
         raise TranscriptionError("models.unknown", "Choose a model from the signed catalog.")
 
+    def installable(self, name: str) -> ModelEntry:
+        """The catalog entry, if this computer's platform can use it (M34)."""
+        entry = self.entry(name)
+        if not compatible(entry.platforms):
+            raise TranscriptionError(
+                "models.incompatible_platform",
+                f"{name} is built for {', '.join(entry.platforms or [])}; this computer is "
+                f"{runtime_platform()}. Choose a model made for this computer.",
+            )
+        return entry
+
     def directory(self, leaf: str) -> Path:
         root = self.library
         for part in ("models", "whisper", leaf):
@@ -146,7 +158,9 @@ class Downloads:
                     continue
             entries.append(
                 {
-                    **model.model_dump(exclude={"url"}),
+                    **model.model_dump(exclude={"url", "platforms"}),
+                    **({"platforms": model.platforms} if model.platforms else {}),
+                    "compatible": compatible(model.platforms),
                     "downloaded_bytes": done,
                     "disk_required_bytes": max(0, model.size_bytes - done)
                     + model.size_bytes
@@ -157,10 +171,10 @@ class Downloads:
                     "versions": saved,
                 }
             )
-        return {"schema_version": "1.23", "catalog_version": catalog.version, "models": entries}
+        return {"schema_version": "1.26", "catalog_version": catalog.version, "models": entries}
 
     def activate(self, name: str, digest: str) -> None:
-        self.entry(name)
+        self.installable(name)
         if not re.fullmatch(r"[a-f0-9]{64}", digest):
             raise TranscriptionError("models.invalid_pin", "Choose a verified installed version.")
         versions = self.directory("versions")
@@ -199,7 +213,7 @@ class Downloads:
     def run(self, name: str, cancel: threading.Event, progress: Progress) -> dict[str, Any]:
         with self.exclusive():
             try:
-                return self._run(self.entry(name), cancel, progress)
+                return self._run(self.installable(name), cancel, progress)
             except OSError as exc:
                 code = "models.disk_full" if exc.errno == 28 else "models.write_failed"
                 raise TranscriptionError(

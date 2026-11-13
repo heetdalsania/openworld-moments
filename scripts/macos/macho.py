@@ -20,6 +20,9 @@ FAT_MAGIC = 0xCAFEBABE
 FAT_MAGIC_64 = 0xCAFEBABF
 LC_BUILD_VERSION = 0x32
 LC_VERSION_MIN_MACOSX = 0x24
+LC_RPATH = 0x8000001C
+#: Commands that load another library (load, weak, re-export, lazy, upward).
+DYLIB_COMMANDS = {0xC, 0x80000018, 0x8000001F, 0x20, 0x80000023}
 PLATFORM_MACOS = 1
 CPU = {0x01000007: "x86_64", 0x0100000C: "arm64"}
 HEADER = 32
@@ -34,6 +37,13 @@ class MachOError(ValueError):
 class Slice:
     arch: str
     minimum: str | None  # "14.0", or None when the binary declares no macOS minimum
+    dylibs: tuple[str, ...] = ()
+    rpaths: tuple[str, ...] = ()
+
+
+def _cstring(data: bytes, start: int, end: int) -> str:
+    stop = data.find(b"\0", start, end)
+    return data[start : stop if stop != -1 else end].decode("utf-8", errors="replace")
 
 
 def _version(value: int) -> str:
@@ -53,6 +63,8 @@ def _thin(data: bytes, offset: int = 0) -> Slice:
     if ncmds > MAX_COMMANDS or offset + HEADER + sizeofcmds > len(data):
         raise MachOError("load commands out of range")
     minimum: str | None = None
+    dylibs: list[str] = []
+    rpaths: list[str] = []
     cursor, end = offset + HEADER, offset + HEADER + sizeofcmds
     for _ in range(ncmds):
         if cursor + 8 > end:
@@ -67,8 +79,14 @@ def _thin(data: bytes, offset: int = 0) -> Slice:
         elif cmd == LC_VERSION_MIN_MACOSX and size >= 16 and minimum is None:
             (version,) = struct.unpack_from("<I", data, cursor + 8)
             minimum = _version(version)
+        elif (cmd in DYLIB_COMMANDS or cmd == LC_RPATH) and size >= 12:
+            (name_offset,) = struct.unpack_from("<I", data, cursor + 8)
+            if not 12 <= name_offset < size:
+                raise MachOError("bad load command string")
+            text = _cstring(data, cursor + name_offset, cursor + size)
+            (rpaths if cmd == LC_RPATH else dylibs).append(text)
         cursor += size
-    return Slice(arch, minimum)
+    return Slice(arch, minimum, tuple(dylibs), tuple(rpaths))
 
 
 def slices(data: bytes) -> list[Slice]:
@@ -135,3 +153,75 @@ def check_native(path: Path, arch: str, floor: str) -> list[str]:
         elif release(item.minimum) > release(floor):
             problems.append(f"{path.name}: needs macOS {item.minimum}, above the {floor} floor")
     return problems
+
+
+SYSTEM_PREFIXES = ("/usr/lib/", "/System/Library/")
+
+
+def _resolve(reference: str, binary: Path, root: Path, rpaths: tuple[str, ...]) -> list[Path]:
+    """Where a dyld reference can point inside `root` (candidates, in dyld order)."""
+
+    def expand(text: str) -> Path | None:
+        if text.startswith("@loader_path/"):
+            return binary.parent / text.removeprefix("@loader_path/")
+        if text.startswith("@executable_path/"):
+            return root / text.removeprefix("@executable_path/")
+        if text.startswith("/"):
+            return Path(text)
+        return None
+
+    if reference.startswith("@rpath/"):
+        leaf = reference.removeprefix("@rpath/")
+        bases = [expand(r) for r in rpaths]
+        return [base / leaf for base in bases if base is not None]
+    found = expand(reference)
+    return [found] if found is not None else []
+
+
+def audit_runtime(root: Path, arch: str, floor: str) -> tuple[list[str], dict[str, object]]:
+    """Check every file under `root` for shipping in a native `arch` macOS bundle.
+
+    * symbolic links stay inside `root`;
+    * every Mach-O file is thin `arch`, runs on `floor`, and loads only system
+      libraries (`/usr/lib`, `/System/Library`) or files inside `root`.
+
+    Returns the problems and a summary for the runtime inventory.
+    """
+    problems: list[str] = []
+    root = root.resolve()
+    machos = 0
+    system: set[str] = set()
+    newest = "0.0"
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            target = path.resolve()
+            if not target.is_relative_to(root):
+                problems.append(f"{rel}: link points outside the runtime")
+            continue
+        if not path.is_file() or not is_macho(path):
+            continue
+        machos += 1
+        problems.extend(f"{rel}: {p.split(': ', 1)[1]}" for p in check_native(path, arch, floor))
+        try:
+            found = read(path)
+        except (OSError, MachOError):
+            continue
+        for item in found:
+            if item.minimum and release(item.minimum) > release(newest):
+                newest = item.minimum
+            for dylib in item.dylibs:
+                if dylib.startswith(SYSTEM_PREFIXES):
+                    system.add(dylib)
+                    continue
+                candidates = _resolve(dylib, path, root, item.rpaths)
+                inside = [c for c in candidates if c.resolve().is_relative_to(root)]
+                if not any(c.exists() for c in inside):
+                    problems.append(f"{rel}: loads {dylib}, which is not in the runtime")
+    summary: dict[str, object] = {
+        "architecture": arch,
+        "macho_files": machos,
+        "newest_minimum": newest,
+        "system_libraries": sorted(system),
+    }
+    return problems, summary

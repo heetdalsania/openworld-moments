@@ -67,7 +67,7 @@ function mac(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     host_version: "0.1.0",
     os: { family: "macos", version: "15.2", minimum: "14.0" },
     architecture: { binary: "aarch64", translated: false },
-    build: { target: "aarch64-apple-darwin", profile: "release", bundled_worker: false },
+    build: { target: "aarch64-apple-darwin", profile: "release", bundled_worker: true },
     support: { level: "development", reasons: ["macos-preview"] },
     directories: { convention: "macos-standard" },
     integrations: { file_manager: "finder", secret_store: "none", menus: "default" },
@@ -99,7 +99,7 @@ it("shows the Mac architecture and that macOS is a preview, even without a worke
 it("warns when the Intel build runs under Rosetta", async () => {
   host.platform = mac({
     architecture: { binary: "x86_64", translated: true },
-    build: { target: "x86_64-apple-darwin", profile: "release", bundled_worker: false },
+    build: { target: "x86_64-apple-darwin", profile: "release", bundled_worker: true },
     support: { level: "unsupported", reasons: ["macos-preview", "translated"] },
   });
   render(<SystemPanel />);

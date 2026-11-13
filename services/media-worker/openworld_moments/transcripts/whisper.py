@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from openworld_moments.media.process import ToolCancelled, ToolError, ToolNotStarted, run_tool
+from openworld_moments.native import executable_problem
 from openworld_moments.redaction import Redactor
 
 ENGINE = "whisper.cpp"
@@ -213,6 +214,9 @@ def probe_engine(
     """Check the executable runs and record its version (best effort) and digest.
     ``command`` defaults to the executable itself (tests pass an interpreter prefix)."""
     argv = command or (str(path),)
+    if command is None and (problem := executable_problem(path)):
+        # M34: wrong architecture or quarantined download; never run it.
+        raise TranscriptionError("transcription.engine_incompatible", problem)
     try:
         result = run_tool(
             [*argv, "--help"],
