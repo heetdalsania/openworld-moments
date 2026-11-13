@@ -45,12 +45,16 @@ const EXPLAIN: Record<string, string> = {
   "worker.not_bundled": "This build has no media worker configured.",
   "media.source_missing": "The original file is missing, offline, or changed since import.",
   "derived.source_unavailable": "The original file cannot be read right now.",
-  "derived.disk_full": "There is not enough free space in the library folder.",
+  "derived.disk_full": "There is not enough free space where playback media is stored.",
   "derived.ffmpeg_incapable": "Your FFmpeg build lacks a component needed to prepare playback.",
   "tool.ffmpeg_missing": "FFmpeg is not installed. Install FFmpeg 6.0 or newer.",
   "tool.ffprobe_missing": "FFprobe is not installed. Install FFmpeg 6.0 or newer.",
   "import.unsupported": "This file type is not supported.",
   "media.damaged": "The file is damaged or incomplete.",
+  "media.download_required":
+    "Download this item in Finder or OneDrive, wait for it to finish, then try again.",
+  "media.permission_denied":
+    "Access was denied. Select the file or folder again, or allow Files and Folders access in macOS Privacy & Security.",
 };
 
 export function describeError(error: ApiError): string {
@@ -97,6 +101,10 @@ export function listAssets(after?: string): Promise<MediaAsset[]> {
 
 export function getAsset(id: string): Promise<MediaAsset> {
   return call("GET", `/v1/assets/${id}`);
+}
+
+export function relinkAsset(id: string, path: string): Promise<Job> {
+  return call("POST", `/v1/assets/${id}/relink`, { path });
 }
 
 export function getDerived(id: string): Promise<AssetDerivedMedia> {

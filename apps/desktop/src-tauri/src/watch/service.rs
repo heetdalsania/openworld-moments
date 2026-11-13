@@ -17,6 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
 
@@ -69,6 +70,7 @@ pub struct FolderStatus {
     pub id: i64,
     /// `starting`, `watching`, `scanning-only` (no native events), or `unavailable`.
     pub state: &'static str,
+    pub unavailable_reason: Option<String>,
     /// Files waiting to become stable.
     pub pending: usize,
     /// Cloud placeholders not yet downloaded to this computer.
@@ -100,6 +102,7 @@ struct Folder {
     availability: Availability,
     last_reconcile: Option<Instant>,
     rejected: usize,
+    unavailable_reason: Option<String>,
 }
 
 type Event = (i64, PathBuf);
@@ -126,6 +129,8 @@ pub struct WatchService<S: Sink> {
     cfg: WatchConfig,
     refresh: Arc<Notify>,
     stop: Arc<Notify>,
+    reconcile: Arc<Notify>,
+    paused: Arc<AtomicBool>,
     status: Arc<StdMutex<Vec<FolderStatus>>>,
 }
 
@@ -136,6 +141,8 @@ impl<S: Sink> WatchService<S> {
             cfg,
             refresh: Arc::new(Notify::new()),
             stop: Arc::new(Notify::new()),
+            reconcile: Arc::new(Notify::new()),
+            paused: Arc::new(AtomicBool::new(false)),
             status: Arc::new(StdMutex::new(Vec::new())),
         }
     }
@@ -149,6 +156,18 @@ impl<S: Sink> WatchService<S> {
         self.stop.notify_one();
     }
 
+    /// Sleep suspends native watchers and pending stabilization. Wake and explicit
+    /// reauthorization rebuild them and check only configured roots immediately.
+    pub fn pause(&self) {
+        self.paused.store(true, Ordering::SeqCst);
+        self.reconcile.notify_one();
+    }
+
+    pub fn resume(&self) {
+        self.paused.store(false, Ordering::SeqCst);
+        self.reconcile.notify_one();
+    }
+
     pub fn status(&self) -> Vec<FolderStatus> {
         self.status.lock().map(|s| s.clone()).unwrap_or_default()
     }
@@ -160,7 +179,9 @@ impl<S: Sink> WatchService<S> {
         let mut last_reload: Option<Instant> = None;
         let mut reload = true;
         loop {
-            if reload || last_reload.is_none_or(|t| t.elapsed() >= self.cfg.reload_every) {
+            if !self.paused.load(Ordering::SeqCst)
+                && (reload || last_reload.is_none_or(|t| t.elapsed() >= self.cfg.reload_every))
+            {
                 if let Ok(list) = self.sink.folders().await {
                     self.apply(&mut folders, list);
                     last_reload = Some(Instant::now());
@@ -183,12 +204,24 @@ impl<S: Sink> WatchService<S> {
                 }
             }
             for folder in folders.values_mut() {
-                self.tend(folder, &tx).await;
+                if !self.paused.load(Ordering::SeqCst) {
+                    self.tend(folder, &tx).await;
+                }
             }
             self.publish(&folders);
             tokio::select! {
                 _ = tokio::time::sleep(self.cfg.tick) => {}
                 _ = self.refresh.notified() => reload = true,
+                _ = self.reconcile.notified() => {
+                    reload = true;
+                    for folder in folders.values_mut() {
+                        folder.watcher = None;
+                        folder.watcher_failed = false;
+                        folder.availability = Availability::Unknown;
+                        folder.last_reconcile = None;
+                        folder.stabilizer.clear();
+                    }
+                }
                 _ = self.stop.notified() => break,
             }
         }
@@ -226,6 +259,7 @@ impl<S: Sink> WatchService<S> {
             availability: Availability::Unknown,
             last_reconcile: None,
             rejected: 0,
+            unavailable_reason: None,
             cfg,
         }
     }
@@ -240,7 +274,21 @@ impl<S: Sink> WatchService<S> {
     }
 
     fn on_event(&self, folder: &mut Folder, path: &Path) {
+        if self.paused.load(Ordering::SeqCst) {
+            return;
+        }
         if !matches!(folder.availability, Availability::Available) {
+            return;
+        }
+        // Validate the event before walking it: an OS hint is not authorization.
+        if path != folder.cfg.path
+            && folder.real_root.as_deref() != Some(path)
+            && Self::relative(folder, path).is_none()
+        {
+            return;
+        }
+        if path != folder.cfg.path && std::fs::symlink_metadata(path).is_ok_and(|m| m.is_symlink())
+        {
             return;
         }
         if folder.cfg.recursive && path.is_dir() {
@@ -309,6 +357,7 @@ impl<S: Sink> WatchService<S> {
                 eprintln!("watch: folder {} is available again", folder.cfg.id);
             }
             folder.availability = Availability::Available;
+            folder.unavailable_reason = None;
             folder.real_root = std::fs::canonicalize(&folder.cfg.path).ok();
             folder.last_reconcile = None; // rescan everything it may have missed
         }
@@ -344,6 +393,7 @@ impl<S: Sink> WatchService<S> {
     }
 
     async fn mark_unavailable(&self, folder: &mut Folder, kind: &str) {
+        folder.unavailable_reason = Some(kind.to_owned());
         let attempts = match folder.availability {
             Availability::Unavailable { attempts, .. } => attempts + 1,
             _ => {
@@ -354,7 +404,11 @@ impl<S: Sink> WatchService<S> {
                 );
                 let error = json!({
                     "code": "watch.folder_unavailable",
-                    "message": "The folder cannot be read. It may be on a disconnected drive or an offline location.",
+                    "message": match kind {
+                        "permission-required" => "Access was denied. Select this folder again and check Files and Folders in macOS Privacy & Security.",
+                        "download-required" => "Download this folder in Finder or OneDrive, wait for it to finish, then check again.",
+                        _ => "Reconnect the drive or choose this folder again. Library records are kept.",
+                    },
                     "retryable": true,
                     "details": { "reason": kind },
                 });
@@ -440,6 +494,7 @@ impl<S: Sink> WatchService<S> {
                     Availability::Available if f.watcher.is_some() => "watching",
                     Availability::Available => "scanning-only",
                 },
+                unavailable_reason: f.unavailable_reason.clone(),
                 pending: f.stabilizer.len(),
                 cloud_only: f.cloud_only.len(),
                 reported: f.reported.len(),

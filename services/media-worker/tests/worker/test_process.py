@@ -119,3 +119,40 @@ def test_shutdown_endpoint_stops_the_worker(worker_factory: Any) -> None:
     worker: WorkerProcess = worker_factory()
     assert worker.request("POST", "/v1/shutdown")[0] == 202
     assert worker.proc.wait(timeout=15) == 0
+
+
+def test_explicit_cache_and_rotating_log_paths_keep_canonical_data_in_library(
+    worker_factory: Any, tmp_path: Path
+) -> None:
+    cache, logs = tmp_path / "Caches ✓", tmp_path / "Logs ✓"
+    worker: WorkerProcess = worker_factory("--cache-dir", str(cache), "--log-dir", str(logs))
+    assert worker.startup["event"] == "ready"
+    worker.request("GET", "/v1/health", token="wrong-token-abcdefghijklmnop")
+    worker.stop()
+    logfile = logs / "worker.jsonl"
+    assert logfile.is_file()
+    text = logfile.read_text()
+    assert "worker ready" in text
+    assert worker.token not in text and "wrong-token-abcdefghijklmnop" not in text
+    assert all(isinstance(json.loads(line), dict) for line in text.splitlines())
+
+
+def test_unwritable_log_location_is_a_recoverable_startup_error(
+    worker_factory: Any, tmp_path: Path
+) -> None:
+    invalid = tmp_path / "file-not-directory"
+    invalid.write_text("preserve this")
+    worker: WorkerProcess = worker_factory("--log-dir", str(invalid))
+    assert worker.startup["code"] == "worker.storage_unavailable"
+    assert worker.proc.wait(timeout=10) == 3
+    assert invalid.read_text() == "preserve this"
+
+
+def test_offline_selected_library_never_creates_an_empty_replacement(
+    worker_factory: Any, tmp_path: Path
+) -> None:
+    missing = tmp_path / "Disconnected Drive ✓" / "library"
+    worker: WorkerProcess = worker_factory("--existing-library", library=missing)
+    assert worker.startup["code"] == "worker.library_unavailable"
+    assert worker.proc.wait(timeout=10) == 3
+    assert not missing.exists()

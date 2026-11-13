@@ -41,6 +41,10 @@ def main() -> int:
         from openworld_moments.gateway.__main__ import main as gateway
 
         return gateway(sys.argv[3:])
+    if sys.argv[1:3] == ["-m", "openworld_moments.media.guardian"]:
+        from openworld_moments.media.guardian import main as guardian
+
+        return guardian(sys.argv[3:])
     print("Unsupported packaged-worker entrypoint.", file=sys.stderr)
     return 2
 

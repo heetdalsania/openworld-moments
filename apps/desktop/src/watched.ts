@@ -7,6 +7,7 @@ import type { WatchedFile, WatchedFolder } from "@openworld-moments/contracts";
 export interface FolderStatus {
   id: number;
   state: "starting" | "watching" | "scanning-only" | "unavailable";
+  unavailable_reason?: string | null;
   pending: number;
   cloud_only: number;
   reported: number;
@@ -56,6 +57,10 @@ export function watchedFiles(id: number): Promise<WatchedFile[]> {
   return invoke<WatchedFile[]>("watched_folder_files", { id });
 }
 
+export function reauthorizeWatched(id: number): Promise<boolean> {
+  return invoke<boolean>("watched_folder_reauthorize", { id });
+}
+
 /** Native folder picker. Resolves to null when the user cancels. */
 export async function pickFolder(title: string): Promise<string | null> {
   const choice = await open({ directory: true, multiple: false, title });
@@ -69,6 +74,11 @@ export function describeFolder(view: WatchedFolderView): string {
   if (status?.state === "unavailable" || folder.availability === "unavailable") {
     const retry = status?.next_check_ms ?? null;
     const when = retry === null ? "" : ` Checking again in ${Math.ceil(retry / 1000)} s.`;
+    const reason = status?.unavailable_reason;
+    if (reason === "permission-required")
+      return `Access required — select this folder again. Check Files and Folders in macOS Privacy & Security.${when}`;
+    if (reason === "download-required")
+      return `Download required — download this folder in Finder or OneDrive, then select it again.${when}`;
     return `Unavailable — the folder cannot be read right now.${when}`;
   }
   const parts: string[] = [];

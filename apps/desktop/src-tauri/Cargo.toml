@@ -33,5 +33,10 @@ tauri-plugin-dialog = "2"
 if-addrs = "0.13"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6.2"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSWorkspace"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["NSNotification", "NSOperation", "NSString", "block2"] }
+
 [dev-dependencies]
 tempfile = "3"

@@ -23,8 +23,10 @@ import json
 import logging
 import os
 import socket
+import sqlite3
 import sys
 import threading
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +40,7 @@ from openworld_moments.ingest.library import LibraryPaths
 from openworld_moments.jobs.engine import JobEngine
 from openworld_moments.jobs.handlers import build_handlers
 from openworld_moments.logs import configure_logging
+from openworld_moments.media.availability import DOWNLOAD_REQUIRED, cloud_only
 from openworld_moments.media.tools import MediaTools
 from openworld_moments.redaction import Redactor
 from openworld_moments.render.service import Renderer
@@ -124,6 +127,13 @@ def main(argv: list[str] | None = None) -> int:
         "--library", type=Path, required=True, help="library folder (holds database.sqlite3)"
     )
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--existing-library",
+        action="store_true",
+        help="never create an empty replacement for a selected library",
+    )
+    parser.add_argument("--cache-dir", type=Path, help="optional disposable derived-media root")
+    parser.add_argument("--log-dir", type=Path, help="optional redacted rotating log directory")
     parser.add_argument("--port", type=int, default=0, help="0 picks a free port")
     parser.add_argument(
         "--log-level", default="info", choices=["debug", "info", "warning", "error"]
@@ -132,18 +142,50 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ffmpeg", help="ffmpeg executable (default: OWM_FFMPEG, then PATH)")
     args = parser.parse_args(argv)
 
-    redactor = Redactor()
+    redactor = Redactor(
+        [str(path) for path in (args.library, args.cache_dir, args.log_dir) if path]
+    )
     configure_logging(redactor, level=getattr(logging, args.log_level.upper()))
     try:
         token = read_token(sys.stdin)
         redactor.add_secret(token)
+        if args.existing_library and not (args.library / "database.sqlite3").is_file():
+            raise StartupError(
+                "worker.library_unavailable",
+                "The selected library is offline or unavailable. "
+                "Reconnect its drive, or select the library again in Settings.",
+            )
+        for location in (args.library, args.library / "database.sqlite3"):
+            if location.exists() and cloud_only(location.stat()):
+                raise StartupError("media.download_required", DOWNLOAD_REQUIRED)
+        if args.log_dir:
+            args.log_dir.mkdir(parents=True, exist_ok=True)
+            handler = RotatingFileHandler(
+                args.log_dir / "worker.jsonl",
+                maxBytes=2 * 1024 * 1024,
+                backupCount=3,
+                encoding="utf-8",
+            )
+            from openworld_moments.logs import JsonFormatter
+
+            handler.setFormatter(JsonFormatter(redactor))
+            logging.getLogger().addHandler(handler)
         sock = bind_loopback(args.host, args.port)
         database = Database.open(args.library / "database.sqlite3")
     except StartupError as exc:
         emit({"event": "error", "code": exc.code, "message": exc.message})
         return EXIT_STARTUP_FAILED
-    except StorageError as exc:
+    except (StorageError, sqlite3.Error) as exc:
         emit({"event": "error", "code": "worker.database_error", "message": redactor(str(exc))})
+        return EXIT_STARTUP_FAILED
+    except OSError:
+        emit(
+            {
+                "event": "error",
+                "code": "worker.storage_unavailable",
+                "message": "Application storage is unavailable. Check disk space and permissions.",
+            }
+        )
         return EXIT_STARTUP_FAILED
 
     host, port = sock.getsockname()[:2]
@@ -178,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     tools = MediaTools(ffprobe=args.ffprobe, ffmpeg=args.ffmpeg)
     # No job runs yet, so every staging leftover is from a crash: remove it.
     LibraryPaths.for_database(database.path).clean_import_staging()
-    derived = DerivedMedia(database, tools)
+    derived = DerivedMedia(database, tools, cache_root=args.cache_dir)
     derived.paths.clean_staging()
     transcriber = Transcriber(database, tools, derived)
     transcriber.clean_staging()

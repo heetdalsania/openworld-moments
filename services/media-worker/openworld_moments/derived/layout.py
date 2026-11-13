@@ -60,14 +60,15 @@ class CleanupReport:
 @dataclass(frozen=True)
 class DerivedPaths:
     root: Path  # the library folder
+    cache_root: Path | None = None
 
     @property
     def derived(self) -> Path:
-        return self.root / DERIVED_DIR
+        return (self.cache_root or self.root) / DERIVED_DIR
 
     @property
     def staging(self) -> Path:
-        return self.root / STAGING_DIR / DERIVED_STAGING
+        return (self.cache_root or self.root) / STAGING_DIR / DERIVED_STAGING
 
     def job_staging(self, job_id: str) -> Path:
         return self.staging / job_id
@@ -89,12 +90,12 @@ class DerivedPaths:
             return None
         if not _ASSET_DIR.match(parts[1]) or not _ARTIFACT.match(parts[2]):
             return None
-        return self.root.joinpath(*parts)
+        return (self.cache_root or self.root).joinpath(*parts)
 
     def clean_staging(self, job_id: str | None = None) -> None:
         """Remove one job's staging folder, or all (only when no job is running)."""
         target = self.job_staging(job_id) if job_id else self.staging
-        remove_tree(target, CleanupReport(), inside=self.root / STAGING_DIR)
+        remove_tree(target, CleanupReport(), inside=(self.cache_root or self.root) / STAGING_DIR)
 
     def remove_artifact(self, relpath: str) -> int:
         """Delete one artifact by its stored path; returns bytes freed."""

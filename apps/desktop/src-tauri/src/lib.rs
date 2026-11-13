@@ -10,6 +10,8 @@ use serde::Serialize;
 
 pub mod calibration;
 mod host;
+pub mod library_location;
+pub mod lifecycle;
 pub mod media;
 pub mod phone;
 pub mod platform;
@@ -102,6 +104,8 @@ pub fn run() {
             host::diagnostics_export,
             host::render_reveal,
             host::library_reveal,
+            host::library_location,
+            host::library_select,
             host::calibration_export_patch,
             host::calibration_export_sample,
             host::phone_interfaces,
@@ -113,6 +117,7 @@ pub fn run() {
             host::watched_folder_update,
             host::watched_folder_remove,
             host::watched_folder_files,
+            host::watched_folder_reauthorize,
         ])
         .build(context)
         .expect("error while building OpenWorld Moments")

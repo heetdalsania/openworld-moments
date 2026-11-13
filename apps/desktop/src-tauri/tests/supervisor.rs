@@ -355,3 +355,47 @@ async fn worker_sink_round_trip() {
         "the watched file is never touched"
     );
 }
+
+#[tokio::test]
+async fn sleep_closes_phone_and_recovers_running_job_then_quit_refuses_a_late_wake() {
+    use openworld_moments_desktop_lib::lifecycle::Lifecycle;
+    use openworld_moments_desktop_lib::phone::{PhoneConfig, PhoneGateway};
+    use openworld_moments_desktop_lib::platform::LifecycleEvent;
+    use openworld_moments_desktop_lib::watch::{WatchConfig, WatchService, WorkerSink};
+    let dir = tempfile::tempdir().unwrap();
+    let supervisor = Supervisor::new(config(&dir));
+    supervisor.start().await.unwrap();
+    let watcher = WatchService::new(WorkerSink(supervisor.clone()), WatchConfig::default());
+    let phone = PhoneGateway::new(PhoneConfig {
+        command: worker_command(),
+        staging_root: dir.path().join("phone"),
+        session_seconds: 600,
+        allow_loopback: true,
+    });
+    assert_eq!(phone.status().state, "idle");
+    let active = phone
+        .start(Some(supervisor.clone()), "127.0.0.1", 0)
+        .await
+        .unwrap();
+    let port = active.port.unwrap();
+    let job = supervisor
+        .submit_job("diagnostic", json!({"steps":10000,"step_ms":10}), Some(COR))
+        .await
+        .unwrap();
+    let id = job["id"].as_str().unwrap();
+    wait_job_state(&supervisor, id, "analyzing").await;
+    let lifecycle = Lifecycle::new(supervisor.clone(), watcher, phone.clone());
+    lifecycle.handle(LifecycleEvent::Sleep).await;
+    assert_eq!(supervisor.status(), WorkerStatus::Stopped);
+    assert!(TcpStream::connect(("127.0.0.1", port)).is_err());
+    assert!(phone.status().url.is_none());
+    lifecycle.handle(LifecycleEvent::Wake).await;
+    assert!(matches!(supervisor.status(), WorkerStatus::Ready { .. }));
+    assert_ne!(phone.status().state, "active");
+    let recovered = supervisor.get_job(id).await.unwrap();
+    assert_ne!(recovered["state"], "ready");
+    supervisor.cancel_job(id).await.unwrap();
+    lifecycle.shutdown().await;
+    lifecycle.handle(LifecycleEvent::Wake).await;
+    assert_eq!(supervisor.status(), WorkerStatus::Stopped);
+}

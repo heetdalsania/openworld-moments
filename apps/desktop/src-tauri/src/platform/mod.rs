@@ -29,7 +29,14 @@ use other as imp;
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 compile_error!("OpenWorld Moments builds only for x86_64 and aarch64");
 
-pub use imp::{hide_console, is_cloud_placeholder, reveal_command};
+pub use imp::{hide_console, is_cloud_placeholder, observe_lifecycle, reveal_command};
+
+/// Native system sleep/wake, distinct from a hidden or unfocused window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LifecycleEvent {
+    Sleep,
+    Wake,
+}
 
 /// Oldest macOS release the macOS builds support (verified in M33; see
 /// `docs/platforms/macos-os-floor.md`). Keep in sync with `tauri.macos.conf.json`.
@@ -189,14 +196,15 @@ pub fn capabilities(host_version: &str, facts: &Facts) -> serde_json::Value {
         },
         "support": support(facts),
         "directories": { "convention": convention },
-        // Nothing persists a secret yet (M35 adds the Keychain); the app keeps the
+        // Tokens remain per-launch/session in memory; nothing persists a secret.
+        // The app keeps the
         // default Tauri menus until M38 adds native ones.
         "integrations": { "file_manager": file_manager, "secret_store": "none", "menus": "default" },
     })
 }
 
 /// Contract version the host writes. Kept equal to the contracts package by a test.
-pub const SCHEMA_VERSION: &str = "1.26";
+pub const SCHEMA_VERSION: &str = "1.27";
 
 /// Where the app keeps its files. Only `data` holds the canonical library today; M35
 /// moves disposable caches and logs into `cache` and `logs`.

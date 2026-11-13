@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -98,10 +99,19 @@ def run_tool(
     if not argv or any("\0" in a for a in argv):
         raise ToolNotStarted("invalid command")
     tail = BoundedTail(STDERR_TAIL_BYTES, redactor)
+    guarded = sys.platform == "darwin"
+    program = argv[0]
+    if cwd and not os.path.isabs(program) and os.path.dirname(program):
+        program = str(cwd / program)
+    if guarded and shutil.which(program) is None:
+        raise ToolNotStarted("could not start requested media tool")
+    command = (
+        [sys.executable, "-m", "openworld_moments.media.guardian", *argv] if guarded else list(argv)
+    )
     try:
         proc = subprocess.Popen(  # noqa: S603 - argument list, no shell
-            list(argv),
-            stdin=subprocess.DEVNULL,
+            command,
+            stdin=subprocess.PIPE if guarded else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -180,6 +190,8 @@ def run_tool(
             _kill(proc)
         for reader in readers:
             reader.join(timeout=_KILL_WAIT_S)
+        if proc.stdin is not None:
+            proc.stdin.close()
 
     if outcome is ToolCancelled:
         raise ToolCancelled("cancelled", tail.text())
