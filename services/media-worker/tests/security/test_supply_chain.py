@@ -340,6 +340,20 @@ def test_macos_sbom_uses_that_architectures_closure_and_files(
     root = {p["name"]: p["value"] for p in bom["metadata"]["component"]["properties"]}
     assert root["owm:platform"] == "macos" and root["owm:architecture"] == arch
     assert root["owm:minimum-macos"] == "14.0" and "owm:webview2" not in root
+    assert not any(c["bom-ref"].endswith("linked-into=cryptography") for c in bom["components"])
+
+
+def test_intel_sbom_lists_the_static_openssl_in_cryptography(stubbed: None, tmp_path: Path) -> None:
+    inventory = _macos_inventory(tmp_path / "runtime", "x86_64")
+    pins = json.loads((ROOT / "scripts/macos/openssl.json").read_text())
+    inventory["sources"]["openssl"] = pins
+    bom = sbom.build(inventory, None)
+    assert verify_sbom.schema_errors(json.dumps(bom)) == []
+    (linked,) = [c for c in bom["components"] if c["bom-ref"].endswith("linked-into=cryptography")]
+    assert linked["version"] == pins["version"] and linked["licenses"] == [
+        {"expression": "Apache-2.0"}
+    ]
+    assert linked["externalReferences"][0]["hashes"][0]["content"] == pins["sha256"]
 
 
 def test_windows_sbom_profile_is_unchanged(stubbed: None, tmp_path: Path) -> None:

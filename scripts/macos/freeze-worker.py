@@ -19,6 +19,7 @@ files inside the runtime.
 
 from __future__ import annotations
 
+import json
 import platform
 import shutil
 import subprocess
@@ -82,6 +83,13 @@ def main() -> None:
     python_notices = python_runtime_notices(notices, python_license)
     sources = json_sources()
     media_notices(notices)
+    openssl = ROOT / f"output/packaging/openssl-{ARCH[arch]}"
+    if ARCH[arch] == "x86_64":
+        # cryptography was built from source against this static OpenSSL (no Intel wheel).
+        if not (openssl / "LICENSE.txt").is_file():
+            raise RuntimeError("Intel builds need scripts/macos/build-openssl.sh x86_64 first")
+        sources["openssl"] = json.loads((ROOT / "scripts/macos/openssl.json").read_text())
+        shutil.copyfile(openssl / "LICENSE.txt", notices / "OpenSSL-LICENSE.txt")
     tools = []
     media_build = {}
     for name in ("ffmpeg", "ffprobe"):
@@ -133,15 +141,19 @@ def main() -> None:
         "FFmpeg and x264: GPL-2.0-or-later; matching source archives accompany release builds.\n"
         "Python: PSF-2.0. Runtime and JavaScript package license texts are in runtime/notices.\n"
         "WebKit (WKWebView): Apple-managed macOS component; not bundled.\n"
-        "No OCR engine, whisper.cpp engine or model weights are bundled.\n"
+        + (
+            "OpenSSL (Apache-2.0) is linked statically into cryptography on Intel; "
+            "its pinned source is in runtime/inventory.json.\n"
+            if "openssl" in sources
+            else ""
+        )
+        + "No OCR engine, whisper.cpp engine or model weights are bundled.\n"
         "Runtime inventory and exact sources: runtime/inventory.json.\n",
     )
     print(f"froze the {ARCH[arch]} worker: {len(metadata['files'])} files")  # type: ignore[arg-type]
 
 
 def json_sources() -> dict[str, object]:
-    import json
-
     sources: dict[str, object] = json.loads((ROOT / "scripts/windows/sources.json").read_text())
     return sources
 

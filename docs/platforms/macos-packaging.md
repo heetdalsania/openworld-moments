@@ -15,7 +15,7 @@ Each architecture gets its own build, made on a native Mac of that architecture
 | Worker | The Git commit; executable SHA-256 recorded | PyInstaller 6.22.3, console onedir: the same strategy and the same freeze steps as Windows (`scripts/packaging/runtime_bundle.py`) |
 | FFmpeg / FFprobe | 9.0.2 from the same checksum-verified source archive as Windows | Static FFmpeg libraries with `libx264` as the only external codec, autodetection off; built for `-mmacosx-version-min=14.0` |
 | libx264 | `c24e06c2e184345ceb33eb20a15d1024d9fd3497` | Static, GPL-2.0-or-later ([ADR-0007](../architecture/adr/0007-windows-ffmpeg-packaging.md)) |
-| Python packages | `uv.lock`, runtime closure only | Wheels for the target architecture. On Intel, cryptography 50.0.2 has no wheel and is built from source, linking Homebrew's OpenSSL statically |
+| Python packages | `uv.lock`, runtime closure only | Wheels for the target architecture. On Intel, cryptography 50.0.2 has no wheel and is built from source, linking a pinned OpenSSL 3.5.9 LTS (built for macOS 14 by `build-openssl.sh`) statically |
 | OCR, whisper.cpp, model weights | Not bundled | Optional; installed by the user or through the model manager |
 
 ## Bundle layout
@@ -121,9 +121,10 @@ to its source tree.
 
 ## Build
 
-On a native Mac of the target architecture. Intel also needs `brew install nasm openssl@3`,
-and `OPENSSL_DIR="$(brew --prefix openssl@3)" OPENSSL_STATIC=1` exported before
-`uv sync`:
+On a native Mac of the target architecture. Intel also needs `brew install nasm`,
+`bash scripts/macos/build-openssl.sh x86_64`, and
+`OPENSSL_DIR="$PWD/output/packaging/openssl-x86_64" OPENSSL_STATIC=1 MACOSX_DEPLOYMENT_TARGET=14.0`
+exported before `uv sync --refresh-package cryptography`:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -172,9 +173,11 @@ Sizes (Apple Silicon): runtime 92 MiB (tools 43 MiB, `_internal` 36 MiB, notices
   `libx264` is the correctness path; M36 adds tested hardware encoding.
 - **Unsigned:** the bundled worker and tools carry only linker or PyInstaller ad-hoc
   signatures. Signing order, entitlements and notarization are M37.
-- **cryptography on Intel** is built from source at freeze time with
-  `OPENSSL_STATIC=1`, so Homebrew's OpenSSL on the CI runner is linked into the
-  extension. The Mach-O audit fails the build if it would load an outside library.
+- **cryptography on Intel** is built from source with `OPENSSL_STATIC=1` against
+  OpenSSL 3.5.9 from `scripts/macos/openssl.json` (checksum-verified, built for macOS 14,
+  listed in the SBOM and notices). The first CI run used Homebrew's OpenSSL instead:
+  the audit caught libraries outside the app that needed macOS 15, and the build failed
+  as designed.
 - **No universal binaries:** a universal wheel fails the audit. None are in the runtime
   closure today.
 - **The Intel lane has a planned end:** GitHub's last Intel runner image is supported

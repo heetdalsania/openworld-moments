@@ -166,7 +166,11 @@
   - **Unsigned:** the bundled binaries carry only ad-hoc signatures (M37).
   - **No hardware encoding** on macOS yet (M36).
   - **cryptography on Intel** is built from source at freeze time with
-    `OPENSSL_STATIC=1`.
+    `OPENSSL_STATIC=1` against a pinned OpenSSL 3.5.9 LTS built for macOS 14
+    (`scripts/macos/build-openssl.sh`). The first Intel CI run linked Homebrew's
+    OpenSSL (dynamic, macOS 15) from a cached build, and the Mach-O audit failed it as
+    designed. The fixed approach was verified by a local source build: static OpenSSL
+    3.5.9, minimum 14.0, system libraries only.
   - **No ONNX or native OCR/transcription artifacts are in the catalog yet;** the
     compatibility checks are in place for when they are added.
   - **Python worker tests still run only on Linux and Windows CI;** macOS covers the

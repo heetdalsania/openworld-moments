@@ -154,6 +154,26 @@ def native_components(inventory: dict[str, Any]) -> list[dict[str, Any]]:
                 ],
             }
         )
+    if "openssl" in sources:  # M34 Intel: linked statically into cryptography's extension
+        source = sources["openssl"]
+        out.append(
+            {
+                "type": "library",
+                "bom-ref": f"pkg:generic/openssl@{source['version']}?linked-into=cryptography",
+                "name": "openssl",
+                "version": source["version"],
+                "purl": f"pkg:generic/openssl@{source['version']}",
+                "licenses": [{"expression": source["license"]}],
+                "externalReferences": [
+                    {
+                        "type": "source-distribution",
+                        "url": source["url"],
+                        "hashes": [{"alg": "SHA-256", "content": source["sha256"]}],
+                    }
+                ],
+                "properties": [{"name": "owm:linked-into", "value": "cryptography"}],
+            }
+        )
     for name in ("ffmpeg", "x264"):
         source = sources[name]
         component: dict[str, Any] = {

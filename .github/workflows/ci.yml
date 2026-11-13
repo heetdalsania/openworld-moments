@@ -180,19 +180,32 @@ jobs:
           version: "0.13.7"
           enable-cache: true
           cache-dependency-glob: uv.lock
-          cache-suffix: macos-${{ matrix.arch }}
+          cache-suffix: macos-${{ matrix.arch }}-v2
+      # cryptography ships no Intel macOS wheel. On Intel it is built from source and
+      # linked statically against a pinned OpenSSL LTS built for macOS 14 (Homebrew's
+      # targets the runner's macOS and would be loaded from outside the app).
+      - uses: actions/cache@v6.1.0
+        if: matrix.arch == 'x86_64'
+        id: openssl-cache
+        with:
+          path: output/packaging/openssl-x86_64
+          key: macos-x86_64-openssl-${{ hashFiles('scripts/macos/openssl.json', 'scripts/macos/build-openssl.sh') }}
+      - name: Static OpenSSL for macOS 14 (Intel)
+        if: matrix.arch == 'x86_64' && steps.openssl-cache.outputs.cache-hit != 'true'
+        run: bash scripts/macos/build-openssl.sh x86_64
       # The pinned python-build-standalone runtime that is frozen into the app (M34).
-      # Runtime and packaging packages only. cryptography ships no Intel macOS wheel, so
-      # on Intel it is built from source against Homebrew's OpenSSL (docs/platforms).
+      # Runtime and packaging packages only.
       - name: Worker environment (managed CPython 3.12.14, runtime packages)
         run: |
+          EXTRA=""
           if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            # Static, so the frozen extension loads no Homebrew library (Mach-O audit).
-            OPENSSL_DIR="$(brew --prefix openssl@3)"
+            OPENSSL_DIR="$GITHUB_WORKSPACE/output/packaging/openssl-x86_64"
             OPENSSL_STATIC=1
-            export OPENSSL_DIR OPENSSL_STATIC
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            export OPENSSL_DIR OPENSSL_STATIC MACOSX_DEPLOYMENT_TARGET
+            EXTRA="--refresh-package cryptography"  # never reuse a cached dynamic build
           fi
-          uv sync --managed-python --locked --all-packages --no-dev --group packaging --python ${{ matrix.python }}
+          uv sync $EXTRA --managed-python --locked --all-packages --no-dev --group packaging --python ${{ matrix.python }}
       - run: pnpm install --frozen-lockfile
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked

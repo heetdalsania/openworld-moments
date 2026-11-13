@@ -16,4 +16,6 @@ called only from a job that pins its OS.
 - `macos/freeze-worker.py` — freezes, audits and inventories the macOS worker (M34).
 - `macos/runtime-smoke.py` — runs a frozen runtime as the host does, with an empty
   environment: doctor, import, render, cancellation, missing/corrupt tools (M34).
+- `macos/build-openssl.sh` — static OpenSSL LTS for macOS 14 from `macos/openssl.json`,
+  for the Intel source build of cryptography (M34).
 - `packaging/runtime_bundle.py` — freeze steps shared by the Windows and macOS builds.
