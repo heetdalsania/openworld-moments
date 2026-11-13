@@ -161,6 +161,7 @@ def test_offline_selected_library_never_creates_an_empty_replacement(
 def test_existing_library_identity_check_is_read_only_and_refuses_unrelated_sqlite(
     worker_factory: Any, tmp_path: Path
 ) -> None:
+    import contextlib
     import hashlib
     import sqlite3
     import subprocess
@@ -172,7 +173,7 @@ def test_existing_library_identity_check_is_read_only_and_refuses_unrelated_sqli
     root = tmp_path / "Other app ✓"
     root.mkdir()
     path = root / "database.sqlite3"
-    with sqlite3.connect(path) as conn:
+    with contextlib.closing(sqlite3.connect(path)) as conn, conn:
         conn.execute("CREATE TABLE personal_notes (body TEXT)")
         conn.execute("INSERT INTO personal_notes VALUES ('preserve me')")
         conn.execute("PRAGMA user_version = 1")
@@ -222,3 +223,19 @@ def test_existing_library_identity_check_is_read_only_and_refuses_unrelated_sqli
     assert result.returncode == 0 and json.loads(result.stdout)["event"] == "library_checked"
     assert (library / "database.sqlite3").read_bytes() == expected
     assert set(library.iterdir()) == files
+    valid: WorkerProcess = worker_factory("--existing-library", library=library)
+    assert valid.startup["event"] == "ready"
+    assert valid.stop() == 0
+
+    # Future-version metadata committed in a WAL must not be ignored.
+    from openworld_moments.storage import StorageError
+
+    with contextlib.closing(sqlite3.connect(library / "database.sqlite3")) as conn:
+        with conn:
+            conn.execute("PRAGMA user_version = 999")
+        expected = (library / "database.sqlite3").read_bytes()
+        files = set(library.iterdir())
+        with pytest.raises(StorageError):
+            Database.validate_existing(library)
+        assert (library / "database.sqlite3").read_bytes() == expected
+        assert set(library.iterdir()) == files

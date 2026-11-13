@@ -228,7 +228,7 @@ jobs:
           OWM_FFMPEG: ${{ github.workspace }}/output/packaging/media/ffmpeg
           OWM_FFPROBE: ${{ github.workspace }}/output/packaging/media/ffprobe
         run: >-
-          uv run --locked --no-dev --group packaging --with pytest==9.2.0
+          uv run --locked --no-dev --group packaging --with pytest==9.2.0 --with httpx2==2.16.0
           --directory services/media-worker pytest
           tests/media/test_macos_recovery.py tests/media/test_process.py tests/media/test_probe_job.py
           tests/worker/test_process.py

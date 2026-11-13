@@ -157,35 +157,50 @@ class Database:
 
     @classmethod
     def validate_existing(cls, root: Path) -> None:
-        """Identify a closed OWM library without creating files or changing WAL.
+        """Identify a library before migrations or preference changes.
 
-        Immutable read-only mode deliberately ignores an uncheckpointed WAL: users
-        must close a library before moving/selecting it. Do not use connect(), which
-        enables WAL and can modify a database before its identity is established.
+        First inspect the main database immutably, without sidecars. Only after
+        identifying an OWM library may SQLite read an existing WAL in read-only
+        mode. This checks committed version metadata after a crash, rather than
+        accepting a stale main-file snapshot. No database writes are permitted.
         """
         try:
             candidate = root / "database.sqlite3"
-            if candidate.is_symlink() or not candidate.is_file():
+            for entry in (
+                candidate,
+                candidate.with_name(candidate.name + "-wal"),
+                candidate.with_name(candidate.name + "-shm"),
+            ):
+                if entry.is_symlink() or (entry.exists() and entry.stat().st_nlink != 1):
+                    raise StorageError("Linked database files are not accepted")
+            if not candidate.is_file():
                 raise StorageError("Not a regular library database")
             path = candidate.resolve()
-            with closing(sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
-                conn.row_factory = sqlite3.Row
-                conn.execute("PRAGMA trusted_schema = OFF")
-                conn.execute("PRAGMA query_only = ON")
-                tables = {
-                    row[0]
-                    for row in conn.execute(
-                        "SELECT name FROM sqlite_schema WHERE type='table' "
-                        "AND name IN ('schema_migrations', 'media_assets')"
-                    )
-                }
-                if tables != {"schema_migrations", "media_assets"}:
-                    raise StorageError("Not an OpenWorld Moments library")
-                database = cls(path)
-                current = database.schema_version(conn)
-                if current < 1:
-                    raise StorageError("Not an initialized library")
-                database._verify_applied(conn, current)
+            database = cls(path)
+
+            def inspect(uri: str) -> None:
+                with closing(sqlite3.connect(uri, uri=True)) as conn:
+                    conn.row_factory = sqlite3.Row
+                    conn.execute("PRAGMA trusted_schema = OFF")
+                    conn.execute("PRAGMA query_only = ON")
+                    tables = {
+                        row[0]
+                        for row in conn.execute(
+                            "SELECT name FROM sqlite_schema WHERE type='table' "
+                            "AND name IN ('schema_migrations', 'media_assets')"
+                        )
+                    }
+                    if tables != {"schema_migrations", "media_assets"}:
+                        raise StorageError("Not an OpenWorld Moments library")
+                    current = database.schema_version(conn)
+                    if current < 1:
+                        raise StorageError("Not an initialized library")
+                    database._verify_applied(conn, current)
+
+            inspect(path.as_uri() + "?mode=ro&immutable=1")
+            wal = path.with_name(path.name + "-wal")
+            if wal.is_file() and wal.stat().st_size:
+                inspect(path.as_uri() + "?mode=ro")
         except (sqlite3.Error, OSError, StorageError) as exc:
             raise StorageError(
                 "The selected folder is not a verified OpenWorld Moments library. "
