@@ -127,6 +127,7 @@ class Transcriber:
         self.database, self.tools, self.derived = database, tools, derived
         self.analyzer = Analyzer(database, tools, derived)
         self.root = derived.paths.root
+        self.staging = (derived.paths.cache_root or self.root) / STAGING
         self.models = SpeechModels(self.root)
         self.engine_factory = engine
         self.threads = threads or max(1, min(4, os.cpu_count() or 1))
@@ -160,7 +161,7 @@ class Transcriber:
 
     def clean_staging(self) -> None:
         """Remove scratch WAVs left by a crash. Only when no transcription runs."""
-        target = self.root / STAGING
+        target = self.staging
         if target.is_dir() and not target.is_symlink():
             shutil.rmtree(target, ignore_errors=True)
 
@@ -363,7 +364,7 @@ class Transcriber:
         job_id: str,
         cancel: threading.Event,
     ) -> Recognition:
-        staging = self.root / STAGING
+        staging = self.staging
         staging.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(prefix=f"{job_id}-", dir=staging) as tmp:
             wav = Path(tmp) / "clip.wav"

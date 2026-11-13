@@ -10,6 +10,8 @@ import { ASSET_ID, asset, createHost, type FakeHost, install, job } from "./test
 
 const invoke = vi.hoisted(() => vi.fn());
 const listen = vi.hoisted(() => vi.fn());
+const open = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 
@@ -111,6 +113,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   invoke.mockReset();
+  open.mockReset();
   resetQueries();
   resetJobs();
   vi.unstubAllGlobals();
@@ -287,4 +290,29 @@ describe("asset view", () => {
     const labels = screen.getAllByRole("button").map((b) => b.textContent ?? "");
     expect(labels.some((l) => /delete|remove|trash|move|rename|overwrite/i.test(l))).toBe(false);
   });
+});
+
+it("locates a missing original through native selection and keeps cancellation inert", async () => {
+  host.route(`GET /v1/assets/${ASSET_ID}`, asset({ missing_at: "2026-11-13T19:00:00Z" }));
+  host.route(
+    `GET /v1/assets/${ASSET_ID}/derived`,
+    derived([failed("proxy"), failed("filmstrip"), failed("waveform")]),
+  );
+  host.route(`POST /v1/assets/${ASSET_ID}/relink`, job());
+  const user = userEvent.setup();
+  render(<AssetView id={ASSET_ID} />);
+  const button = await screen.findByRole("button", { name: "Locate original or restore access…" });
+  open.mockResolvedValueOnce(null);
+  await user.click(button);
+  expect(host.posts(`/v1/assets/${ASSET_ID}/relink`)).toEqual([]);
+  open.mockResolvedValueOnce("/Volumes/Captures ✓/Original.mp4");
+  await user.click(button);
+  expect(open).toHaveBeenLastCalledWith({
+    directory: false,
+    multiple: false,
+    title: "Locate this clip or restore access",
+  });
+  expect(host.posts(`/v1/assets/${ASSET_ID}/relink`)).toEqual([
+    { path: "/Volumes/Captures ✓/Original.mp4" },
+  ]);
 });

@@ -222,6 +222,16 @@ jobs:
         run: |
           if [ "${{ matrix.arch }}" = "x86_64" ]; then brew install nasm; fi
           bash scripts/macos/build-media.sh ${{ matrix.arch }}
+      - name: macOS file, process and restart recovery fixtures (M35)
+        env:
+          OWM_REQUIRE_FFMPEG: "1"
+          OWM_FFMPEG: ${{ github.workspace }}/output/packaging/media/ffmpeg
+          OWM_FFPROBE: ${{ github.workspace }}/output/packaging/media/ffprobe
+        run: >-
+          uv run --locked --no-dev --group packaging --with pytest==9.2.0 --with httpx2==2.16.0
+          --directory services/media-worker pytest
+          tests/media/test_macos_recovery.py tests/media/test_process.py tests/media/test_probe_job.py
+          tests/worker/test_process.py
       - name: Freeze, audit and inventory the worker
         run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/macos/freeze-worker.py
       - name: Host lifecycle, crash recovery and import tests against the frozen worker

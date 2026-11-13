@@ -24,6 +24,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from openworld_moments.media.availability import DOWNLOAD_REQUIRED, cloud_only
 from openworld_moments.media.probe import VIDEO_EXTENSIONS
 
 MAX_ITEMS = 10_000
@@ -98,6 +99,11 @@ class _Scanner:
         self.entries.append(entry)
 
     def candidate(self, source: int, path: Path, rel: str | None, info: os.stat_result) -> None:
+        if cloud_only(info):
+            self.add(
+                Problem(source, rel, "failed", "media.download_required", DOWNLOAD_REQUIRED, True)
+            )
+            return
         if not info.st_ino:
             # Windows: DirEntry.stat() leaves st_ino/st_dev at 0; a full stat fills them.
             info = path.stat()
@@ -168,6 +174,18 @@ class _Scanner:
             folder, parts = stack.pop()
             rel_folder = "/".join(parts) or None
             try:
+                if cloud_only(folder.stat()):
+                    self.add(
+                        Problem(
+                            source,
+                            rel_folder,
+                            "failed",
+                            "media.download_required",
+                            DOWNLOAD_REQUIRED,
+                            True,
+                        )
+                    )
+                    continue
                 with os.scandir(folder) as it:
                     children = sorted(it, key=lambda e: e.name)
             except PermissionError:

@@ -23,6 +23,12 @@ pub const PHONE_EVENT: &str = "phone://status";
 /// The phone import session manager, present when a worker is configured.
 pub type Phone = Option<PhoneGateway>;
 
+#[derive(Clone)]
+struct CurrentLibrary {
+    path: PathBuf,
+    configuration_error: bool,
+}
+
 /// Where the worker comes from. Release builds on Windows (M29) and macOS (M34) start
 /// it from the bundle's `runtime/` folder; `OWM_WORKER_PYTHON` overrides; debug builds
 /// fall back to the repository's virtualenv. Every path is absolute: no shell `PATH`.
@@ -72,9 +78,29 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::E
         app.manage(None::<PhoneGateway> as Phone);
         return Ok(());
     };
-    let library = crate::platform::app_dirs(app)?.library();
+    let dirs = crate::platform::app_dirs(app)?;
+    let macos = crate::platform::facts().family == crate::platform::Family::Macos;
+    let selection = if macos {
+        crate::library_location::load(&dirs.data)
+    } else {
+        Ok(None)
+    };
+    let (library, existing, configuration_error) = match selection {
+        Ok(Some(selected)) => (selected.path, true, false),
+        Ok(None) => (dirs.library(), false, false),
+        // Fail closed, but keep Settings usable so native selection can repair it.
+        Err(_) => (dirs.data.join("unavailable-library-selection"), true, true),
+    };
+    app.manage(CurrentLibrary {
+        path: library.clone(),
+        configuration_error,
+    });
     // No phone session runs yet: leftovers are from a crash.
-    let phone_staging = library.join("staging").join("phone");
+    let phone_staging = if crate::platform::facts().family == crate::platform::Family::Macos {
+        dirs.temp.join("phone")
+    } else {
+        library.join("staging").join("phone")
+    };
     crate::phone::clean_staging(&phone_staging);
     let phone = PhoneGateway::new(PhoneConfig {
         command: command.clone(),
@@ -91,12 +117,35 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::E
             let _ = handle.emit(PHONE_EVENT, &status);
         }
     });
-    let supervisor = Supervisor::new(SupervisorConfig::new(command, library));
+    let mut config = SupervisorConfig::new(command, library);
+    if existing {
+        config.extra_args.push("--existing-library".into());
+    }
+    if crate::platform::facts().family == crate::platform::Family::Macos {
+        config.extra_args.extend([
+            "--cache-dir".into(),
+            dirs.cache.to_string_lossy().into_owned(),
+            "--log-dir".into(),
+            dirs.logs.to_string_lossy().into_owned(),
+        ]);
+    }
+    let supervisor = Supervisor::new(config);
     app.manage(Some(supervisor.clone()));
 
     let watcher = WatchService::new(WorkerSink(supervisor.clone()), WatchConfig::default());
     app.manage(Some(watcher.clone()) as Watcher);
     tauri::async_runtime::spawn(watcher.clone().run());
+
+    let (lifecycle_tx, mut lifecycle_rx) = tokio::sync::mpsc::unbounded_channel();
+    crate::platform::observe_lifecycle(lifecycle_tx);
+    let lifecycle = crate::lifecycle::Lifecycle::new(supervisor.clone(), watcher.clone(), phone);
+    app.manage(lifecycle.clone());
+    let initial_lifecycle = lifecycle.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = lifecycle_rx.recv().await {
+            lifecycle.handle(event).await;
+        }
+    });
 
     let handle = app.clone();
     let mut status = supervisor.subscribe_status();
@@ -118,7 +167,9 @@ pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::E
     tauri::async_runtime::spawn(async move { relay_events(handle, relay).await });
 
     tauri::async_runtime::spawn(async move {
-        let _ = supervisor.start().await; // failures surface as WorkerStatus::Failed
+        initial_lifecycle
+            .handle(crate::platform::LifecycleEvent::Wake)
+            .await;
     });
     Ok(())
 }
@@ -153,21 +204,9 @@ async fn relay_events<R: Runtime>(app: AppHandle<R>, supervisor: Supervisor) {
 
 pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
     if let RunEvent::Exit = event
-        && let Some(phone) = app.try_state::<Phone>().and_then(|p| p.inner().clone())
+        && let Some(lifecycle) = app.try_state::<crate::lifecycle::Lifecycle>()
     {
-        tauri::async_runtime::block_on(phone.stop());
-    }
-    if let RunEvent::Exit = event
-        && let Some(watcher) = app.try_state::<Watcher>().and_then(|w| w.inner().clone())
-    {
-        watcher.stop();
-    }
-    if let RunEvent::Exit = event
-        && let Some(supervisor) = app
-            .try_state::<Option<Supervisor>>()
-            .and_then(|s| s.inner().clone())
-    {
-        tauri::async_runtime::block_on(supervisor.stop());
+        tauri::async_runtime::block_on(lifecycle.shutdown());
     }
 }
 
@@ -442,6 +481,54 @@ pub async fn watched_folder_files(
         .map_err(to_ui_error)
 }
 
+/// Re-select the configured root through the native panel. A different folder is
+/// refused: reauthorization must retain this folder's history and import identities.
+#[tauri::command]
+pub async fn watched_folder_reauthorize(
+    app: AppHandle,
+    state: State<'_, Option<Supervisor>>,
+    watcher: State<'_, Watcher>,
+    id: i64,
+) -> Result<bool, Value> {
+    let folders = supervisor(&state)?
+        .request(reqwest::Method::GET, "/v1/watched-folders", None, None)
+        .await
+        .map_err(to_ui_error)?;
+    let root = folders
+        .as_array()
+        .and_then(|list| list.iter().find(|f| f["id"].as_i64() == Some(id)))
+        .and_then(|f| f["path"].as_str())
+        .map(PathBuf::from)
+        .ok_or_else(crate::media::route_refused)?;
+    use tauri_plugin_dialog::DialogExt;
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = app.dialog().file().set_title("Select the same watched folder to restore access").blocking_pick_folder() else { return Ok(false); };
+        let path = file.into_path().map_err(|_| crate::media::route_refused())?;
+        if !same_folder(&root, &path) {
+            return Err(json!({"code":"watch.different_folder", "message":"Select the same watched folder. Add a different location as a new watched folder.", "retryable":true}));
+        }
+        crate::watch::fsprobe::folder_available(&path).map_err(|_| json!({"code":"watch.access_required", "message":"The folder is still unavailable. Reconnect the drive, download the folder, or allow Files and Folders access in macOS Privacy & Security.", "retryable":true}))?;
+        Ok::<_, Value>(true)
+    }).await.map_err(|_| unavailable())??;
+    if selected && let Some(watcher) = watcher.inner() {
+        watcher.resume();
+    }
+    Ok(selected)
+}
+
+fn same_folder(configured: &std::path::Path, selected: &std::path::Path) -> bool {
+    if configured == selected {
+        return true;
+    }
+    match (
+        std::fs::canonicalize(configured),
+        std::fs::canonicalize(selected),
+    ) {
+        (Ok(left), Ok(right)) => left == right,
+        _ => false,
+    }
+}
+
 /// Extension the saved file must have for each M27 export format (fixed by the host).
 pub fn export_extension(format: &str) -> Option<&'static str> {
     match format {
@@ -575,9 +662,70 @@ fn host_platform_body(body: Option<Value>, host: Value) -> Value {
 }
 
 fn library_dir<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, Value> {
+    if let Some(library) = app.try_state::<CurrentLibrary>() {
+        return if library.configuration_error {
+            Err(unavailable())
+        } else {
+            Ok(library.path.clone())
+        };
+    }
     crate::platform::app_dirs(app)
         .map(|dirs| dirs.library())
         .map_err(|_| unavailable())
+}
+
+/// The active path is deliberate user-visible Settings data, never diagnostics.
+#[tauri::command]
+pub fn library_location(app: AppHandle) -> Result<Value, Value> {
+    if crate::platform::facts().family != crate::platform::Family::Macos {
+        return Ok(json!({"supported":false}));
+    }
+    let path = library_dir(&app).ok();
+    Ok(
+        json!({"supported":true, "path":path, "available":path.as_ref().is_some_and(|p| p.join("database.sqlite3").is_file())}),
+    )
+}
+
+/// Locate a library moved while the app was closed. Switching is deferred to a new
+/// launch; an active library is never copied, moved, or detached from its jobs.
+#[tauri::command]
+pub async fn library_select(app: AppHandle) -> Result<Value, Value> {
+    if crate::platform::facts().family != crate::platform::Family::Macos {
+        return Err(crate::media::route_refused());
+    }
+    let data = crate::platform::app_dirs(&app)
+        .map_err(|_| unavailable())?
+        .data;
+    let current = library_dir(&app).ok();
+    use tauri_plugin_dialog::DialogExt;
+    let picker = app.clone();
+    let selection = tauri::async_runtime::spawn_blocking(move || {
+        let Some(file) = picker.dialog().file().set_title("Choose an existing OpenWorld Moments library").blocking_pick_folder() else { return Ok(None); };
+        let path = file.into_path().map_err(|_| crate::media::route_refused())?;
+        let path = crate::library_location::validate(&path).map_err(|_| json!({"code":"library.selection_unavailable", "message":"Select a downloaded, readable library folder containing database.sqlite3. The current library was kept.", "retryable":true}))?;
+        Ok::<_, Value>(Some(path))
+    }).await.map_err(|_| unavailable())??;
+    let Some(path) = selection else {
+        return Ok(json!({"selected":false}));
+    };
+    let restart = !current
+        .as_deref()
+        .is_some_and(|current| same_folder(current, &path));
+    let active = app
+        .try_state::<Option<Supervisor>>()
+        .and_then(|state| state.inner().clone())
+        .is_some_and(|worker| matches!(worker.status(), WorkerStatus::Ready { .. }));
+    if restart || !active {
+        let command = worker_command(&app).ok_or_else(unavailable)?;
+        crate::library_location::check(&command, &path).await.map_err(|_| json!({"code":"library.invalid", "message":"Close the app using that library, then select a verified OpenWorld Moments library. An unrelated database is never changed.", "retryable":true}))?;
+    }
+    crate::library_location::save(&data, &path).map_err(|_| json!({"code":"library.save_failed", "message":"The library selection could not be saved. The current library was kept.", "retryable":true}))?;
+    if !restart && let Some(lifecycle) = app.try_state::<crate::lifecycle::Lifecycle>() {
+        lifecycle
+            .handle(crate::platform::LifecycleEvent::Wake)
+            .await;
+    }
+    Ok(json!({"selected":true,"restart_required":restart}))
 }
 
 fn reveal_failed() -> Value {
@@ -731,5 +879,22 @@ mod tests {
             assert_eq!(export_filename(Some(bad), "otio"), "export.otio", "{bad}");
         }
         assert_eq!(export_filename(None, "srt"), "export.srt");
+    }
+}
+
+#[cfg(test)]
+mod location_tests {
+    use super::same_folder;
+    #[test]
+    fn reauthorization_refuses_another_root_and_accepts_a_canonical_alias() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("Captures ✓");
+        let other = dir.path().join("Other");
+        std::fs::create_dir(&root).unwrap();
+        std::fs::create_dir(&other).unwrap();
+        assert!(same_folder(&root, &root));
+        assert!(same_folder(&root, &std::fs::canonicalize(&root).unwrap()));
+        assert!(!same_folder(&root, &other));
+        assert!(!same_folder(&root, &dir.path().join("missing")));
     }
 }

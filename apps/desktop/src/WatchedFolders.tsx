@@ -11,6 +11,7 @@ import {
   parsePatterns,
   pickFolder,
   removeWatched,
+  reauthorizeWatched,
   updateWatched,
   watchedFiles,
 } from "./watched";
@@ -78,8 +79,7 @@ export function WatchedFolders({
   async function run(action: () => Promise<unknown>, done: string) {
     setNotice(null);
     try {
-      await action();
-      setNotice(done);
+      if ((await action()) !== false) setNotice(done);
     } catch (error) {
       setNotice(`Could not complete that: ${errorMessage(error)}`);
     }
@@ -161,6 +161,14 @@ function FolderItem({
     }
   }
 
+  async function restoreAccess() {
+    // Cancellation is not a successful reauthorization and changes no settings.
+    await run(
+      () => reauthorizeWatched(folder.id),
+      "Folder check finished. Its import history was kept.",
+    );
+  }
+
   return (
     <li className="folder" aria-labelledby={`${id}-path`}>
       <p id={`${id}-path`} className="path">
@@ -224,6 +232,11 @@ function FolderItem({
         </button>
       </details>
       <div className="row">
+        {(view.status?.state === "unavailable" || folder.availability === "unavailable") && (
+          <button type="button" onClick={() => void restoreAccess()}>
+            Select folder again…
+          </button>
+        )}
         {folder.stats.failed > 0 && (
           <button type="button" onClick={() => void showFailures()}>
             Show failed files

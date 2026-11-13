@@ -190,3 +190,13 @@ describe("import from phone", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/private network addresses/);
   });
 });
+
+it("explains Mac firewall and local-network access before a session starts", async () => {
+  render(<PhoneImport />);
+  await screen.findByRole("combobox", { name: "Network connection" });
+  const guide = screen.getByRole("region", { name: "Mac network permissions" });
+  expect(guide.textContent).toContain("Keep the firewall on");
+  expect(guide.textContent).toContain("Local Network in System Settings");
+  expect(guide.textContent).toContain("waking the Mac never reopens phone transfer automatically");
+  expect(calls.some((c) => c.command === "phone_start")).toBe(false);
+});

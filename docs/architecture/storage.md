@@ -9,7 +9,7 @@ Decision record: [ADR-0003](./adr/0003-sqlite-migrations.md).
 |---|---|---|
 | Asset identity and metadata, sessions, session membership, events, transcripts, stories (with their EDL), render jobs, jobs, tags, collections, watched folders, settings | `library/database.sqlite3` (SQLite, WAL) | Canonical, queryable, transactional |
 | Original footage | Where the user keeps it (reference mode) or `library/managed-media/ab/cd/<sha256>.<ext>` (managed mode) | Never modified; the database stores paths and hashes only |
-| Proxies, waveforms, thumbnails, sampled frames | `library/derived/<asset-id>/` | Large and replaceable; can always be regenerated |
+| Proxies, waveforms, thumbnails, sampled frames | `library/derived/<asset-id>/` (macOS M35: Caches root) | Large and replaceable; can always be regenerated |
 | Exported videos and manifests | `library/exports/` | User output |
 | Database backups | `library/backups/` | Written before every upgrade of a non-empty database |
 | Models, profiles, logs | `library/models/`, `library/profiles/`, `library/logs/` | Managed by their own milestones |
@@ -42,7 +42,7 @@ Rules:
 | `AssetRepository` | `media_assets` | contract `MediaAsset` (+ `original_path`, `managed_path`, `source_profile_id` kept out of the contract for privacy). Since 0008 also `container_created_at` (the probed container time, for re-estimating capture time). Since 0003 also `rotation`, `average_frame_rate`, and `variable_frame_rate`; added color fields live in `color_metadata_json`. Since 0004 `size_bytes`, since 0005 `set_fast_hash`, `ids_by_fast_hash`, `ids_with_duration`, plus `query(missing=)`, `location(s)` (paths for the missing-source check), `set_original_path`, `clear_missing`. `managed_path` is relative to the library (`managed-media/ab/cd/<sha256>.<ext>`) |
 | `FingerprintRepository` | `asset_fingerprints` (0005) | One versioned fingerprint per (asset, kind): `fast`, `frames`, `audio`; small canonical JSON, never media. Cascades with its asset ([fingerprints](./fingerprints.md)) |
 | `DuplicateCandidateRepository` | `duplicate_candidates` (0005) | Perceptual look-alike pairs (`asset_a < asset_b`). Re-recording refreshes score and evidence but never `review_state`. Cascades with either asset; never deletes media |
-| `DerivedArtifactRepository` | `derived_artifacts` (0007) | One row per (asset, kind) for the proxy, filmstrip, and waveform: status (`ready` or `failed`), cache key, recipe, kind-specific info, the artifact's path relative to the library (`derived/<asset-id>/…`), size, digest, and the last error. A failed regeneration keeps the previous ready artifact. Cascades with the asset; rows never delete files ([derived media](./derived-media.md)) |
+| `DerivedArtifactRepository` | `derived_artifacts` (0007) | One row per (asset, kind) for the proxy, filmstrip, and waveform: status (`ready` or `failed`), cache key, recipe, kind-specific info, the artifact's logical path (`derived/<asset-id>/…`, resolved under the configured derived-media root), size, digest, and the last error. A failed regeneration keeps the previous ready artifact. Cascades with the asset; rows never delete files ([derived media](./derived-media.md)) |
 | `WatchedFolderRepository` | `watched_folders` (0001, extended in 0006), `watched_files` (0006) | Folder settings (mode, recursion, include/exclude, availability, last scan) and the latest version (size, mtime) of each file with its import job. Deleting a folder deletes only these rows ([watched folders](./watched-folders.md)) |
 | `AssetImportRepository` | `asset_imports` (0004) | Import provenance: one row per (asset, source path), upserted on re-import (`last_seen_at`); cascades with its asset |
 | `SessionRepository` | `sessions`, `session_assets`, `session_corrections` (0008) | `Session` (since 0008 with `grouping` evidence and `updated_at`), `SessionAsset`; `update`, `replace_assets`, `newest`, `session_of`, `has_stories`, `has_attached_data` / `with_attached_data`, and the correction log (`log_correction`, `corrections`). Rows never delete media ([sessions](./sessions.md)) |
@@ -128,3 +128,7 @@ keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
 sidecars now flush the project and use the gated `project_export` host command;
 `caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
 Migration 0018 stores review configuration/decisions without copied evidence text.
+
+## macOS storage (M35)
+
+The host now uses standard Caches/Logs/temp paths for replaceable media, redacted rotating logs and phone staging. Native selection remembers an existing relocated library; an offline selection never creates an empty database. Atomic import/render finalization staging stays on the canonical library volume. See [paths and lifecycle](../platforms/macos-files-and-lifecycle.md).

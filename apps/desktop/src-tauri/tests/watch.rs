@@ -320,3 +320,46 @@ async fn non_recursive_folder_ignores_subfolders() {
     assert_eq!(sink.reported(), vec!["top.mp4".to_string()]);
     run.stop().await;
 }
+
+// M35: a sleep gap invalidates stabilization, then wake scans the configured root
+// immediately, retaining reports so unchanged clips do not import a second time.
+#[tokio::test(flavor = "multi_thread")]
+async fn sleep_wake_reconciles_unicode_long_paths_without_duplicate_reports() {
+    let dir = tempfile::tempdir().unwrap();
+    let nested = dir
+        .path()
+        .join("Captures ✓")
+        .join("long-folder-".repeat(12));
+    fs::create_dir_all(&nested).unwrap();
+    let first = nested.join("First 🎮.mp4");
+    write(&first, b"immutable first capture");
+    let sink = FakeSink::default();
+    sink.folders.lock().unwrap().push(folder(1, dir.path()));
+    let run = Running::start(&sink);
+    wait_until("first report", Duration::from_secs(10), || {
+        sink.reported().len() == 1
+    })
+    .await;
+    run.service.pause();
+    wait_until("watcher suspended", Duration::from_secs(5), || {
+        run.service
+            .status()
+            .first()
+            .is_some_and(|s| s.state == "starting")
+    })
+    .await;
+    let second = nested.join("Second.mp4");
+    write(&second, b"arrived during sleep");
+    tokio::time::sleep(Duration::from_millis(900)).await;
+    assert_eq!(sink.reported().len(), 1);
+    run.service.resume();
+    wait_until("wake report", Duration::from_secs(10), || {
+        sink.reported().len() == 2
+    })
+    .await;
+    tokio::time::sleep(Duration::from_millis(900)).await;
+    assert_eq!(sink.reported().len(), 2);
+    run.stop().await;
+    assert_eq!(fs::read(first).unwrap(), b"immutable first capture");
+    assert_eq!(fs::read(second).unwrap(), b"arrived during sleep");
+}

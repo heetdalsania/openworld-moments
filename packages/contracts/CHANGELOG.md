@@ -1,5 +1,10 @@
 # Contracts changelog
 
+## 1.27 — macOS files and lifecycle (M35)
+
+- `derived-media`: optional `storage_root` distinguishes `library` from the configured disposable `cache`. Omission continues to mean `library`; existing artifact paths retain their format. Filesystem paths are not exposed.
+- Existing 1.x documents remain readable; no SQL migration.
+
 ## 1.26 — macOS worker and media toolchain (M34)
 
 - `system-doctor`: each runtime tool may report its CPU `architecture` (`arm64` or `x86_64`).
