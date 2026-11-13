@@ -179,7 +179,7 @@
   - **M37:** signing order for `Resources/runtime` (or relocation), entitlements,
     notarization; DMG names from ADR-0008.
   - **M39:** both architectures on clean Macs.
-- Pull request: to be linked
+- Pull request: [#52](https://github.com/heetdalsania/openworld-moments/pull/52)
 - Screenshots, reports, or artifacts:
   - CI artifacts `macOS-<arch>-unsigned-dev` contain the zip, `build-info`,
     `SHA256SUMS`, `sbom-macos-<arch>.cdx.json`, the runtime inventory with its Mach-O
