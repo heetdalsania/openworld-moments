@@ -156,6 +156,44 @@ class Database:
         return self.migrations[-1].version if self.migrations else 0
 
     @classmethod
+    def validate_existing(cls, root: Path) -> None:
+        """Identify a closed OWM library without creating files or changing WAL.
+
+        Immutable read-only mode deliberately ignores an uncheckpointed WAL: users
+        must close a library before moving/selecting it. Do not use connect(), which
+        enables WAL and can modify a database before its identity is established.
+        """
+        try:
+            candidate = root / "database.sqlite3"
+            if candidate.is_symlink() or not candidate.is_file():
+                raise StorageError("Not a regular library database")
+            path = candidate.resolve()
+            with closing(sqlite3.connect(path.as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
+                conn.row_factory = sqlite3.Row
+                conn.execute("PRAGMA trusted_schema = OFF")
+                conn.execute("PRAGMA query_only = ON")
+                tables = {
+                    row[0]
+                    for row in conn.execute(
+                        "SELECT name FROM sqlite_schema WHERE type='table' "
+                        "AND name IN ('schema_migrations', 'media_assets')"
+                    )
+                }
+                if tables != {"schema_migrations", "media_assets"}:
+                    raise StorageError("Not an OpenWorld Moments library")
+                database = cls(path)
+                current = database.schema_version(conn)
+                if current < 1:
+                    raise StorageError("Not an initialized library")
+                database._verify_applied(conn, current)
+        except (sqlite3.Error, OSError, StorageError) as exc:
+            raise StorageError(
+                "The selected folder is not a verified OpenWorld Moments library. "
+                "Close the app using that library and select its folder again. "
+                "A newer library may require a newer app."
+            ) from exc
+
+    @classmethod
     def open(
         cls,
         path: Path,

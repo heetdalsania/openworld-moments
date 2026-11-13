@@ -702,7 +702,7 @@ pub async fn library_select(app: AppHandle) -> Result<Value, Value> {
     let selection = tauri::async_runtime::spawn_blocking(move || {
         let Some(file) = picker.dialog().file().set_title("Choose an existing OpenWorld Moments library").blocking_pick_folder() else { return Ok(None); };
         let path = file.into_path().map_err(|_| crate::media::route_refused())?;
-        crate::library_location::save(&data, &path).map_err(|_| json!({"code":"library.selection_unavailable", "message":"Select a downloaded, readable library folder containing database.sqlite3. The current library was kept.", "retryable":true}))?;
+        let path = crate::library_location::validate(&path).map_err(|_| json!({"code":"library.selection_unavailable", "message":"Select a downloaded, readable library folder containing database.sqlite3. The current library was kept.", "retryable":true}))?;
         Ok::<_, Value>(Some(path))
     }).await.map_err(|_| unavailable())??;
     let Some(path) = selection else {
@@ -711,6 +711,15 @@ pub async fn library_select(app: AppHandle) -> Result<Value, Value> {
     let restart = !current
         .as_deref()
         .is_some_and(|current| same_folder(current, &path));
+    let active = app
+        .try_state::<Option<Supervisor>>()
+        .and_then(|state| state.inner().clone())
+        .is_some_and(|worker| matches!(worker.status(), WorkerStatus::Ready { .. }));
+    if restart || !active {
+        let command = worker_command(&app).ok_or_else(unavailable)?;
+        crate::library_location::check(&command, &path).await.map_err(|_| json!({"code":"library.invalid", "message":"Close the app using that library, then select a verified OpenWorld Moments library. An unrelated database is never changed.", "retryable":true}))?;
+    }
+    crate::library_location::save(&data, &path).map_err(|_| json!({"code":"library.save_failed", "message":"The library selection could not be saved. The current library was kept.", "retryable":true}))?;
     if !restart && let Some(lifecycle) = app.try_state::<crate::lifecycle::Lifecycle>() {
         lifecycle
             .handle(crate::platform::LifecycleEvent::Wake)

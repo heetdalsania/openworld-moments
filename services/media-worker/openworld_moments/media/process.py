@@ -232,6 +232,14 @@ def _kill_tree(pid: int) -> None:
 def _kill(proc: subprocess.Popen[bytes]) -> None:
     """Kill the tool's process tree and reap it. There is no polite phase: callers
     discard partial output, and FFmpeg/FFprobe have no cleanup worth waiting for."""
+    if sys.platform == "darwin" and proc.stdin is not None and proc.poll() is None:
+        # Let the guardian finish registering its child before it kills its own
+        # group. Killing it in the middle of posix_spawn can strand a child that
+        # inherits the output pipes and delay cancellation until reader timeouts.
+        with contextlib.suppress(OSError):
+            proc.stdin.close()
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=1)
     if proc.poll() is None:
         _kill_tree(proc.pid)
     with contextlib.suppress(OSError):  # already exited

@@ -8,6 +8,36 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+/// Ask the existing bundled/development worker to identify a closed library in
+/// immutable read-only mode. This does not start its API, jobs or media tools.
+pub async fn check(command: &crate::worker::WorkerCommand, path: &Path) -> std::io::Result<()> {
+    use std::process::Stdio;
+    let mut process = tokio::process::Command::new(&command.program);
+    process
+        .args(&command.args)
+        .arg("--library")
+        .arg(path)
+        .arg("--check-library-only")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true);
+    if let Some(cwd) = &command.cwd {
+        process.current_dir(cwd);
+    }
+    crate::platform::hide_console(&mut process);
+    let output = tokio::time::timeout(std::time::Duration::from_secs(15), process.output())
+        .await
+        .map_err(std::io::Error::other)??;
+    let response: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    if !output.status.success() || response["event"] != "library_checked" {
+        return Err(std::io::Error::other(
+            "Not a verified closed OpenWorld Moments library",
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Selection {

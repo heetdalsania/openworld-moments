@@ -221,3 +221,20 @@ def test_hard_worker_exit_stops_its_media_tool(tmp_path: Path) -> None:
                 os.killpg(int(group_file.read_text()), signal.SIGKILL)
         if parent.stderr is not None:
             parent.stderr.close()
+
+
+@pytest.mark.parametrize("_attempt", range(5))
+def test_cancel_at_spawn_never_leaves_an_output_pipe_open(_attempt: int) -> None:
+    # Exercise the guard startup window before the actual media tool has started.
+    cancel = threading.Event()
+    spawned: list[subprocess.Popen[bytes]] = []
+
+    def at_spawn(proc: subprocess.Popen[bytes]) -> None:
+        spawned.append(proc)
+        cancel.set()
+
+    started = time.monotonic()
+    with pytest.raises(ToolCancelled):
+        run_tool([PY, "-c", SLEEP], timeout_s=60, cancel=cancel, on_spawn=at_spawn)
+    assert time.monotonic() - started < 5
+    assert spawned[0].poll() is not None

@@ -128,6 +128,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument(
+        "--check-library-only",
+        action="store_true",
+        help="read-only library identity check; starts no worker or jobs",
+    )
+    parser.add_argument(
         "--existing-library",
         action="store_true",
         help="never create an empty replacement for a selected library",
@@ -141,6 +146,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ffprobe", help="ffprobe executable (default: OWM_FFPROBE, then PATH)")
     parser.add_argument("--ffmpeg", help="ffmpeg executable (default: OWM_FFMPEG, then PATH)")
     args = parser.parse_args(argv)
+
+    if args.check_library_only:
+        try:
+            Database.validate_existing(args.library)
+        except StorageError:
+            emit(
+                {
+                    "event": "error",
+                    "code": "library.invalid",
+                    "message": "Close and select an existing OpenWorld Moments library.",
+                }
+            )
+            return EXIT_STARTUP_FAILED
+        emit({"event": "library_checked"})
+        return 0
 
     redactor = Redactor(
         [str(path) for path in (args.library, args.cache_dir, args.log_dir) if path]
@@ -158,6 +178,8 @@ def main(argv: list[str] | None = None) -> int:
         for location in (args.library, args.library / "database.sqlite3"):
             if location.exists() and cloud_only(location.stat()):
                 raise StartupError("media.download_required", DOWNLOAD_REQUIRED)
+        if args.existing_library:
+            Database.validate_existing(args.library)
         if args.log_dir:
             args.log_dir.mkdir(parents=True, exist_ok=True)
             handler = RotatingFileHandler(

@@ -399,3 +399,32 @@ async fn sleep_closes_phone_and_recovers_running_job_then_quit_refuses_a_late_wa
     lifecycle.handle(LifecycleEvent::Wake).await;
     assert_eq!(supervisor.status(), WorkerStatus::Stopped);
 }
+
+#[tokio::test]
+async fn native_library_selection_checks_identity_without_starting_a_worker() {
+    let dir = tempfile::tempdir().unwrap();
+    let supervisor = Supervisor::new(config(&dir));
+    supervisor.start().await.unwrap();
+    supervisor.stop().await;
+    let library = dir.path().join("library");
+    openworld_moments_desktop_lib::library_location::check(&worker_command(), &library)
+        .await
+        .unwrap();
+    let unrelated = dir.path().join("not-a-library");
+    std::fs::create_dir(&unrelated).unwrap();
+    std::fs::write(
+        unrelated.join("database.sqlite3"),
+        b"SQLite format 3\0not a library",
+    )
+    .unwrap();
+    assert!(
+        openworld_moments_desktop_lib::library_location::check(&worker_command(), &unrelated)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        std::fs::read(unrelated.join("database.sqlite3")).unwrap(),
+        b"SQLite format 3\0not a library"
+    );
+    assert_eq!(supervisor.status(), WorkerStatus::Stopped);
+}

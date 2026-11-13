@@ -156,3 +156,69 @@ def test_offline_selected_library_never_creates_an_empty_replacement(
     assert worker.startup["code"] == "worker.library_unavailable"
     assert worker.proc.wait(timeout=10) == 3
     assert not missing.exists()
+
+
+def test_existing_library_identity_check_is_read_only_and_refuses_unrelated_sqlite(
+    worker_factory: Any, tmp_path: Path
+) -> None:
+    import hashlib
+    import sqlite3
+    import subprocess
+    import sys
+
+    from openworld_moments.storage import Database
+    from tests.worker.conftest import WORKER_DIR
+
+    root = tmp_path / "Other app ✓"
+    root.mkdir()
+    path = root / "database.sqlite3"
+    with sqlite3.connect(path) as conn:
+        conn.execute("CREATE TABLE personal_notes (body TEXT)")
+        conn.execute("INSERT INTO personal_notes VALUES ('preserve me')")
+        conn.execute("PRAGMA user_version = 1")
+    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    files = set(root.iterdir())
+    result = subprocess.run(  # noqa: S603 - fixed read-only helper mode, no API
+        [
+            sys.executable,
+            "-m",
+            "openworld_moments.worker",
+            "--library",
+            str(root),
+            "--check-library-only",
+        ],
+        cwd=WORKER_DIR,
+        input=b"",
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode == 3 and json.loads(result.stdout)["code"] == "library.invalid"
+    worker: WorkerProcess = worker_factory("--existing-library", library=root)
+    assert worker.startup["code"] == "worker.database_error"
+    assert worker.proc.wait(timeout=10) == 3
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == before
+    assert set(root.iterdir()) == files
+
+    library = tmp_path / "Valid library ✓"
+    Database.open(library / "database.sqlite3")
+    expected = (library / "database.sqlite3").read_bytes()
+    files = set(library.iterdir())
+    result = subprocess.run(  # noqa: S603 - read-only helper, even without stdin token
+        [
+            sys.executable,
+            "-m",
+            "openworld_moments.worker",
+            "--library",
+            str(library),
+            "--check-library-only",
+        ],
+        cwd=WORKER_DIR,
+        input=b"",
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode == 0 and json.loads(result.stdout)["event"] == "library_checked"
+    assert (library / "database.sqlite3").read_bytes() == expected
+    assert set(library.iterdir()) == files
