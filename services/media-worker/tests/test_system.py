@@ -10,11 +10,12 @@ import pytest
 from openworld_moments_contracts import load
 
 from openworld_moments.media.tools import MediaTools
-from openworld_moments.system import doctor, inventory
+from openworld_moments.system import EXE, WORKER, doctor, inventory
 
 
 def test_runtime_inventory_detects_corruption_missing_tools_and_traversal(tmp_path: Path) -> None:
-    names = ["owm-worker.exe", "tools/ffmpeg.exe", "tools/ffprobe.exe"]
+    # M34: the same layout on Windows (`.exe`) and macOS (no suffix).
+    names = [WORKER, f"tools/ffmpeg{EXE}", f"tools/ffprobe{EXE}"]
     for name in names:
         p = tmp_path / name
         p.parent.mkdir(exist_ok=True)

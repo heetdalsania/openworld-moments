@@ -8,7 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
-      "output/playwright/**",
+      "output/**",
+      "apps/desktop/src-tauri/bundle-input/**",
       ".playwright-cli/**",
       "**/target/**",
       "**/gen/**",

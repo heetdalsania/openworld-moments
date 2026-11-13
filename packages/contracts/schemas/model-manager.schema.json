@@ -85,6 +85,21 @@
               "type": "string",
               "pattern": "^[a-f0-9]{64}$"
             }
+          },
+          "platforms": {
+            "description": "M34: platforms the artifact runs on (os-arch, or any). Absent means any.",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^(any|(macos|windows|linux)-(arm64|x86_64))$"
+            }
+          },
+          "compatible": {
+            "description": "M34: whether this computer can install the artifact. Absent means compatible.",
+            "type": "boolean"
           }
         }
       }

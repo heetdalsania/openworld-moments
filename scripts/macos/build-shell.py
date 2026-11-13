@@ -1,24 +1,30 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Build, verify and package an unsigned macOS development shell (M33).
+"""Build, verify and package an unsigned macOS development build (M33, M34).
 
     python scripts/macos/build-shell.py --arch arm64     # or x86_64
     python scripts/macos/build-shell.py --arch x86_64 --skip-build --no-run
+    python scripts/macos/build-shell.py --arch arm64 --no-runtime   # M33 shell only
+
+Since M34 the build bundles the frozen worker and media tools from
+`apps/desktop/src-tauri/bundle-input/runtime/` (scripts/macos/freeze-worker.py) as
+`Contents/Resources/runtime/`; `--no-runtime` builds the bare M33 shell.
 
 Steps (every external program is started by argument array, never through a shell):
 
 1. `tauri build --target <triple> --bundles app` with `MACOSX_DEPLOYMENT_TARGET` set to
-   the supported floor, so the binary and `Info.plist` agree.
+   the supported floor, so the binary and `Info.plist` agree, and the packaged overlay
+   `tauri.macos-packaged.conf.json` that adds the runtime.
 2. Check every Mach-O file in the bundle is a thin binary of the requested
-   architecture that runs on the floor, and that the host executable targets it exactly.
+   architecture that runs on the floor, that the host executable targets it exactly,
+   and that the runtime loads only system libraries or its own files.
 3. Check `Info.plist` declares the floor and the expected executable.
 4. Run the executable with `--version-report` (unless `--no-run`, used when building
    for the other architecture) and check it reports the expected build natively.
 5. Zip the bundle with `ditto`, keeping macOS metadata, and write `build-info.json`
    and `SHA256SUMS.txt` next to it in `output/packaging/macos/`.
 
-The result is a development artifact: unsigned, not notarized, without the worker or
-media tools (M34). Opening it needs right-click → Open on the test Mac; see
-`docs/platforms/macos-development-shell.md`.
+The result is a development artifact: unsigned and not notarized (M37). See
+`docs/platforms/macos-development-shell.md` for opening it on a test Mac.
 """
 
 from __future__ import annotations
@@ -33,7 +39,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from macho import check_native, is_macho, read
+from macho import audit_runtime, check_native, is_macho, read
 
 ROOT = Path(__file__).resolve().parents[2]
 FLOOR = "14.0"
@@ -52,7 +58,25 @@ def artifact_name(version: str, arch: str, commit: str) -> str:
     return f"OpenWorld-Moments_{safe}+{short}_macOS_{arch}_unsigned-dev.zip"
 
 
-def build(arch: str) -> None:
+RUNTIME = ROOT / "apps/desktop/src-tauri/bundle-input/runtime"
+PACKAGED_CONFIG = "src-tauri/tauri.macos-packaged.conf.json"
+
+
+def runtime_problem(arch: str, runtime: Path = RUNTIME) -> str | None:
+    """Why the frozen runtime cannot go into an `arch` build, or `None`."""
+    try:
+        inventory = json.loads((runtime / "inventory.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        return "no frozen runtime; run scripts/macos/freeze-worker.py first"
+    if inventory.get("platform") != "macos" or inventory.get("architecture") != arch:
+        return (
+            f"the frozen runtime is {inventory.get('platform')}/"
+            f"{inventory.get('architecture')}, not macos/{arch}"
+        )
+    return None
+
+
+def build(arch: str, runtime: bool = True) -> None:
     env = {**os.environ, "MACOSX_DEPLOYMENT_TARGET": FLOOR}
     command = [
         "pnpm",
@@ -65,6 +89,7 @@ def build(arch: str) -> None:
         TARGETS[arch],
         "--bundles",
         "app",
+        *(["--config", PACKAGED_CONFIG] if runtime else []),
     ]
     subprocess.run(command, cwd=ROOT, env=env, check=True)  # noqa: S603
 
@@ -73,8 +98,10 @@ def bundle_path(arch: str) -> Path:
     return ROOT / "target" / TARGETS[arch] / "release" / "bundle" / "macos" / APP
 
 
-def verify_bundle(app: Path, arch: str, floor: str = FLOOR) -> list[str]:
-    """Every problem with the bundle; empty when it is a native `arch` shell."""
+def verify_bundle(
+    app: Path, arch: str, floor: str = FLOOR, *, require_runtime: bool = False
+) -> list[str]:
+    """Every problem with the bundle; empty when it is a native `arch` build."""
     problems: list[str] = []
     info_path = app / "Contents" / "Info.plist"
     try:
@@ -96,6 +123,15 @@ def verify_bundle(app: Path, arch: str, floor: str = FLOOR) -> list[str]:
         problems.append(f"{executable.name}: not a Mach-O executable")
     for binary in binaries:
         problems.extend(check_native(binary, arch, floor))
+    runtime = app / "Contents" / "Resources" / "runtime"
+    if runtime.is_dir():
+        audit_problems, _ = audit_runtime(runtime, arch, floor)
+        problems.extend(f"runtime/{p}" for p in audit_problems if "not in the runtime" in p)
+        for tool in ("owm-worker", "tools/ffmpeg", "tools/ffprobe", "inventory.json"):
+            if not (runtime / tool).is_file():
+                problems.append(f"runtime/{tool}: missing")
+    elif require_runtime:
+        problems.append("Contents/Resources/runtime: missing (the worker is not bundled)")
     if executable in binaries and not problems:
         (main,) = read(executable)
         if main.minimum != floor:
@@ -106,7 +142,7 @@ def verify_bundle(app: Path, arch: str, floor: str = FLOOR) -> list[str]:
     return problems
 
 
-def check_report(report: dict[str, object], arch: str) -> list[str]:
+def check_report(report: dict[str, object], arch: str, *, bundled: bool = True) -> list[str]:
     """The `--version-report` of a native shell on a supported Mac."""
 
     def part(name: str) -> dict[str, object]:
@@ -123,6 +159,8 @@ def check_report(report: dict[str, object], arch: str) -> list[str]:
         problems.append(f"architecture: not running natively ({architecture})")
     if build_info.get("target") != TARGETS[arch] or build_info.get("profile") != "release":
         problems.append(f"build: {build_info}")
+    if build_info.get("bundled_worker") is not bundled:
+        problems.append(f"build: bundled_worker should be {bundled} ({build_info})")
     return problems
 
 
@@ -152,7 +190,9 @@ def git_commit() -> str:
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
-def package(app: Path, arch: str, report: dict[str, object] | None) -> Path:
+def package(
+    app: Path, arch: str, report: dict[str, object] | None, *, runtime: bool = True
+) -> Path:
     info = plistlib.loads((app / "Contents" / "Info.plist").read_bytes())
     version = str(info.get("CFBundleShortVersionString", "0.0.0"))
     commit = git_commit()
@@ -173,9 +213,9 @@ def package(app: Path, arch: str, report: dict[str, object] | None) -> Path:
         "minimum_macos": FLOOR,
         "signed": False,
         "notarized": False,
-        "bundled_worker": False,
+        "bundled_worker": runtime,
         "version_report": report,
-        "note": "Development artifact. Unsigned, not notarized, no worker or media tools.",
+        "note": "Development artifact. Unsigned and not notarized.",
     }
     (OUTPUT / f"build-info-{arch}.json").write_text(json.dumps(meta, indent=2) + "\n", "utf-8")
     with (OUTPUT / "SHA256SUMS.txt").open("a", encoding="ascii") as sums:
@@ -189,26 +229,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--skip-build", action="store_true", help="verify an existing bundle")
     parser.add_argument("--no-run", action="store_true", help="do not start the executable")
     parser.add_argument("--no-package", action="store_true", help="verify only")
+    parser.add_argument(
+        "--no-runtime", action="store_true", help="the bare M33 shell, without the worker"
+    )
     args = parser.parse_args(argv)
     if sys.platform != "darwin":
-        print("macOS shells are built on macOS", file=sys.stderr)
+        print("macOS builds are made on macOS", file=sys.stderr)
         return 2
+    runtime = not args.no_runtime
+    if runtime and not args.skip_build and (problem := runtime_problem(args.arch)):
+        print(f"error: {problem}", file=sys.stderr)
+        return 1
     if not args.skip_build:
-        build(args.arch)
+        build(args.arch, runtime)
     app = bundle_path(args.arch)
-    problems = verify_bundle(app, args.arch)
+    problems = verify_bundle(app, args.arch, require_runtime=runtime)
     report = None
     if not problems and not args.no_run:
         report = version_report(app)
-        problems = check_report(report, args.arch)
+        problems = check_report(report, args.arch, bundled=runtime)
         print(json.dumps(report, indent=2))
     for problem in problems:
         print(f"error: {problem}", file=sys.stderr)
     if problems:
         return 1
-    print(f"verified native {args.arch} shell for macOS {FLOOR}+")
+    what = "build with the bundled worker" if runtime else "shell"
+    print(f"verified native {args.arch} {what} for macOS {FLOOR}+")
     if not args.no_package:
-        print(f"packaged {package(app, args.arch, report).relative_to(ROOT)}")
+        archive = package(app, args.arch, report, runtime=runtime)
+        print(f"packaged {archive.relative_to(ROOT)}")
     return 0
 
 

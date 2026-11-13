@@ -88,6 +88,8 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
     scripts.mkdir(parents=True)
     for name in ("build-media.sh", "freeze-worker.py", "sources.json", "python-notices.json"):
         (scripts / name).write_text("build input fixture")
+    (tmp_path / "scripts/packaging").mkdir()
+    (tmp_path / "scripts/packaging/runtime_bundle.py").write_text("build input fixture")
     installers = tmp_path / "target/x86_64-pc-windows-msvc/release/bundle/nsis"
     installers.mkdir(parents=True)
     (installers / "Moments_0.1.0-alpha.29_x64-setup.exe").write_bytes(b"installer fixture")
@@ -103,7 +105,7 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
     assert "checksums.txt" not in listed
     assert "runtime-notices.zip" in listed
-    assert {"sbom.cdx.json", "SECURITY.md", "VERIFY.md"} <= set(listed)
+    assert {"sbom.cdx.json", "SECURITY.md", "VERIFY.md", "runtime_bundle.py"} <= set(listed)
     assert "config.log" not in listed
 
 

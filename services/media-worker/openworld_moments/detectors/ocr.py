@@ -19,6 +19,7 @@ from typing import Protocol
 
 from openworld_moments.detectors.sdk import AnalysisError, Frame, checkpoint
 from openworld_moments.media.process import ToolError, ToolNotStarted, run_tool
+from openworld_moments.native import executable_problem
 from openworld_moments.redaction import Redactor
 
 PREPROCESS_VERSION = "text-gray-border-v1"
@@ -190,6 +191,9 @@ class Tesseract:
                 "ocr.unavailable",
                 "Install local Tesseract 5+ and the selected language data to enable OCR.",
             )
+        if problem := executable_problem(Path(location)):
+            # M34: wrong architecture or quarantined download; never run it.
+            raise AnalysisError("ocr.unavailable", problem)
         try:
             version = run_tool(
                 [location, "--version"], timeout_s=10, cancel=cancel, max_stdout=32768

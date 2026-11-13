@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Generate a CycloneDX 1.6 SBOM for the Windows package (M30).
+"""Generate a CycloneDX 1.6 SBOM for a package (M30 Windows; M34 macOS per architecture).
 
 Inputs are the ones that produce the package: the runtime inventory written when
 the worker was frozen (every packaged file and its SHA-256, the bundled tools,
@@ -27,6 +27,7 @@ from components import (  # noqa: E402
     ROOT,
     Component,
     javascript_components,
+    profile,
     python_components,
     rust_components,
 )
@@ -45,6 +46,19 @@ CPYTHON_LIBRARIES = {
     "mpdecimal": ("BSD-2-Clause", "_internal/_decimal.pyd"),
     "zlib": ("Zlib", "_internal/python312.dll"),
 }
+#: M34: on macOS python-build-standalone links these into libpython; libffi, zlib,
+#: libedit and ncurses come from macOS itself (the Mach-O audit lists them).
+MACOS_CPYTHON_LIBRARIES = {
+    name: (CPYTHON_LIBRARIES[name][0], "_internal/libpython3.12.dylib")
+    for name in ("openssl", "sqlite", "bzip2", "xz-liblzma", "expat", "mpdecimal")
+}
+
+
+def platform_files(inventory: dict[str, Any]) -> tuple[str, dict[str, tuple[str, str]], str]:
+    """(executable suffix, CPython libraries, webview note) for the package."""
+    if inventory.get("platform", "windows") == "macos":
+        return "", MACOS_CPYTHON_LIBRARIES, "Apple-managed macOS WebKit (WKWebView); not bundled"
+    return ".exe", CPYTHON_LIBRARIES, "Microsoft-managed Windows component; not bundled"
 
 
 def sha256(path: Path) -> str:
@@ -91,6 +105,7 @@ def library(component: Component, known: dict[str, str]) -> dict[str, Any]:
 
 def native_components(inventory: dict[str, Any]) -> list[dict[str, Any]]:
     files: dict[str, str] = inventory["files"]
+    exe, cpython_libraries, _ = platform_files(inventory)
     tools = {tool["name"]: tool for tool in inventory["tools"]}
     sources = inventory["sources"]
     out: list[dict[str, Any]] = [
@@ -119,11 +134,11 @@ def native_components(inventory: dict[str, Any]) -> list[dict[str, Any]]:
             "version": inventory["pyinstaller"],
             "purl": f"pkg:pypi/pyinstaller@{inventory['pyinstaller']}",
             "licenses": [{"expression": "GPL-2.0-or-later WITH Bootloader-exception"}],
-            "hashes": [{"alg": "SHA-256", "content": files["owm-worker.exe"]}],
-            "properties": [{"name": "owm:file", "value": "runtime/owm-worker.exe"}],
+            "hashes": [{"alg": "SHA-256", "content": files[f"owm-worker{exe}"]}],
+            "properties": [{"name": "owm:file", "value": f"runtime/owm-worker{exe}"}],
         },
     ]
-    for name, (license_id, proof) in sorted(CPYTHON_LIBRARIES.items()):
+    for name, (license_id, proof) in sorted(cpython_libraries.items()):
         if proof not in files:
             continue
         out.append(
@@ -163,10 +178,10 @@ def native_components(inventory: dict[str, Any]) -> list[dict[str, Any]]:
                 for tool in ("ffmpeg", "ffprobe")
             ]
             component["properties"].append(
-                {"name": "owm:file", "value": "runtime/tools/ffmpeg.exe"}
+                {"name": "owm:file", "value": f"runtime/tools/ffmpeg{exe}"}
             )
             component["properties"].append(
-                {"name": "owm:file", "value": "runtime/tools/ffprobe.exe"}
+                {"name": "owm:file", "value": f"runtime/tools/ffprobe{exe}"}
             )
         out.append(component)
     return out
@@ -224,11 +239,27 @@ def commit_time(commit: str) -> str | None:
         return None
 
 
+def platform_root_properties(inventory: dict[str, Any]) -> list[dict[str, str]]:
+    note = platform_files(inventory)[2]
+    if inventory.get("platform", "windows") == "macos":
+        return [
+            {"name": "owm:platform", "value": "macos"},
+            {"name": "owm:minimum-macos", "value": inventory.get("minimum_macos", "")},
+            {"name": "owm:webview", "value": note},
+        ]
+    return [{"name": "owm:webview2", "value": note}]
+
+
 def build(inventory: dict[str, Any], installer: Path | None) -> dict[str, Any]:
     known = overrides()
+    target, markers = profile(inventory)
     libraries = [
         library(c, known)
-        for c in [*python_components(), *rust_components(), *javascript_components(inventory)]
+        for c in [
+            *python_components(markers),
+            *rust_components(target),
+            *javascript_components(inventory),
+        ]
     ]
     components = sorted(
         [
@@ -249,7 +280,7 @@ def build(inventory: dict[str, Any], installer: Path | None) -> dict[str, Any]:
         "properties": [
             {"name": "owm:commit", "value": inventory["commit"]},
             {"name": "owm:architecture", "value": inventory["architecture"]},
-            {"name": "owm:webview2", "value": "Microsoft-managed Windows component; not bundled"},
+            *platform_root_properties(inventory),
         ],
     }
     if installer is not None:

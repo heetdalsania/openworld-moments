@@ -1,5 +1,11 @@
 # Contracts changelog
 
+## 1.26 — macOS worker and media toolchain (M34)
+
+- `system-doctor`: each runtime tool may report its CPU `architecture` (`arm64` or `x86_64`).
+- `model-manager`: each model may declare `platforms` (`os-arch` pairs or `any`) and reports whether this computer is `compatible`. Semantic rules: `any` stands alone, and a model for any platform is always compatible.
+- Existing 1.x documents remain readable.
+
 ## 1.25 — Platform capabilities (M33)
 
 - Add the platform-capabilities contract, written by the desktop host: OS family and version, the supported minimum, binary architecture, translation (Rosetta), build target and profile, support level with reasons, directory convention and integrations. It carries no paths, names or identifiers. Semantic rules tie the support level to its reasons and the directory convention and file manager to the OS family.

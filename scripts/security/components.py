@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Collect the components that ship in the Windows package (M30).
+"""Collect the components that ship in a package (M30 Windows; M34 macOS per architecture).
 
 Shared by the SBOM generator, its verifier and the license check, so all three
 agree on what "shipped" means:
@@ -36,6 +36,23 @@ MARKERS = {
     "python_version": "3.12",
     "platform_machine": "AMD64",
 }
+_MACOS = {**MARKERS, "sys_platform": "darwin", "platform_system": "Darwin", "os_name": "posix"}
+#: M34: each package's Rust target and Python marker environment, keyed by the runtime
+#: inventory's platform and architecture (Windows inventories predate the field).
+PROFILES: dict[tuple[str, str], tuple[str, dict[str, str]]] = {
+    ("windows", "x86_64"): (WINDOWS_TARGET, MARKERS),
+    ("macos", "arm64"): ("aarch64-apple-darwin", {**_MACOS, "platform_machine": "arm64"}),
+    ("macos", "x86_64"): ("x86_64-apple-darwin", {**_MACOS, "platform_machine": "x86_64"}),
+}
+
+
+def profile(inventory: dict[str, Any]) -> tuple[str, dict[str, str]]:
+    key = (inventory.get("platform", "windows"), inventory.get("architecture", "x86_64"))
+    if key not in PROFILES:
+        raise ValueError(f"unsupported package platform {key}")
+    return PROFILES[key]
+
+
 WORKSPACE_PYTHON = {
     "openworld-moments-worker": "AGPL-3.0-or-later",
     "openworld-moments-contracts": "Apache-2.0",
@@ -66,9 +83,11 @@ def _run(args: list[str]) -> str:
 _CLAUSE = re.compile(r"\s*(\w+)\s*(==|!=|<=|>=|<|>)\s*'([^']*)'\s*")
 
 
-def marker_applies(marker: str) -> bool:
+def marker_applies(marker: str, markers: dict[str, str] | None = None) -> bool:
     """Evaluate the simple PEP 508 markers uv emits (``name op 'value'`` joined by
-    ``and``/``or``) against :data:`MARKERS`. Anything else counts as applying."""
+    ``and``/``or``) against ``markers`` (default :data:`MARKERS`). Anything else counts
+    as applying."""
+    markers = MARKERS if markers is None else markers
     marker = marker.strip()
     if not marker:
         return True
@@ -80,7 +99,7 @@ def marker_applies(marker: str) -> bool:
                 results.append(True)
                 continue
             name, op, value = match.groups()
-            actual = MARKERS.get(name, "")
+            actual = markers.get(name, "")
             results.append(
                 {
                     "==": actual == value,
@@ -123,7 +142,7 @@ _CLASSIFIERS = {
 _LICENSE_TEXT = {"MIT License": "MIT", "BSD": "BSD-3-Clause", "Apache 2.0": "Apache-2.0"}
 
 
-def python_components() -> list[Component]:
+def python_components(markers: dict[str, str] | None = None) -> list[Component]:
     exported = _run(
         [
             "uv",
@@ -144,7 +163,7 @@ def python_components() -> list[Component]:
             continue
         requirement, _, marker = line.partition(";")
         name, _, version = requirement.strip().partition("==")
-        if not version or not marker_applies(marker):
+        if not version or not marker_applies(marker, markers):
             continue
         name = name.strip().lower()
         components.append(
@@ -173,7 +192,7 @@ def python_components() -> list[Component]:
 # -- Rust -------------------------------------------------------------------------------
 
 
-def rust_components() -> list[Component]:
+def rust_components(target: str = WINDOWS_TARGET) -> list[Component]:
     metadata: dict[str, Any] = json.loads(
         _run(
             [
@@ -183,7 +202,7 @@ def rust_components() -> list[Component]:
                 "--format-version",
                 "1",
                 "--filter-platform",
-                WINDOWS_TARGET,
+                target,
             ]
         )
     )

@@ -16,9 +16,15 @@ from typing import Any
 
 from openworld_moments import __version__
 from openworld_moments.media.tools import MediaTools
+from openworld_moments.native import architecture
 from openworld_moments.render.encoders import EncoderProbe
 from openworld_moments.transcripts.catalog import read_catalog
 from openworld_moments.transcripts.whisper import TranscriptionError, sha256_file
+
+#: Bundled executable names (M29 Windows, M34 macOS): the same layout on both, with
+#: Windows' `.exe` suffix.
+EXE = ".exe" if sys.platform == "win32" else ""
+WORKER = f"owm-worker{EXE}"
 
 
 def inventory(root: Path) -> dict[str, Any]:
@@ -37,7 +43,7 @@ def inventory(root: Path) -> dict[str, Any]:
             raise ValueError("path")
         if target.is_symlink() or not target.is_file() or sha256_file(target) != digest:
             raise ValueError("checksum")
-    for required in ("owm-worker.exe", "tools/ffmpeg.exe", "tools/ffprobe.exe"):
+    for required in (WORKER, f"tools/ffmpeg{EXE}", f"tools/ffprobe{EXE}"):
         if required not in doc["files"]:
             raise ValueError("incomplete")
     return doc
@@ -48,8 +54,8 @@ def configure_bundle() -> None:
         return
     root = Path(sys.executable).resolve().parent
     inventory(root)
-    os.environ["OWM_FFMPEG"] = str(root / "tools" / "ffmpeg.exe")
-    os.environ["OWM_FFPROBE"] = str(root / "tools" / "ffprobe.exe")
+    os.environ["OWM_FFMPEG"] = str(root / "tools" / f"ffmpeg{EXE}")
+    os.environ["OWM_FFPROBE"] = str(root / "tools" / f"ffprobe{EXE}")
 
 
 def doctor(library: Path, tools: MediaTools) -> dict[str, Any]:
@@ -159,7 +165,9 @@ def doctor(library: Path, tools: MediaTools) -> dict[str, Any]:
     if packaged:
         try:
             doc = inventory(Path(sys.executable).resolve().parent)
-            runtimes[2]["sha256"] = doc["files"]["owm-worker.exe"]
+            runtimes[2]["sha256"] = doc["files"][WORKER]
+            for runtime in runtimes[:3]:  # M34: Python, SQLite and the worker are native
+                runtime["architecture"] = architecture()
             runtimes[2]["version"] += " / " + doc["commit"][:12]
             runtimes.extend(doc["tools"])
             verified = True
@@ -183,11 +191,11 @@ def doctor(library: Path, tools: MediaTools) -> dict[str, Any]:
         add(
             "development",
             False,
-            "Development runtime; Windows installer qualification is separate.",
+            "Development runtime; packaged builds are qualified separately.",
             optional=True,
         )
     return {
-        "schema_version": "1.23",
+        "schema_version": "1.26",
         "ready": not any(c["status"] == "fail" for c in checks),
         "packaged": packaged,
         "platform": platform.system(),

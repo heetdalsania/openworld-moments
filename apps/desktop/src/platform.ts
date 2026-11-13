@@ -46,9 +46,7 @@ export function supportNotes(info: PlatformCapabilities): string[] {
   if (reasons.has("architecture-unsupported"))
     notes.push("This alpha is built for x64 Windows only.");
   if (reasons.has("macos-preview"))
-    notes.push(
-      "macOS builds are previews. They are not a supported release yet, and media tools are not bundled.",
-    );
+    notes.push("macOS builds are previews. They are not a supported or signed release yet.");
   if (reasons.has("linux-development")) notes.push("Linux is used for development only.");
   return notes;
 }

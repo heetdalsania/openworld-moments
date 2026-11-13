@@ -153,11 +153,18 @@ pub fn support(facts: &Facts) -> Support {
     Support { level, reasons }
 }
 
-/// Whether this build looks for a worker inside its own bundle. macOS bundles a worker
-/// from M34; until then a release shell starts without one.
+/// Whether this build starts the worker from its own bundle: Windows (M29) and macOS
+/// (M34) release builds. Debug builds use the repository's virtualenv.
 pub fn bundled_worker(facts: &Facts) -> bool {
-    facts.family == Family::Windows && !facts.debug
+    matches!(facts.family, Family::Windows | Family::Macos) && !facts.debug
 }
+
+/// The bundled worker executable inside `runtime/` (same layout on both platforms).
+pub const WORKER_EXECUTABLE: &str = if cfg!(windows) {
+    "owm-worker.exe"
+} else {
+    "owm-worker"
+};
 
 /// The `platform-capabilities` contract document (no paths, names or identifiers).
 pub fn capabilities(host_version: &str, facts: &Facts) -> serde_json::Value {
@@ -189,7 +196,7 @@ pub fn capabilities(host_version: &str, facts: &Facts) -> serde_json::Value {
 }
 
 /// Contract version the host writes. Kept equal to the contracts package by a test.
-pub const SCHEMA_VERSION: &str = "1.25";
+pub const SCHEMA_VERSION: &str = "1.26";
 
 /// Where the app keeps its files. Only `data` holds the canonical library today; M35
 /// moves disposable caches and logs into `cache` and `logs`.
@@ -323,7 +330,15 @@ mod tests {
         assert_eq!(support(&windows("aarch64", false)).level, "unsupported");
         assert!(bundled_worker(&windows("x86_64", false)));
         assert!(!bundled_worker(&windows("x86_64", true)));
-        assert!(!bundled_worker(&mac("15.2", "aarch64", Some(false))));
+        assert!(bundled_worker(&mac("15.2", "aarch64", Some(false))));
+        let mut debug_mac = mac("15.2", "aarch64", Some(false));
+        debug_mac.debug = true;
+        assert!(!bundled_worker(&debug_mac));
+        let linux = Facts {
+            family: Family::Linux,
+            ..mac("15.2", "x86_64", None)
+        };
+        assert!(!bundled_worker(&linux));
     }
 
     #[test]

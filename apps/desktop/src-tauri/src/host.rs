@@ -23,14 +23,14 @@ pub const PHONE_EVENT: &str = "phone://status";
 /// The phone import session manager, present when a worker is configured.
 pub type Phone = Option<PhoneGateway>;
 
-/// Where the worker comes from. Builds that bundle a worker (the Windows release, and
-/// macOS from M34) start it from the bundle; `OWM_WORKER_PYTHON` overrides; debug builds
+/// Where the worker comes from. Release builds on Windows (M29) and macOS (M34) start
+/// it from the bundle's `runtime/` folder; `OWM_WORKER_PYTHON` overrides; debug builds
 /// fall back to the repository's virtualenv. Every path is absolute: no shell `PATH`.
 fn worker_command<R: Runtime>(app: &AppHandle<R>) -> Option<WorkerCommand> {
     if crate::platform::bundled_worker(&crate::platform::facts()) {
         let runtime = app.path().resource_dir().ok()?.join("runtime");
         return Some(WorkerCommand {
-            program: runtime.join("owm-worker.exe"),
+            program: runtime.join(crate::platform::WORKER_EXECUTABLE),
             args: vec!["-m".into(), "openworld_moments.worker".into()],
             cwd: Some(runtime),
         });

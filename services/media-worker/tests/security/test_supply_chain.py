@@ -161,8 +161,19 @@ def stubbed(monkeypatch: pytest.MonkeyPatch) -> None:
             "cargo", "serde", "1.0.0", "MIT OR Apache-2.0", "pkg:cargo/serde@1.0.0"
         )
     ]
-    monkeypatch.setattr(sbom, "python_components", lambda: py)
-    monkeypatch.setattr(sbom, "rust_components", lambda: rs)
+    calls: list[tuple[str, object]] = []
+
+    def python(markers: object = None) -> list[components.Component]:
+        calls.append(("python", markers))
+        return py
+
+    def rust(target: object = None) -> list[components.Component]:
+        calls.append(("rust", target))
+        return rs
+
+    monkeypatch.setattr(sbom, "python_components", python)
+    monkeypatch.setattr(sbom, "rust_components", rust)
+    monkeypatch.setattr(sbom, "STUB_CALLS", calls, raising=False)
 
 
 def test_sbom_is_valid_deterministic_and_complete(stubbed: None, tmp_path: Path) -> None:
@@ -274,3 +285,76 @@ def test_desktop_never_spawns_a_shell() -> None:
     assert "plugin-shell" not in manifests and "tauri-plugin-shell" not in manifests
     frontend = "\n".join(p.read_text("utf-8") for p in (ROOT / "apps/desktop/src").rglob("*.ts*"))
     assert "child_process" not in frontend
+
+
+# -- M34: macOS SBOMs per architecture -----------------------------------------------------
+
+
+def _macos_inventory(runtime: Path, arch: str) -> dict[str, Any]:
+    files = {
+        "owm-worker": b"worker",
+        "tools/ffmpeg": b"ffmpeg",
+        "tools/ffprobe": b"ffprobe",
+        "_internal/libpython3.12.dylib": b"python with openssl and sqlite",
+    }
+    for name, data in files.items():
+        (runtime / name).parent.mkdir(parents=True, exist_ok=True)
+        (runtime / name).write_bytes(data)
+    digests = {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}
+    inventory = _inventory(runtime / "unused")
+    inventory.update(
+        platform="macos",
+        architecture=arch,
+        minimum_macos="14.0",
+        application="0.1.0-alpha.34",
+        files=digests,
+        tools=[
+            {"name": tool, "sha256": digests[f"tools/{tool}"], "architecture": arch}
+            for tool in ("ffmpeg", "ffprobe")
+        ],
+    )
+    return inventory
+
+
+@pytest.mark.parametrize(
+    ("arch", "target", "machine"),
+    [("arm64", "aarch64-apple-darwin", "arm64"), ("x86_64", "x86_64-apple-darwin", "x86_64")],
+)
+def test_macos_sbom_uses_that_architectures_closure_and_files(
+    stubbed: None, tmp_path: Path, arch: str, target: str, machine: str
+) -> None:
+    inventory = _macos_inventory(tmp_path / "runtime", arch)
+    bom = sbom.build(inventory, None)
+    assert verify_sbom.schema_errors(json.dumps(bom)) == []
+    calls = dict(sbom.STUB_CALLS)  # type: ignore[attr-defined]
+    assert calls["rust"] == target
+    markers = calls["python"]
+    assert isinstance(markers, dict)
+    assert markers["sys_platform"] == "darwin" and markers["platform_machine"] == machine
+    by_name = {c["name"]: c for c in bom["components"]}
+    worker = by_name["pyinstaller-bootloader"]
+    assert worker["properties"] == [{"name": "owm:file", "value": "runtime/owm-worker"}]
+    assert {"name": "owm:file", "value": "runtime/tools/ffmpeg"} in by_name["ffmpeg"]["properties"]
+    # Bundled into libpython on macOS; libffi and zlib come from macOS itself.
+    assert {"openssl", "sqlite"} <= set(by_name) and not {"libffi", "zlib"} & set(by_name)
+    root = {p["name"]: p["value"] for p in bom["metadata"]["component"]["properties"]}
+    assert root["owm:platform"] == "macos" and root["owm:architecture"] == arch
+    assert root["owm:minimum-macos"] == "14.0" and "owm:webview2" not in root
+
+
+def test_windows_sbom_profile_is_unchanged(stubbed: None, tmp_path: Path) -> None:
+    bom = sbom.build(_inventory(tmp_path / "runtime"), None)
+    calls = dict(sbom.STUB_CALLS)  # type: ignore[attr-defined]
+    assert calls["rust"] == components.WINDOWS_TARGET
+    assert calls["python"] == components.MARKERS
+    root = {p["name"]: p["value"] for p in bom["metadata"]["component"]["properties"]}
+    assert "owm:webview2" in root and "owm:platform" not in root
+
+
+def test_unknown_package_platform_is_refused() -> None:
+    with pytest.raises(ValueError, match="unsupported package platform"):
+        components.profile({"platform": "macos", "architecture": "universal"})
+    assert components.marker_applies(
+        "sys_platform == 'darwin'", components.PROFILES[("macos", "arm64")][1]
+    )
+    assert not components.marker_applies("sys_platform == 'darwin'")

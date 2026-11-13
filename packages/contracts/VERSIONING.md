@@ -8,7 +8,7 @@
 | API version | Worker URL prefix (`/v1/...`, spec §9.4), added in M03 | `v` + MAJOR | Shape of requests and responses as a whole |
 
 All versioned contracts share one `schema_version` series. Today every
-contract is written at **1.25** (`SUPPORTED_VERSION` in `versioning.py` and
+contract is written at **1.26** (`SUPPORTED_VERSION` in `versioning.py` and
 `src/versioning.ts`; a test keeps them equal).
 
 ## Reading rules
@@ -21,7 +21,7 @@ show as-is:
 |---|---|
 | missing or not `MAJOR.MINOR` | rejected: missing or malformed version |
 | older major (e.g. `0.9`) | rejected: needs migration with the release that introduced the new format |
-| same major, newer minor (e.g. `1.26` today) | rejected: written by a newer app; update |
+| same major, newer minor (e.g. `1.27` today) | rejected: written by a newer app; update |
 | newer major (e.g. `2.0`) | rejected: written by a newer app; update |
 
 Newer minors are rejected rather than half-read because top-level objects are

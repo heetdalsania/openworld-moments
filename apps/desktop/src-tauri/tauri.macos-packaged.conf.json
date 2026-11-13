@@ -1,0 +1,7 @@
+{
+  "version": "0.1.0-alpha.34",
+  "bundle": {
+    "targets": ["app"],
+    "resources": { "bundle-input/runtime/": "runtime/" }
+  }
+}

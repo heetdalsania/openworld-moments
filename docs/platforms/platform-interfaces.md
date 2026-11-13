@@ -18,7 +18,7 @@ platforms' rules are unit-tested on every CI runner.
 | `support(facts)` | `alpha`, `development` or `unsupported`, with reasons | x64 release = alpha; Arm = unsupported | development (`macos-preview`); below 14.0 or under Rosetta = unsupported | development |
 | `capabilities()` | The `platform-capabilities` contract document (1.25) | ✓ | ✓ | ✓ |
 | `app_dirs(app)` | Data, cache, log and temp folders | Tauri `app_data_dir` etc. (unchanged since M03) | `~/Library/Application Support/OpenWorld Moments`, `~/Library/Caches/…`, `~/Library/Logs/…`, `$TMPDIR/OpenWorld Moments` | Tauri XDG folders |
-| `bundled_worker(facts)` | Whether the build starts a worker from its own bundle | release builds | not until M34 | no |
+| `bundled_worker(facts)` / `WORKER_EXECUTABLE` | Whether the build starts a worker from its own bundle, and its name | release builds, `runtime\owm-worker.exe` | release builds since M34, `Resources/runtime/owm-worker` | no |
 | `venv_python(repo)` | Development worker interpreter | `.venv/Scripts/python.exe` | `.venv/bin/python` | `.venv/bin/python` |
 | `reveal_command()` | Show a file in the file manager | `%SystemRoot%\explorer.exe /select,"…"` | `/usr/bin/open -R -- …` | `xdg-open <folder>` |
 | `hide_console()` | Start helper processes without a console window | `CREATE_NO_WINDOW` | nothing to do | nothing to do |

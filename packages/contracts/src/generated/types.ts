@@ -3439,6 +3439,25 @@ export interface ManagedModel {
    * @maxItems 64
    */
   versions: string[];
+  /**
+   * M34: platforms the artifact runs on (os-arch, or any). Absent means any.
+   *
+   * @minItems 1
+   * @maxItems 8
+   */
+  platforms?:
+    | [string]
+    | [string, string]
+    | [string, string, string]
+    | [string, string, string, string]
+    | [string, string, string, string, string]
+    | [string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string]
+    | [string, string, string, string, string, string, string, string];
+  /**
+   * M34: whether this computer can install the artifact. Absent means compatible.
+   */
+  compatible?: boolean;
 }
 /**
  * Alignment of clip B after clip A in a session (spec 8.2.3, M12): whether B's start repeats A's end, where B starts inside A ('offset_ms'), how long the repeat is ('overlap_ms'), with confidence and evidence. 'applied' is what the session timeline uses: a user override, else a 'matched' result of the current algorithm version, else nothing. Low-confidence, ambiguous, stale, or missing results never shorten a clip.
@@ -6217,6 +6236,10 @@ export interface RuntimeTool {
   sha256?: string;
   origin: "bundle" | "development";
   license: string;
+  /**
+   * M34: CPU architecture of a bundled native tool.
+   */
+  architecture?: "x86_64" | "arm64";
 }
 /**
  * A session's locally produced transcript (M18), ordered by session time. Derived text: deleting it never deletes media.

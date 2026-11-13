@@ -26,6 +26,10 @@ class RuntimeTool(BaseModel):
     sha256: Annotated[str | None, Field(pattern="^[a-f0-9]{64}$")] = None
     origin: Literal["bundle", "development"]
     license: Annotated[str, Field(max_length=300, min_length=1)]
+    architecture: Annotated[
+        Literal["x86_64", "arm64"] | None,
+        Field(description="M34: CPU architecture of a bundled native tool."),
+    ] = None
 
 
 class SystemDoctor(BaseModel):

@@ -16,6 +16,10 @@ class Version(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-f0-9]{64}$")]
 
 
+class Platform(RootModel[str]):
+    root: Annotated[str, Field(pattern="^(any|(macos|windows|linux)-(arm64|x86_64))$")]
+
+
 class ManagedModel(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -30,6 +34,20 @@ class ManagedModel(BaseModel):
     disk_required_bytes: Annotated[int, Field(ge=0)]
     active_sha256: ActiveSha256 | None
     versions: Annotated[list[Version], Field(max_length=64)]
+    platforms: Annotated[
+        list[Platform] | None,
+        Field(
+            description="M34: platforms the artifact runs on (os-arch, or any). Absent means any.",
+            max_length=8,
+            min_length=1,
+        ),
+    ] = None
+    compatible: Annotated[
+        bool | None,
+        Field(
+            description="M34: whether this computer can install the artifact. Absent means compatible."
+        ),
+    ] = None
 
 
 class ModelManager(BaseModel):

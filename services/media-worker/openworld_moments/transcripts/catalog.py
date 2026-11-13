@@ -7,6 +7,7 @@ import base64
 import json
 import re
 from pathlib import Path
+from typing import Annotated
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -15,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from openworld_moments.transcripts.whisper import TranscriptionError
 
 DATA = Path(__file__).parent / "catalog"
+PLATFORM = r"^(any|(macos|windows|linux)-(arm64|x86_64))$"
 # Trust root is pinned in the application, never read from a downloaded manifest.
 PUBLIC_KEY = "ccd039b62492513b5e0b951637bf81bd500f8d4112ca37153a32282a09ea3feb"
 
@@ -28,6 +30,11 @@ class ModelEntry(BaseModel):
     license: str = Field(pattern="^MIT$")
     source_url: str = Field(max_length=300)
     url: str = Field(max_length=300)
+    # M34: platforms an artifact runs on (`macos-arm64`, …, or `any`). Absent = any, so
+    # the signed catalog's existing bytes and signature stay valid.
+    platforms: list[Annotated[str, Field(pattern=PLATFORM)]] | None = Field(
+        default=None, min_length=1, max_length=8
+    )
 
 
 class Catalog(BaseModel):

@@ -534,6 +534,8 @@ def create_app(
             raise EngineError(
                 "models.invalid_request", "Choose a model from the signed catalog.", status=422
             )
+        # M34: refuse an artifact built for another platform before any job or network use.
+        await asyncio.to_thread(manager.installable, body.name)
         return await submit_job("model_download", {"name": body.name}, None, request, response)
 
     def idle_model(name: str) -> None:
