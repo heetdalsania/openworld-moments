@@ -158,10 +158,10 @@ worker on both architectures.
 
 | Check | Apple Silicon (local M4, macOS 26.6.2) | Intel |
 |---|---|---|
-| Runtime frozen and audited | Pass | CI (`macos-15-intel`) |
-| Runtime smoke | Pass | CI |
-| Host E2E against frozen worker | Pass (12 tests) | CI |
-| SBOM verified, artifact scan | Pass | CI |
+| Runtime frozen and audited | Pass | Pass (CI, `macos-15-intel`) |
+| Runtime smoke | Pass | Pass (CI) |
+| Host E2E against frozen worker | Pass (12 tests) | Pass (CI) |
+| SBOM verified, artifact scan | Pass | Pass (CI) |
 | App opened from Finder, bundled worker started, system check "Core checks passed" | Pass | Physical Intel Mac pending (with the M33 launch) |
 
 Sizes (Apple Silicon): runtime 92 MiB (tools 43 MiB, `_internal` 36 MiB, notices

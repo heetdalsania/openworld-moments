@@ -2,10 +2,10 @@
 
 - Milestone: M34 — macOS worker and media toolchain
 - Outcome: **Implemented; not yet complete.**
-  - **Still to run:**
-    - the first run of both macOS CI jobs with packaging (the Intel freeze, its
-      source-built cryptography and its audit run for the first time there);
-    - a physical Intel Mac launch (together with M33's).
+  - **Still to run:** a physical Intel Mac launch (together with M33's). Both
+    architectures now pass CI on native runners: the Intel job freezes the worker with
+    the source-built cryptography, passes the Mach-O audit, the runtime smoke and the
+    host tests against the frozen worker, and verifies its SBOM.
   - **Done and verified on Apple Silicon** (M4, macOS 26.6.2):
     - **Freeze strategy:** the same as Windows. PyInstaller 6.22.3 console onedir on
       the pinned python-build-standalone CPython 3.12.14 through uv 0.13.7, with the
@@ -161,8 +161,7 @@
   - **A path-free FFmpeg build** (placeholder prefix, relative include paths) instead
     of a new artifact-scan exception.
 - Known limitations:
-  - **Not yet done (blocks Complete):** the first green Intel CI run (freeze, static
-    cryptography, audit, smoke) and a physical Intel Mac launch.
+  - **Not yet done (blocks Complete):** a physical Intel Mac launch.
   - **Unsigned:** the bundled binaries carry only ad-hoc signatures (M37).
   - **No hardware encoding** on macOS yet (M36).
   - **cryptography on Intel** is built from source at freeze time with
