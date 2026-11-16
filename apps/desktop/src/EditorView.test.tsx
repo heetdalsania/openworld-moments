@@ -91,7 +91,7 @@ beforeEach(() => {
       audio: { codec: "aac", bitrate_kbps: 160, sample_rate_hz: 48000 },
     },
   ]);
-  host.route("GET /v1/render/encoders", {
+  host.route("GET /v1/render/encoders?preset_id=horizontal-720p30", {
     schema_version: "1.18",
     ffmpeg_version: "7.1.1",
     encoders: [{ id: "libx264", label: "CPU (libx264)", kind: "cpu", available: true }],

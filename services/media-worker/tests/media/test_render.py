@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import secrets
+import sys
 import threading
 from pathlib import Path
 from typing import Any
@@ -30,10 +31,11 @@ from openworld_moments.ids import new_id
 from openworld_moments.ingest.importer import Importer
 from openworld_moments.jobs.engine import JobEngine
 from openworld_moments.jobs.handlers import build_handlers
-from openworld_moments.media.process import run_tool
+from openworld_moments.media.process import ToolResult, run_tool
 from openworld_moments.media.tools import MediaTools, ToolInfo
 from openworld_moments.projects.service import ManualProject, ProjectService, SaveProject
-from openworld_moments.render.encoders import ENCODERS, EncoderSpec
+from openworld_moments.render import service as render_service
+from openworld_moments.render.encoders import ENCODERS, VIDEOTOOLBOX
 from openworld_moments.render.plan import RenderError
 from openworld_moments.render.service import RenderCancelled, Renderer, RenderFailed
 from openworld_moments.render.validate import validate_output
@@ -285,9 +287,24 @@ def test_golden_unicode_path_and_no_audio_project(
     assert digest(clip) == before
 
 
+@pytest.mark.parametrize(
+    "encoder",
+    [
+        "libx264",
+        pytest.param(
+            VIDEOTOOLBOX.id,
+            marks=pytest.mark.skipif(sys.platform != "darwin", reason="requires macOS"),
+        ),
+    ],
+)
 def test_cancellation_leaves_nothing_marked_complete(
-    studio: Studio, ffmpeg: ToolInfo, tmp_path: Path
+    studio: Studio, ffmpeg: ToolInfo, tmp_path: Path, encoder: str
 ) -> None:
+    if encoder == VIDEOTOOLBOX.id and not any(
+        e["id"] == encoder and e["available"]
+        for e in studio.renderer.encoder_status(preset_id="horizontal-1080p30")["encoders"]
+    ):
+        pytest.skip("VideoToolbox requires an available hardware encoder")
     clip = make_clip(ffmpeg, tmp_path / "long.mp4", "testsrc2", 20, tone=440)
     pid = studio.project(clip)
     cancel = threading.Event()
@@ -299,7 +316,7 @@ def test_cancellation_leaves_nothing_marked_complete(
 
     with pytest.raises(RenderCancelled):
         studio.renderer.run(
-            {"project_id": pid, "preset_id": "horizontal-1080p30"},
+            {"project_id": pid, "preset_id": "horizontal-1080p30", "encoder": encoder},
             job_id=job,
             cancel=cancel,
             progress=progress,
@@ -313,22 +330,28 @@ def test_cancellation_leaves_nothing_marked_complete(
 
 
 def test_hardware_failure_offers_an_explicit_cpu_fallback(
-    studio: Studio, ffmpeg: ToolInfo, tmp_path: Path
+    studio: Studio, ffmpeg: ToolInfo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     clip = make_clip(ffmpeg, tmp_path / "hw.mp4", "testsrc2", 2, tone=440)
     pid = studio.project(clip)
-    # A "hardware" encoder that fails mid-render (an impossible x264 profile).
-    broken = EncoderSpec(
-        "h264_nvenc", "NVIDIA NVENC", "hardware", "libx264", "NVENC note.", ("-profile:v", "nope")
-    )
+
+    # Reproduce a driver failure after writing partial media without requiring hardware.
+    def fail_hardware(argv: list[str], **kwargs: Any) -> ToolResult:
+        if VIDEOTOOLBOX.id not in argv:
+            return run_tool(argv, **kwargs)
+        (kwargs["cwd"] / "render.mp4").write_bytes(b"partial media")
+        kwargs["on_stdout"](b"out_time_us=1000000\n")
+        return ToolResult(1, b"", "VideoToolbox session interrupted")
+
+    monkeypatch.setattr(render_service, "run_tool", fail_hardware)
 
     class Probe:
-        def status(self, tool: ToolInfo, *, refresh: bool = False) -> list[dict[str, Any]]:
+        def status(self, tool: ToolInfo, **_: Any) -> list[dict[str, Any]]:
             return [
                 {"id": "libx264", "label": "CPU (libx264)", "kind": "cpu", "available": True},
                 {
-                    "id": "h264_nvenc",
-                    "label": "NVIDIA NVENC",
+                    "id": "h264_videotoolbox",
+                    "label": "Apple VideoToolbox",
                     "kind": "hardware",
                     "available": True,
                 },
@@ -338,20 +361,21 @@ def test_hardware_failure_offers_an_explicit_cpu_fallback(
         studio.database,
         studio.tools,
         probe=Probe(),  # type: ignore[arg-type]
-        encoders={"libx264": ENCODERS["libx264"], "h264_nvenc": broken},
+        encoders={"libx264": ENCODERS["libx264"], VIDEOTOOLBOX.id: VIDEOTOOLBOX},
     )
     job = new_id("job")
     with pytest.raises(RenderFailed) as caught:
         renderer.run(
-            {"project_id": pid, "preset_id": "horizontal-720p30", "encoder": "h264_nvenc"},
+            {"project_id": pid, "preset_id": "horizontal-720p30", "encoder": "h264_videotoolbox"},
             job_id=job,
         )
     assert caught.value.error.code == "render.hardware_encoder_failed"
     record = renderer.get(job)
     assert record["status"] == "failed"
     assert record["fallback"]["encoder"] == "libx264"
-    assert record["plan"]["encoder"]["quality_note"] == "NVENC note."
+    assert record["plan"]["encoder"]["quality_note"] == VIDEOTOOLBOX.quality_note
     assert "output" not in record
+    assert not (renderer.root / "staging" / "renders" / job).exists()
     # Nothing switched silently: the CPU render is a separate, explicit choice.
     cpu = renderer.run(
         {"project_id": pid, "preset_id": "horizontal-720p30", "encoder": "libx264"},
@@ -495,6 +519,9 @@ def test_job_and_api_surface(studio: Studio, ffmpeg: ToolInfo, tmp_path: Path) -
         }
         encoders = client.get("/v1/render/encoders").json()
         assert next(e for e in encoders["encoders"] if e["id"] == "libx264")["available"]
+        assert client.get("/v1/render/encoders?preset_id=horizontal-720p30").status_code == 200
+        unknown = client.get("/v1/render/encoders?preset_id=unknown")
+        assert unknown.status_code == 422 and unknown.json()["code"] == "render.unknown_preset"
         bad = client.post(f"/v1/projects/{pid}/render", json={"preset_id": "vertical-9000"})
         assert bad.status_code == 422 and "preset" in json.dumps(bad.json())
         response = client.post(
@@ -521,7 +548,7 @@ def test_real_hardware_encoder_when_available(
     """Renders with every hardware encoder that passes the probe on this machine."""
     available = [
         e["id"]
-        for e in studio.renderer.encoder_status()["encoders"]
+        for e in studio.renderer.encoder_status(preset_id="horizontal-720p30")["encoders"]
         if e["kind"] == "hardware" and e["available"]
     ]
     if not available:

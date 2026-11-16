@@ -53,6 +53,7 @@ from openworld_moments.projects.service import (
     RelinkProject,
     SaveProject,
 )
+from openworld_moments.render.plan import RenderError
 from openworld_moments.render.service import Renderer
 from openworld_moments.review.service import (
     EventReviewService,
@@ -781,8 +782,15 @@ def create_app(
         return await asyncio.to_thread(renders().presets.all)
 
     @app.get("/v1/render/encoders")
-    async def render_encoders() -> dict[str, Any]:
-        return await asyncio.to_thread(renders().encoder_status)
+    async def render_encoders(
+        preset_id: str | None = Query(
+            default=None, max_length=64, pattern=r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$"
+        ),
+    ) -> dict[str, Any]:
+        try:
+            return await asyncio.to_thread(renders().encoder_status, preset_id=preset_id)
+        except RenderError as exc:
+            raise EngineError(exc.code, exc.message, status=exc.status) from exc
 
     @app.post("/v1/projects/{project_id}/render", status_code=201)
     async def render_project(

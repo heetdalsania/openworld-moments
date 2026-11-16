@@ -55,10 +55,12 @@ function RenderRow({
   record,
   onFallback,
   busy,
+  canFallback,
 }: {
   record: RenderRecord;
   onFallback: (record: RenderRecord) => void;
   busy: boolean;
+  canFallback: boolean;
 }) {
   const checks = record.validation?.checks ?? [];
   const [manifestSaved, setManifestSaved] = useState<boolean | null>(null);
@@ -108,9 +110,16 @@ function RenderRow({
         </ul>
       )}
       {record.fallback && (
-        <button type="button" disabled={busy} onClick={() => onFallback(record)}>
-          Render with the CPU encoder instead
-        </button>
+        <>
+          <button type="button" disabled={busy || !canFallback} onClick={() => onFallback(record)}>
+            Render with the CPU encoder instead
+          </button>
+          {!canFallback && (
+            <p className="muted">
+              Select the same preset and review the current export options to retry.
+            </p>
+          )}
+        </>
       )}
       {record.status === "ready" && (
         <div className="row">
@@ -145,7 +154,6 @@ export function ExportPanel({
   media?: Record<string, ProjectMedia>;
 }) {
   const presets = useQuery("render:presets", renderPresets);
-  const encoders = useQuery("render:encoders", renderEncoders);
   const renders = useQuery(`renders:${projectId}`, () => projectRenders(projectId));
   const { jobs } = useJobs();
   const running = jobs.find((j) => forProject(j, projectId) && isActive(j));
@@ -153,6 +161,9 @@ export function ExportPanel({
   const [encoderId, setEncoderId] = useState("libx264");
   const [omitText, setOmitText] = useState(false);
   const preset = presetId ?? presets.data?.[0]?.id ?? "";
+  const encoders = useQuery(preset ? `render:encoders:${preset}` : null, () =>
+    renderEncoders(preset),
+  );
   const selectedPreset = presets.data?.find((p) => p.id === preset);
   const vertical = Boolean(selectedPreset && selectedPreset.height > selectedPreset.width);
   const loadedProfile = useLayoutProfile(document);
@@ -215,7 +226,13 @@ export function ExportPanel({
       <div className="row">
         <label>
           Preset{" "}
-          <select value={preset} onChange={(e) => setPresetId(e.target.value)}>
+          <select
+            value={preset}
+            onChange={(e) => {
+              setPresetId(e.target.value);
+              setEncoderId("libx264");
+            }}
+          >
             {(presets.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>
                 {p.display_name}
@@ -236,7 +253,12 @@ export function ExportPanel({
         </label>
         <button
           type="button"
-          disabled={blocked || Boolean(running) || start.busy}
+          disabled={
+            blocked ||
+            (encoderId !== "libx264" && !encoder?.available) ||
+            Boolean(running) ||
+            start.busy
+          }
           onClick={() => void start.run(encoderId)}
         >
           Render
@@ -303,6 +325,7 @@ export function ExportPanel({
               key={record.id}
               record={record}
               busy={Boolean(running) || start.busy}
+              canFallback={!blocked && preset === record.preset_id}
               onFallback={() => {
                 setEncoderId("libx264");
                 void start.run("libx264");

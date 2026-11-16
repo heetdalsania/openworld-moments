@@ -13,7 +13,7 @@ Each architecture gets its own build, made on a native Mac of that architecture
 |---|---|---|
 | Python | CPython 3.12.14, python-build-standalone 20260929, through uv 0.13.7 (`cpython-3.12.14-macos-aarch64-none` / `-x86_64-none`) | Frozen into the worker. Extension modules are linked into `libpython3.12.dylib` |
 | Worker | The Git commit; executable SHA-256 recorded | PyInstaller 6.22.3, console onedir: the same strategy and the same freeze steps as Windows (`scripts/packaging/runtime_bundle.py`) |
-| FFmpeg / FFprobe | 9.0.2 from the same checksum-verified source archive as Windows | Static FFmpeg libraries with `libx264` as the only external codec, autodetection off; built for `-mmacosx-version-min=14.0` |
+| FFmpeg / FFprobe | 9.0.2 from the same checksum-verified source archive as Windows | Static FFmpeg libraries with `libx264` as the only external codec. The build explicitly enables Apple's VideoToolbox framework and disables autodetection. Built for `-mmacosx-version-min=14.0`. |
 | libx264 | `c24e06c2e184345ceb33eb20a15d1024d9fd3497` | Static, GPL-2.0-or-later ([ADR-0007](../architecture/adr/0007-windows-ffmpeg-packaging.md)) |
 | Python packages | `uv.lock`, runtime closure only | Wheels for the target architecture. On Intel, cryptography 50.0.2 has no wheel and is built from source, linking a pinned OpenSSL 3.5.9 LTS (built for macOS 14 by `build-openssl.sh`) statically |
 | OCR, whisper.cpp, model weights | Not bundled | Optional; installed by the user or through the model manager |
@@ -170,7 +170,8 @@ Sizes (Apple Silicon): runtime 92 MiB (tools 43 MiB, `_internal` 36 MiB, notices
 ## Known limitations
 
 - **No hardware acceleration yet:** VideoToolbox is excluded (autodetection off). CPU
-  `libx264` is the correctness path; M36 adds tested hardware encoding.
+  `libx264` is the correctness path. The [M36 media matrix](./macos-media-parity.md)
+  records VideoToolbox availability independently for each fixed-rate preset.
 - **Unsigned:** the bundled worker and tools carry only linker or PyInstaller ad-hoc
   signatures. Signing order, entitlements and notarization are M37.
 - **cryptography on Intel** is built from source with `OPENSSL_STATIC=1` against

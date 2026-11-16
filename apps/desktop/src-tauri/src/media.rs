@@ -93,7 +93,19 @@ pub fn api_route_allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "projects", id, "relink"]) => is_id(id, "prj_") && query.is_none(),
         ("POST", ["", "v1", "assets", id, "relink"]) => is_id(id, "ast_") && query.is_none(),
         // M24: renders write only inside the library; the UI never names an output path.
-        ("GET", ["", "v1", "render", "presets" | "encoders"]) => query.is_none(),
+        ("GET", ["", "v1", "render", "presets"]) => query.is_none(),
+        ("GET", ["", "v1", "render", "encoders"]) => query.is_none_or(|q| {
+            q.strip_prefix("preset_id=").is_some_and(|id| {
+                !id.is_empty()
+                    && id.len() <= 64
+                    && id.split(['-', '_']).all(|part| {
+                        !part.is_empty()
+                            && part
+                                .bytes()
+                                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+                    })
+            })
+        }),
         ("POST", ["", "v1", "projects", id, "render"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "projects", id, "renders"]) => is_id(id, "prj_") && query.is_none(),
         ("GET", ["", "v1", "renders", id]) => is_id(id, "job_") && query.is_none(),
@@ -386,6 +398,7 @@ mod tests {
             ),
             ("GET", "/v1/render/presets"),
             ("GET", "/v1/render/encoders"),
+            ("GET", "/v1/render/encoders?preset_id=vertical-1080x1920-30"),
             ("POST", "/v1/projects/prj_01JCBQ00000000000000000003/render"),
             ("GET", "/v1/projects/prj_01JCBQ00000000000000000003/renders"),
             ("GET", &format!("/v1/renders/{JOB}")),
@@ -520,6 +533,10 @@ mod tests {
             ("PUT", "/v1/render/presets"),
             ("POST", "/v1/render/presets"),
             ("GET", "/v1/render/encoders?refresh=1"),
+            (
+                "GET",
+                "/v1/render/encoders?preset_id=vertical-1080x1920-30&refresh=1",
+            ),
             ("GET", "/v1/renders/prj_01JCBQ00000000000000000003"),
             ("DELETE", &format!("/v1/renders/{JOB}")),
             ("GET", "/v1/renders"),

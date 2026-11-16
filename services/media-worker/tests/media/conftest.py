@@ -48,7 +48,13 @@ def ffmpeg(tools: MediaTools) -> ToolInfo:
 @pytest.fixture(scope="session")
 def media_dir(tmp_path_factory: pytest.TempPathFactory, ffmpeg: ToolInfo) -> Path:
     out = tmp_path_factory.mktemp("media-fixtures")
-    generate(out, ffmpeg)
+    fixture_executable = os.environ.get("OWM_FIXTURE_FFMPEG")
+    if fixture_executable:
+        fixture_tool = _need(MediaTools(ffmpeg=fixture_executable).tool("ffmpeg"))
+        generate(out, fixture_tool)
+        assert (out / "hevc.mp4").is_file(), "The fixture generator must support libx265"
+    else:
+        generate(out, ffmpeg)
     return out
 
 

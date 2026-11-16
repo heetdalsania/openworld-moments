@@ -170,8 +170,12 @@ The supported encoders are:
 - `h264_amf`.
 
 **Probe:** an encoder is offered only if it is built into this FFmpeg
-(`-encoders`) **and** a real 0.5 s test encode succeeds. Brand or GPU presence never
-counts. Results are cached per FFmpeg version (`GET /v1/render/encoders`).
+(`-encoders`) and a short test encode succeeds. VideoToolbox tests the selected
+preset's exact fixed size, frame rate, H.264 High profile, 8-bit `yuv420p` and rate
+control, with software fallback disabled in FFmpeg. Source-rate presets use the CPU
+path on macOS. The [macOS media matrix](../platforms/macos-media-parity.md) defines the
+supported probe settings. `GET /v1/render/encoders?preset_id=<id>` returns availability
+for a catalog preset and retains the existing response shape.
 Unavailable encoders carry a reason:
 - "Not built into this FFmpeg";
 - "The test encode failed… (no supported hardware or driver)".
@@ -181,7 +185,7 @@ preset's CRF. Each has a `quality_note` shown before rendering:
 
 | Encoder | Mapping |
 |---|---|
-| VideoToolbox | `-q:v round(100 − 1.75·CRF)` (CRF 20 → 65) |
+| VideoToolbox | Apple Silicon uses `-q:v round(100 − 1.75·CRF)` (CRF 20 → 65). Intel approximates CRF with a bounded bitrate target scaled by frame size and rate. An explicit bitrate stays explicit. |
 | NVENC | `-rc vbr -cq CRF -b:v 0` |
 | Quick Sync | `-global_quality CRF` |
 | AMF | `-rc cqp -qp_i CRF -qp_p CRF` |
@@ -190,7 +194,8 @@ preset's CRF. Each has a `quality_note` shown before rendering:
 `render.hardware_encoder_failed`. The record and job error carry
 `fallback: {encoder: "libx264"}`, and the UI offers **Render with the CPU encoder
 instead**. Nothing retries silently, so quality never changes without the user
-choosing.
+choosing. The retry requires the original preset and current vertical/text review.
+VideoToolbox renders that fail output validation also offer the CPU retry.
 
 ## Validation
 
@@ -201,7 +206,7 @@ choosing.
 | video_stream, resolution, pixel_format, frame_rate | exactly one H.264 stream at the plan size, yuv420p, fps within 1% |
 | rotation | no rotation side data or tag; FFmpeg auto-rotates, so the output is upright |
 | audio_stream | one AAC stereo 48 kHz stream if the plan has audio, otherwise none |
-| metadata | only `major_brand`, `minor_version`, `compatible_brands` and `encoder` tags |
+| metadata | only `major_brand`, `minor_version`, `compatible_brands` and `encoder` tags. Tone-mapped outputs must have BT.709 primaries, transfer and matrix with limited range. |
 | decode_start / middle / end | one frame decodes at 100 ms, the middle, and the end minus 150 ms |
 | black_frames | a sample with mean luma below 20 is a filter error if the source frame at that moment has mean luma of at least 40 |
 
