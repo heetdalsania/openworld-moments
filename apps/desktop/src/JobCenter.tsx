@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useId } from "react";
+import { useId, useState } from "react";
 import {
   type ApiError,
   cancelJob,
@@ -69,12 +69,15 @@ function JobRow({ job }: { job: Job }) {
         <span className="job-state">{stateLabel(job)}</span>
       </div>
       {isActive(job) && (
-        <progress
-          max={100}
-          value={done ?? undefined}
-          aria-label={`${label} progress`}
-          aria-valuetext={done === null ? "In progress" : `${done}%`}
-        />
+        <div className="job-progress">
+          <progress
+            max={100}
+            value={done ?? undefined}
+            aria-label={`${label} progress`}
+            aria-valuetext={done === null ? "In progress" : `${done}%`}
+          />
+          {done !== null && <span aria-hidden="true">{done}%</span>}
+        </div>
       )}
       {job.message && <p className="muted">{job.message}</p>}
       {job.state === "failed" && error && (
@@ -120,13 +123,24 @@ function JobRow({ job }: { job: Job }) {
 export function JobCenter({ onClose }: { onClose: () => void }) {
   const { jobs, loaded, error } = useJobs();
   const headingId = useId();
-  const visible = jobs.filter((j) => j.kind !== "diagnostic").slice(0, 50);
+  const [activeOnly, setActiveOnly] = useState(false);
+  const all = jobs.filter((job) => job.kind !== "diagnostic");
+  const active = all.filter(isActive);
+  const visible = (activeOnly ? active : all).slice(0, 50);
   return (
     <aside className="job-center" aria-labelledby={headingId}>
       <div className="job-center-head">
         <h2 id={headingId}>Background jobs</h2>
         <button type="button" onClick={onClose} aria-label="Close background jobs">
           Close
+        </button>
+      </div>
+      <div className="row" role="group" aria-label="Filter background jobs">
+        <button type="button" aria-pressed={!activeOnly} onClick={() => setActiveOnly(false)}>
+          All jobs
+        </button>
+        <button type="button" aria-pressed={activeOnly} onClick={() => setActiveOnly(true)}>
+          Running ({active.length})
         </button>
       </div>
       {!loaded && <p role="status">Loading jobs…</p>}
@@ -138,7 +152,9 @@ export function JobCenter({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       )}
-      {loaded && !error && visible.length === 0 && <p className="muted">No background jobs yet.</p>}
+      {loaded && !error && visible.length === 0 && (
+        <p className="muted">{activeOnly ? "No jobs running." : "No background jobs yet."}</p>
+      )}
       <ul className="jobs">
         {visible.map((job) => (
           <JobRow key={job.id} job={job} />

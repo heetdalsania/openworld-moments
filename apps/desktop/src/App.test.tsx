@@ -148,6 +148,25 @@ describe("app shell", () => {
     expect(within(dialog).getByText("b.mkv")).toBeTruthy();
   });
 
+  it("adds new drops without restoring paths removed from the import dialog", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByText("Heist finale.mp4");
+
+    const dropFiles = (paths: string[]) => {
+      act(() => drop.handler?.({ payload: { type: "drop", paths, position: {} } }));
+    };
+    dropFiles(["/captures/a.mp4", "/captures/b.mp4"]);
+    const dialog = within(await screen.findByRole("dialog", { name: "Import media" }));
+    await user.click(dialog.getByRole("button", { name: "Remove a.mp4 from the selection" }));
+    dropFiles(["/captures/b.mp4", "/captures/c.mp4"]);
+    expect(dialog.queryByText("a.mp4")).toBeNull();
+    expect(dialog.getAllByText("b.mp4")).toHaveLength(1);
+    expect(dialog.getByText("c.mp4")).toBeTruthy();
+    dropFiles(["/captures/a.mp4"]);
+    expect(dialog.getByText("a.mp4")).toBeTruthy();
+  });
+
   it("keeps running jobs visible across navigation", async () => {
     host.route("GET /v1/jobs?limit=200", [
       job({ kind: "proxy", state: "proxying", progress: { done: 400, total: 1000 } }),
@@ -170,35 +189,33 @@ describe("keyboard-only walkthrough", () => {
     render(<App />);
     await screen.findByText("Heist finale.mp4");
 
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Skip to content");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Library");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Sessions");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Projects");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Search");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Settings");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Import");
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Import from phone");
-    await user.tab();
-    expect(document.activeElement?.textContent).toMatch(/^Background jobs/);
-    await user.tab();
-    expect(document.activeElement?.textContent).toBe("Refresh");
-    await user.tab();
-    expect(document.activeElement?.textContent).toContain("Heist finale.mp4"); // the clip card
+    const controls = [
+      screen.getByRole("link", { name: "Skip to content" }),
+      ...["Library", "Sessions", "Projects", "Search", "Settings"].map((name) =>
+        screen.getByRole("link", { name }),
+      ),
+      screen.getByRole("button", { name: "Import" }),
+      screen.getByRole("link", { name: "Import from phone" }),
+      screen.getByRole("button", { name: "Background jobs" }),
+      screen.getByRole("button", { name: "Refresh" }),
+      screen.getByRole("searchbox", { name: "Search clips by filename" }),
+      screen.getByRole("combobox", { name: "Filter clips" }),
+      screen.getByRole("combobox", { name: "Sort clips" }),
+      screen.getByRole("button", { name: "Grid" }),
+      screen.getByRole("button", { name: "List" }),
+      screen.getByRole("link", { name: /Heist finale/ }),
+    ];
 
-    // Open Import from the keyboard; focus moves into the dialog.
-    await user.tab({ shift: true });
-    await user.tab({ shift: true });
-    await user.tab({ shift: true });
-    await user.tab({ shift: true });
-    expect(document.activeElement?.textContent).toBe("Import");
+    for (const control of controls) {
+      await user.tab();
+      expect(document.activeElement).toBe(control);
+    }
+
+    // Return to Import using the same keyboard order.
+    for (const control of controls.slice(6, -1).reverse()) {
+      await user.tab({ shift: true });
+      expect(document.activeElement).toBe(control);
+    }
     await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", { name: "Import media" });
     expect(document.activeElement?.textContent).toBe("Choose files…");
