@@ -109,6 +109,30 @@ describe("library", () => {
     expect(screen.getByText("New.mp4")).toBeTruthy();
   });
 
+  it("sorts and filters clips, toggles list view, and recovers from no matches", async () => {
+    host.route(FIRST, [
+      asset({ original_name: "Zulu.mp4", missing_at: "2026-11-22T10:00:00Z" }),
+      asset({ id: "ast_01JCBQ00000000000000000002", original_name: "Alpha.mp4" }),
+    ]);
+    const user = userEvent.setup();
+    render(<LibraryView onImport={() => undefined} />);
+    const grid = await screen.findByRole("list", { name: "2 clips" });
+    await user.selectOptions(screen.getByRole("combobox", { name: "Sort clips" }), "name");
+    expect(within(grid).getAllByRole("link")[0]?.textContent).toContain("Alpha.mp4");
+    const list = screen.getByRole("button", { name: "List" });
+    await user.click(list);
+    expect(list.getAttribute("aria-pressed")).toBe("true");
+    expect(grid.classList.contains("clip-list")).toBe(true);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Filter clips" }), "missing");
+    expect(screen.queryByText("Alpha.mp4")).toBeNull();
+    await user.type(screen.getByRole("searchbox"), "alpha");
+    expect(screen.getByRole("heading", { name: "No matching clips" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Clear search and filter" }));
+    expect(screen.getByText("Alpha.mp4")).toBeTruthy();
+    expect(screen.getByText("Zulu.mp4")).toBeTruthy();
+  });
+
   it("falls back to a placeholder when a thumbnail is not ready", async () => {
     host.route(FIRST, [asset()]);
     const { container } = render(<LibraryView onImport={() => undefined} />);
