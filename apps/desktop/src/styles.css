@@ -199,6 +199,14 @@ a {
   font-size: 1.1rem;
 }
 
+.play-symbol::before {
+  content: "";
+  display: block;
+  border-block: 0.38rem solid transparent;
+  border-inline-start: 0.62rem solid currentColor;
+  margin-inline-start: 0.15rem;
+}
+
 .sidebar nav {
   display: grid;
   gap: 0.35rem;

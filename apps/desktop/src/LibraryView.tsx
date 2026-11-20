@@ -24,12 +24,7 @@ const EMPTY_PAGING: Omit<Paging, "base"> = { pages: [], busy: false, done: false
 
 function Thumbnail({ asset }: { asset: MediaAsset }) {
   const [failed, setFailed] = useState(false);
-  if (failed)
-    return (
-      <span className="thumb placeholder" aria-hidden="true">
-        ▶
-      </span>
-    );
+  if (failed) return <span className="thumb placeholder play-symbol" aria-hidden="true" />;
   return (
     <img
       className="thumb"
@@ -57,9 +52,7 @@ function AssetCard({ asset }: { asset: MediaAsset }) {
       <a className="card clip-card" href={routeHref({ view: "asset", id: asset.id })}>
         <span className="clip-preview">
           <Thumbnail asset={asset} />
-          <span className="clip-play" aria-hidden="true">
-            ▶
-          </span>
+          <span className="clip-play play-symbol" aria-hidden="true" />
         </span>
         <span className="clip-details">
           <span className="card-title" title={asset.original_name}>

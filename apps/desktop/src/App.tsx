@@ -338,9 +338,7 @@ export function App() {
       </a>
       <aside className="sidebar" aria-label="Workspace">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            ▶
-          </span>
+          <span className="brand-mark play-symbol" aria-hidden="true" />
           <span>
             OpenWorld <strong>Moments</strong>
           </span>
@@ -358,7 +356,7 @@ export function App() {
           <NavLink route={{ view: "search" }} current={route} icon="⌕">
             Search
           </NavLink>
-          <NavLink route={{ view: "settings" }} current={route} icon="⚙">
+          <NavLink route={{ view: "settings" }} current={route} icon="⚙︎">
             Settings
           </NavLink>
         </nav>
