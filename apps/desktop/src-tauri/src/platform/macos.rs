@@ -50,8 +50,55 @@ pub fn reveal_command(target: &Path, select: bool) -> Command {
 /// Child processes never open a window on macOS.
 pub fn hide_console(_command: &mut tokio::process::Command) {}
 
-/// File Provider placeholders (iCloud, OneDrive) are handled in M35; until then a file
-/// that reads as present is treated as local.
-pub fn is_cloud_placeholder(_meta: &std::fs::Metadata) -> bool {
-    false
+/// Apple TN3150: SF_DATALESS marks File Provider metadata without local bytes.
+/// Metadata only: opening the item would ask the provider to download it.
+pub fn is_cloud_placeholder(meta: &std::fs::Metadata) -> bool {
+    use std::os::macos::fs::MetadataExt;
+    dataless(meta.st_flags())
+}
+
+fn dataless(flags: u32) -> bool {
+    flags & 0x4000_0000 != 0 // SF_DATALESS, sys/stat.h
+}
+
+/// Install once, for the lifetime of this app process. NSNotificationCenter retains
+/// its block observers. Blocks capture only a Send channel, never UI or borrowed data.
+pub fn observe_lifecycle(sender: tokio::sync::mpsc::UnboundedSender<super::LifecycleEvent>) {
+    use objc2_app_kit::{
+        NSWorkspace, NSWorkspaceDidWakeNotification, NSWorkspaceWillSleepNotification,
+    };
+    use objc2_foundation::NSNotification;
+    use std::ptr::NonNull;
+    let center = NSWorkspace::sharedWorkspace().notificationCenter();
+    // SAFETY: AppKit exports both names as process-lifetime NSString constants.
+    let names = unsafe {
+        [
+            (
+                NSWorkspaceWillSleepNotification,
+                super::LifecycleEvent::Sleep,
+            ),
+            (NSWorkspaceDidWakeNotification, super::LifecycleEvent::Wake),
+        ]
+    };
+    for (name, event) in names {
+        let sender = sender.clone();
+        let block = block2::RcBlock::new(move |_: NonNull<NSNotification>| {
+            let _ = sender.send(event);
+        });
+        // SAFETY: no object/queue, and the copied block captures only Send data.
+        unsafe {
+            center.addObserverForName_object_queue_usingBlock(Some(name), None, None, &block);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn only_dataless_flag_means_cloud_only() {
+        assert!(super::dataless(0x4000_0000));
+        assert!(super::dataless(0x4000_8000));
+        assert!(!super::dataless(0));
+        assert!(!super::dataless(0x8000)); // UF_HIDDEN is not a placeholder
+    }
 }

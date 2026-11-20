@@ -109,6 +109,10 @@ def precheck(path: Path) -> int:
         ) from exc
     except OSError as exc:
         raise ProbeError("media.unreadable", f"The file cannot be read: {exc.strerror}.") from exc
+    from openworld_moments.media.availability import DOWNLOAD_REQUIRED, cloud_only
+
+    if cloud_only(info):
+        raise ProbeError("media.download_required", DOWNLOAD_REQUIRED, retryable=True)
     if not stat.S_ISREG(info.st_mode):
         raise ProbeError("media.not_a_file", "The path is not a regular file.")
     if info.st_size == 0:

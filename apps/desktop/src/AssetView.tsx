@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   type ApiError,
   type AssetDerivedMedia,
@@ -8,6 +9,7 @@ import {
   getDerived,
   type MediaAsset,
   prepareDerived,
+  relinkAsset,
 } from "./api";
 import { isActive, percent, upsertJob, useJobs } from "./jobs";
 import { badges } from "./LibraryView";
@@ -129,6 +131,14 @@ export function AssetView({ id, at }: { id: string; at?: number }) {
   const prepare = useAction(async (force: boolean) => {
     upsertJob(await prepareDerived(id, force ? { force: true } : {}));
   });
+  const relink = useAction(async () => {
+    const path = await open({
+      directory: false,
+      multiple: false,
+      title: "Locate this clip or restore access",
+    });
+    if (typeof path === "string") upsertJob(await relinkAsset(id, path));
+  });
   const [choice, setChoice] = useState<Choice | null>(null);
   const [playErrorFor, setPlayErrorFor] = useState<Choice | null>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -192,6 +202,14 @@ export function AssetView({ id, at }: { id: string; at?: number }) {
           drive or was moved. Nothing was deleted: the library keeps its details
           {proxyOk ? " and the playback copy still plays" : ""}. Reconnect the drive to play the
           original again.
+        </div>
+      )}
+      {(missing || playError) && (
+        <div className="row">
+          <button type="button" disabled={relink.busy} onClick={() => void relink.run()}>
+            Locate original or restore access…
+          </button>
+          {relink.error && <p role="alert">{describeError(relink.error)}</p>}
         </div>
       )}
 

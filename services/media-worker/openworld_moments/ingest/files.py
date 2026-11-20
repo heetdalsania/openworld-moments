@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from openworld_moments.ingest.library import fsync_directory
+from openworld_moments.media.availability import DOWNLOAD_REQUIRED, cloud_only
 
 CHUNK_BYTES = 1024 * 1024
 _NO_SPACE = frozenset({errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)})
@@ -56,7 +57,10 @@ class Staged:
 
 def snapshot(path: Path) -> os.stat_result:
     try:
-        return path.stat()
+        info = path.stat()
+        if cloud_only(info):
+            raise FileStepError("media.download_required", DOWNLOAD_REQUIRED, retryable=True)
+        return info
     except FileNotFoundError as exc:
         raise FileStepError("media.not_found", "The file disappeared during import.") from exc
     except OSError as exc:

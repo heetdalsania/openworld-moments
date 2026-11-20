@@ -187,3 +187,7 @@ it.
 - **No resumable uploads:** an interrupted upload must be sent again (out of
   scope for M10).
 - **IPv4 only:** IPv6 LAN addresses are not offered.
+
+## macOS lifecycle and consent (M35)
+
+The screen explains Local Network and Firewall permission recovery before Show QR code, and the app declares its local-network purpose in Info.plist. Sleep/quit closes the gateway; wake never restores a link. Phone staging uses the per-user OS temporary directory on macOS. Tokens remain ephemeral; no credential is persisted. Native/clean-account phone validation remains separate from gateway fixtures. See [M35 paths and lifecycle](../platforms/macos-files-and-lifecycle.md).

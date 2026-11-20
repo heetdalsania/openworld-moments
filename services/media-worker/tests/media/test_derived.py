@@ -587,3 +587,50 @@ def test_media_endpoint(api: tuple[TestClient, Library], media_dir: Path, tmp_pa
     assert client.get(f"/v1/assets/{asset}/media/../../x").status_code == 404
     unknown = client.get("/v1/assets/ast_01JCBQ00000000000000000099/media/original")
     assert unknown.status_code == 404 and unknown.json()["code"] == "asset.not_found"
+
+
+def test_disposable_cache_rebuild_keeps_canonical_source_and_database(
+    library: Library, media_dir: Path, tmp_path: Path
+) -> None:
+    source = _copy(media_dir, "h264_aac.mp4", tmp_path / "Captures ✓")
+    before = hashlib.sha256(source.read_bytes()).hexdigest()
+    aid = library.add(source)
+    cache = tmp_path / "Caches ✓"
+    library.derived = DerivedMedia(library.database, library.tools, cache_root=cache)
+    library.generate(aid, artifacts=["proxy"], proxy_policy="always")
+    assert library.status(aid)["storage_root"] == "cache"
+    artifact = library.artifact(aid, "proxy")
+    assert artifact["status"] == "ready"
+    cached = library.derived.paths.resolve(artifact["path"])
+    assert cached is not None and cached.is_file()
+    assert not (library.root / "derived").exists()
+    shutil.rmtree(cache)
+    assert library.artifact(aid, "proxy")["status"] == "missing"
+    library.generate(aid, artifacts=["proxy"], proxy_policy="always")
+    assert library.artifact(aid, "proxy")["status"] == "ready"
+    assert library.database.path.is_file()
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == before
+
+
+def test_cache_space_is_checked_on_its_own_volume_and_models_stay_canonical(
+    library: Library, media_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from openworld_moments.transcripts.service import Transcriber
+
+    aid = library.add(_copy(media_dir, "h264_aac.mp4", tmp_path / "captures"))
+    cache = tmp_path / "cache"
+    library.derived = DerivedMedia(library.database, library.tools, cache_root=cache)
+    transcriber = Transcriber(library.database, library.tools, library.derived)
+    assert transcriber.models.directory.is_relative_to(library.root)
+    assert transcriber.staging.is_relative_to(cache)
+    usage = shutil.disk_usage(tmp_path)
+    checked: list[Path] = []
+
+    def space(path: Path) -> Any:
+        checked.append(path)
+        return type(usage)(usage.total, usage.total, 1024 if path == cache else usage.total)
+
+    monkeypatch.setattr("openworld_moments.derived.service.shutil.disk_usage", space)
+    with pytest.raises(DerivedFailure) as error:
+        library.generate(aid, artifacts=["waveform"])
+    assert error.value.code == "derived.disk_full" and checked == [cache]

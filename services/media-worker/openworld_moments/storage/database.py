@@ -156,6 +156,59 @@ class Database:
         return self.migrations[-1].version if self.migrations else 0
 
     @classmethod
+    def validate_existing(cls, root: Path) -> None:
+        """Identify a library before migrations or preference changes.
+
+        First inspect the main database immutably, without sidecars. Only after
+        identifying an OWM library may SQLite read an existing WAL in read-only
+        mode. This checks committed version metadata after a crash, rather than
+        accepting a stale main-file snapshot. No database writes are permitted.
+        """
+        try:
+            candidate = root / "database.sqlite3"
+            for entry in (
+                candidate,
+                candidate.with_name(candidate.name + "-wal"),
+                candidate.with_name(candidate.name + "-shm"),
+            ):
+                if entry.is_symlink() or (entry.exists() and entry.stat().st_nlink != 1):
+                    raise StorageError("Linked database files are not accepted")
+            if not candidate.is_file():
+                raise StorageError("Not a regular library database")
+            path = candidate.resolve()
+            database = cls(path)
+
+            def inspect(uri: str) -> None:
+                with closing(sqlite3.connect(uri, uri=True)) as conn:
+                    conn.row_factory = sqlite3.Row
+                    conn.execute("PRAGMA trusted_schema = OFF")
+                    conn.execute("PRAGMA query_only = ON")
+                    tables = {
+                        row[0]
+                        for row in conn.execute(
+                            "SELECT name FROM sqlite_schema WHERE type='table' "
+                            "AND name IN ('schema_migrations', 'media_assets')"
+                        )
+                    }
+                    if tables != {"schema_migrations", "media_assets"}:
+                        raise StorageError("Not an OpenWorld Moments library")
+                    current = database.schema_version(conn)
+                    if current < 1:
+                        raise StorageError("Not an initialized library")
+                    database._verify_applied(conn, current)
+
+            inspect(path.as_uri() + "?mode=ro&immutable=1")
+            wal = path.with_name(path.name + "-wal")
+            if wal.is_file() and wal.stat().st_size:
+                inspect(path.as_uri() + "?mode=ro")
+        except (sqlite3.Error, OSError, StorageError) as exc:
+            raise StorageError(
+                "The selected folder is not a verified OpenWorld Moments library. "
+                "Close the app using that library and select its folder again. "
+                "A newer library may require a newer app."
+            ) from exc
+
+    @classmethod
     def open(
         cls,
         path: Path,

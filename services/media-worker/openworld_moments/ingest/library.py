@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from openworld_moments.media.availability import cloud_only
+
 if TYPE_CHECKING:
     from openworld_moments.storage import AssetLocation
 
@@ -80,6 +82,8 @@ def readable_source(library: LibraryPaths, location: AssetLocation) -> Path | No
     try:
         info = path.stat()
     except OSError:
+        return None
+    if cloud_only(info):
         return None
     if location.size_bytes is not None and info.st_size != location.size_bytes:
         return None

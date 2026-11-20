@@ -7,7 +7,7 @@ original file:
 - a **filmstrip** of thumbnails,
 - a **waveform** of the audio.
 
-All three are replaceable files in the library. The database records which file
+All three are replaceable files in the configured derived-media root (the library by default; the standard Caches directory on macOS since M35). The database records which file
 is current and exactly how it was made.
 
 Code:
@@ -205,9 +205,11 @@ A failure is `derived.validation_failed`, and nothing is promoted.
 | POST | `/v1/assets/{id}/derived` | Starts a `proxy` job. Body: optional `artifacts`, `proxy_policy`, `force`, `idempotency_key` |
 | POST | `/v1/derived/cleanup` | `DerivedCleanupResult`: removes files in `derived/` that no row points at |
 
+On macOS, M35 maps the `derived/` and derived staging namespace to the standard Caches directory. Contracts 1.27 expose `storage_root: cache`; older responses without the field mean `library`. See [macOS storage and recovery](../platforms/macos-files-and-lifecycle.md). Old library-local cache files are retained during upgrade and cache misses regenerate on demand.
+
 ## Cleanup
 
-`POST /v1/derived/cleanup` removes, inside `library/derived/` only:
+`POST /v1/derived/cleanup` removes, inside the configured `derived/` root only:
 
 - folders of deleted assets,
 - old artifact versions,

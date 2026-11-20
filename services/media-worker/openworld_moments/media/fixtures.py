@@ -66,7 +66,8 @@ FIXTURES: tuple[Fixture, ...] = (
     Fixture("hdr_pq.mp4", {"video_codec": "h264", "hdr": True, "transfer": "smpte2084"}),
     Fixture("hevc.mp4", {"video_codec": "hevc", "audio": 1}, requires=("libx265",)),
     Fixture("audio_only.m4a", {"error": "media.no_video_stream"}, requires=()),
-    Fixture("still.png", {"error": "media.still_image"}, requires=()),
+    # The PNG encoder needs zlib; the bundled macOS FFmpeg (M34) is built without it.
+    Fixture("still.png", {"error": "media.still_image"}, requires=("png",)),
     Fixture("truncated.mp4", {"error": "media.damaged"}),
     Fixture("garbage.mp4", {"error": "media.damaged"}, requires=()),
     Fixture("garbage.bin", {"error": "media.unsupported_format"}, requires=()),

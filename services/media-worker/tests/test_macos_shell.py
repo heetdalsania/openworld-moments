@@ -120,7 +120,11 @@ def make_app(
     app = tmp_path / "OpenWorld Moments.app"
     (app / "Contents" / "MacOS").mkdir(parents=True)
     (app / "Contents" / "Resources").mkdir()
-    info = {"CFBundleExecutable": "openworld-moments-desktop", "LSMinimumSystemVersion": minimum}
+    info = {
+        "CFBundleExecutable": "openworld-moments-desktop",
+        "LSMinimumSystemVersion": minimum,
+        "NSLocalNetworkUsageDescription": "Receive explicitly enabled phone uploads.",
+    }
     (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
     (app / "Contents" / "MacOS" / "openworld-moments-desktop").write_bytes(exe)
     (app / "Contents" / "Resources" / "icon.icns").write_bytes(b"icns")
@@ -342,3 +346,16 @@ def test_runtime_must_match_the_build_architecture(tmp_path: Path) -> None:
         (runtime / "inventory.json").write_text(json.dumps(doc))
         result = shell.runtime_problem("arm64", runtime)
         assert (problem is None and result is None) or (problem and problem in str(result))
+
+
+def test_missing_local_network_purpose_is_rejected(tmp_path: Path) -> None:
+    app = make_app(tmp_path, thin(ARM64))
+    info_path = app / "Contents/Info.plist"
+    info = plistlib.loads(info_path.read_bytes())
+    del info["NSLocalNetworkUsageDescription"]
+    info_path.write_bytes(plistlib.dumps(info))
+    assert "Info.plist: NSLocalNetworkUsageDescription is missing" in shell.verify_bundle(
+        app, "arm64"
+    )
+    source = plistlib.loads((ROOT / "apps/desktop/src-tauri/Info.plist").read_bytes())
+    assert "temporary phone upload" in source["NSLocalNetworkUsageDescription"]

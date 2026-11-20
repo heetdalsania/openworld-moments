@@ -1050,7 +1050,9 @@ library/
 └── logs/
 ```
 
-Temporary files belong in an application-specific temp directory and are recoverable or cleanable after a crash.
+Temporary files belong in an application-specific temp directory and are recoverable or cleanable after a crash. Atomic finalization staging may remain beside its destination so promotion stays on one volume.
+
+On macOS (M35), the canonical library defaults to Application Support, disposable derived media to Caches, redacted rotating logs to Logs, and phone staging to the OS per-user temporary directory. Native selection can remember an existing relocated library for the next launch. See [macOS files and lifecycle](./docs/platforms/macos-files-and-lifecycle.md) for exact paths and recovery behavior.
 
 ### 9.7 Database model
 

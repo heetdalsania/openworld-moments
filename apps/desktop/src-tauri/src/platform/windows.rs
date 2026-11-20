@@ -7,6 +7,8 @@ use std::process::Command;
 
 use super::{Family, Probe};
 
+pub fn observe_lifecycle(_sender: tokio::sync::mpsc::UnboundedSender<super::LifecycleEvent>) {}
+
 pub const FAMILY: Family = Family::Windows;
 
 /// The Windows version is reported by the worker's system check; the host does not

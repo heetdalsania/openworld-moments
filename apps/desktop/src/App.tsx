@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Announcer } from "./Announcer";
 import { describeError, revealLibrary } from "./api";
 import { AppearanceSettings } from "./AppearanceSettings";
+import { LibraryLocation } from "./LibraryLocation";
 import { type AppInfo, fetchAppInfo } from "./appInfo";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { GUIDES_URL, Onboarding } from "./Onboarding";
@@ -142,6 +143,7 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
     <section className="view" aria-labelledby="settings-heading">
       <h1 id="settings-heading">Settings</h1>
       <PrivacyChoices />
+      <LibraryLocation />
       {workerReady ? (
         <>
           <SystemPanel />

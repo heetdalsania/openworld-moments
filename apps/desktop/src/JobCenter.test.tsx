@@ -113,7 +113,9 @@ describe("job center", () => {
     const user = userEvent.setup();
     render(<JobCenter onClose={() => undefined} />);
     await act(reloadJobs);
-    expect(screen.getByText("There is not enough free space in the library folder.")).toBeTruthy();
+    expect(
+      screen.getByText("There is not enough free space where playback media is stored."),
+    ).toBeTruthy();
     expect(screen.getByText("The file is damaged or incomplete.")).toBeTruthy();
     const details = must(screen.getByText("Technical details").closest("details"), "details");
     expect(details.open).toBe(false);

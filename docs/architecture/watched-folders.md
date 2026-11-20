@@ -186,3 +186,7 @@ The user guide is [Xbox captures through OneDrive](../guides/xbox-onedrive.md).
 | `watch.folder_disabled` | A report for a disabled folder (409) |
 | `watch.invalid_path` | A reported path that could leave the folder, or a subfolder of a non-recursive folder (422) |
 | `watch.folder_unavailable` | Host report: the folder cannot be read (`last_error`, **retryable**) |
+
+## macOS recovery (M35)
+
+Native reauthorization accepts the same configured root without deleting folder/file records. Live status adds optional `unavailable_reason` (`permission-required`, `download-required`, `offline`, or other unavailability). `SF_DATALESS` files are counted without opening; dataless directories are not enumerated. Workspace sleep pauses watchers and resets pending stabilization; wake immediately reconciles configured roots while persistent idempotency prevents duplicate imports. See [macOS files and lifecycle](../platforms/macos-files-and-lifecycle.md).

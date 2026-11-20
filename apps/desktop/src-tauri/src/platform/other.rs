@@ -6,6 +6,8 @@ use std::process::Command;
 
 use super::{Family, Probe};
 
+pub fn observe_lifecycle(_sender: tokio::sync::mpsc::UnboundedSender<super::LifecycleEvent>) {}
+
 pub const FAMILY: Family = Family::Linux;
 
 pub fn probe() -> Probe {

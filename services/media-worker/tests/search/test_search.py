@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
+from openworld_moments.derived.layout import DerivedPaths
 from openworld_moments.search.filters import SearchFilters
 from openworld_moments.search.service import SearchError, segments
 from openworld_moments.storage import transaction
@@ -238,7 +239,7 @@ def test_deleted_transcripts_and_events_leave_results_on_commit(
         conn.execute("COMMIT")
     assert [i["kind"] for i in lib.search("secret")["items"]] == ["transcript"]
     # The transcript service's delete path removes the spans too.
-    derived = SimpleNamespace(paths=SimpleNamespace(root=tmp_path))
+    derived = SimpleNamespace(paths=DerivedPaths(tmp_path))
     Transcriber(lib.database, tools=None, derived=derived).delete(sid)  # type: ignore[arg-type]
     assert lib.search("secret")["total"] == 0
     with contextlib.closing(lib.database.connect()) as conn:

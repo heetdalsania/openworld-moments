@@ -113,6 +113,11 @@ def verify_bundle(
             f"Info.plist: LSMinimumSystemVersion is {info.get('LSMinimumSystemVersion')!r}, "
             f"expected {floor!r}"
         )
+    if (
+        not isinstance(info.get("NSLocalNetworkUsageDescription"), str)
+        or not info["NSLocalNetworkUsageDescription"].strip()
+    ):
+        problems.append("Info.plist: NSLocalNetworkUsageDescription is missing")
     executable = app / "Contents" / "MacOS" / str(info.get("CFBundleExecutable", ""))
     if not info.get("CFBundleExecutable") or not executable.is_file():
         return [*problems, "Info.plist: CFBundleExecutable is missing from Contents/MacOS"]

@@ -48,6 +48,9 @@ pub fn file_state(path: &Path) -> FileState {
 
 /// Can the file be opened and read? (Another program may still hold it exclusively.)
 pub fn readable(path: &Path) -> bool {
+    if !matches!(file_state(path), FileState::Local(_)) {
+        return false;
+    }
     let mut byte = [0u8; 1];
     fs::File::open(path)
         .and_then(|mut f| f.read(&mut byte))
@@ -56,11 +59,20 @@ pub fn readable(path: &Path) -> bool {
 
 pub fn folder_available(path: &Path) -> Result<(), String> {
     match fs::metadata(path) {
+        Ok(m) if crate::platform::is_cloud_placeholder(&m) => Err("download-required".into()),
         Ok(m) if m.is_dir() => fs::read_dir(path)
             .map(|_| ())
-            .map_err(|e| e.kind().to_string()),
+            .map_err(|e| access_reason(&e).into()),
         Ok(_) => Err("not a folder".into()),
-        Err(e) => Err(e.kind().to_string()),
+        Err(e) => Err(access_reason(&e).into()),
+    }
+}
+
+fn access_reason(error: &std::io::Error) -> &'static str {
+    match error.kind() {
+        std::io::ErrorKind::PermissionDenied => "permission-required",
+        std::io::ErrorKind::NotFound | std::io::ErrorKind::NotConnected => "offline",
+        _ => "unavailable",
     }
 }
 
@@ -68,7 +80,13 @@ pub fn folder_available(path: &Path) -> Result<(), String> {
 /// valid UTF-8 (such names cannot be reported and are skipped).
 pub fn relative(root: &Path, path: &Path) -> Option<String> {
     let rel = path.strip_prefix(root).ok()?;
-    let parts: Option<Vec<&str>> = rel.components().map(|c| c.as_os_str().to_str()).collect();
+    let parts: Option<Vec<&str>> = rel
+        .components()
+        .map(|c| match c {
+            std::path::Component::Normal(part) => part.to_str(),
+            _ => None,
+        })
+        .collect();
     let parts = parts?;
     (!parts.is_empty()).then(|| parts.join("/"))
 }
@@ -79,6 +97,15 @@ pub fn walk(root: &Path, recursive: bool, max_entries: usize, max_depth: usize) 
     let mut out = Vec::new();
     let mut stack = vec![(root.to_path_buf(), 0usize)];
     while let Some((dir, depth)) = stack.pop() {
+        // A dataless directory can trigger a download just by enumerating it.
+        let metadata = if dir == root {
+            fs::metadata(&dir)
+        } else {
+            fs::symlink_metadata(&dir)
+        };
+        if !metadata.is_ok_and(|m| !m.is_symlink() && !crate::platform::is_cloud_placeholder(&m)) {
+            continue;
+        }
         let Ok(entries) = fs::read_dir(&dir) else {
             continue;
         };
@@ -117,6 +144,7 @@ mod tests {
         );
         assert_eq!(relative(root, Path::new("/elsewhere/b.mp4")), None);
         assert_eq!(relative(root, root), None);
+        assert_eq!(relative(root, Path::new("/w/../elsewhere/b.mp4")), None);
     }
 
     #[test]

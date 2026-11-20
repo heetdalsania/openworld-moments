@@ -183,12 +183,13 @@ class DerivedMedia:
         tools: MediaTools,
         *,
         library: LibraryPaths | None = None,
+        cache_root: Path | None = None,
         probe_timeout_s: float = 60.0,
     ) -> None:
         self.database = database
         self.tools = tools
         self.library = library or LibraryPaths.for_database(database.path)
-        self.paths = DerivedPaths(self.library.root)
+        self.paths = DerivedPaths(self.library.root, cache_root)
         self.probe_timeout_s = probe_timeout_s
         # Held while an artifact is promoted and recorded, and during cleanup, so
         # cleanup never sees a promoted file before its row exists.
@@ -303,6 +304,7 @@ class DerivedMedia:
         doc = {
             "schema_version": SCHEMA_VERSION,
             "asset_id": asset_id,
+            "storage_root": "cache" if self.paths.cache_root else "library",
             "proxy_decision": decision.doc(),
             "artifacts": artifacts,
         }
@@ -515,13 +517,13 @@ class DerivedMedia:
         if kind == "proxy":
             estimate += asset.duration_ms * PROXY_BITS_PER_SECOND // 8000
         try:
-            free = shutil.disk_usage(self.library.root).free
+            free = shutil.disk_usage(self.paths.cache_root or self.library.root).free
         except OSError:
             return
         if free < estimate:
             raise DerivedFailure(
                 "derived.disk_full",
-                "There is not enough free space in the library folder for this artifact.",
+                "There is not enough free space in playback-media storage for this artifact.",
                 retryable=True,
                 details={"required_bytes": estimate, "free_bytes": free},
             )

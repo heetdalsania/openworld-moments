@@ -99,6 +99,23 @@ export function PhoneImport() {
         the phone.
       </div>
 
+      {!active && (
+        <div className="notice-box" role="region" aria-label="Mac network permissions">
+          <strong>On a Mac, check network permissions before showing the code.</strong>
+          <p>
+            If macOS asks, allow OpenWorld Moments to use your local network and receive incoming
+            connections. You can review Local Network in System Settings → Privacy &amp; Security,
+            and Firewall in Network → Firewall → Options. Keep the firewall on; allow this app only
+            on a trusted network. A denied request leaves your library unchanged.
+          </p>
+          <p>
+            If the phone cannot connect, close this page, check those permissions and that both
+            devices use the same Wi-Fi, then show a new code. The code also closes when this Mac
+            sleeps; waking the Mac never reopens phone transfer automatically.
+          </p>
+        </div>
+      )}
+
       {!active && !allowed && (
         <div className="panel phone-consent">
           <h2>Phone transfer is off</h2>

@@ -118,7 +118,7 @@ def main() -> None:
     metadata = {
         "format_version": 1,
         "platform": "macos",
-        "application": "0.1.0-alpha.34",
+        "application": "0.1.0-alpha.35",
         "python": "3.12.14",
         "pyinstaller": "6.22.3",
         "uv": "0.13.7",

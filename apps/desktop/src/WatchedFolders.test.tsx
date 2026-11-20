@@ -239,3 +239,48 @@ describe("XboxOnboarding", () => {
     expect(screen.getByRole("alert").textContent).toContain("already watched");
   });
 });
+
+it.each([true, false])(
+  "reauthorization keeps history and handles picker result %s",
+  async (selected) => {
+    mockList(
+      [folder({ availability: "unavailable" })],
+      [{ ...watching, state: "unavailable", unavailable_reason: "permission-required" }],
+    );
+    const base = invoke.getMockImplementation();
+    invoke.mockImplementation((cmd: string, args?: unknown) =>
+      cmd === "watched_folder_reauthorize" ? Promise.resolve(selected) : base?.(cmd, args),
+    );
+    render(<WatchedFolders />);
+    const button = await screen.findByRole("button", { name: "Select folder again…" });
+    expect(screen.getByTestId("folder-1-status").textContent).toContain("Access required");
+    await act(async () => {
+      fireEvent.click(button);
+    });
+    expect(invoke).toHaveBeenCalledWith("watched_folder_reauthorize", { id: 1 });
+    expect(invoke).not.toHaveBeenCalledWith("watched_folder_remove", expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith("watched_folder_add", expect.anything());
+    expect(screen.queryByRole("status")?.textContent ?? "").toBe(
+      selected ? "Folder check finished. Its import history was kept." : "",
+    );
+  },
+);
+
+it("shows a recoverable native reauthorization error", async () => {
+  mockList([folder({ availability: "unavailable" })]);
+  const base = invoke.getMockImplementation();
+  invoke.mockImplementation((cmd: string, args?: unknown) =>
+    cmd === "watched_folder_reauthorize"
+      ? Promise.reject({
+          code: "watch.different_folder",
+          message: "Select the same watched folder.",
+        })
+      : base?.(cmd, args),
+  );
+  render(<WatchedFolders />);
+  const button = await screen.findByRole("button", { name: "Select folder again…" });
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  expect(screen.getByRole("status").textContent).toContain("Select the same watched folder.");
+});

@@ -178,3 +178,63 @@ def test_cancel_kills_tools_started_through_a_shim(tmp_path: Path) -> None:
         assert time.monotonic() < deadline, "the tool started by the shim kept running"
     assert size > 0
     output.unlink()
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS tool-parent lifetime guard")
+def test_hard_worker_exit_stops_its_media_tool(tmp_path: Path) -> None:
+    if sys.platform == "win32":
+        pytest.skip("macOS tool-parent lifetime guard")
+    import contextlib
+    import os
+    import signal
+
+    output, group_file = tmp_path / "partial.mp4", tmp_path / "tool-group"
+    parent_code = (
+        "import sys\nfrom pathlib import Path\n"
+        "from openworld_moments.media.process import run_tool\n"
+        "run_tool([sys.executable, '-c', sys.argv[1], sys.argv[2]], timeout_s=60, "
+        "on_spawn=lambda proc: Path(sys.argv[3]).write_text(str(proc.pid)))"
+    )
+    parent = subprocess.Popen(  # noqa: S603 - argument arrays, generated fixtures
+        [PY, "-c", parent_code, TOOL, str(output), str(group_file)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    try:
+        deadline = time.monotonic() + 10
+        while not output.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert output.exists(), "media tool did not start"
+        parent.kill()  # real SIGKILL: no worker finally/atexit hooks can run
+        parent.wait(timeout=5)
+        time.sleep(0.3)
+        size = output.stat().st_size
+        time.sleep(0.5)
+        assert output.stat().st_size == size, "orphan media tool kept writing after worker exit"
+    finally:
+        if parent.poll() is None:
+            parent.kill()
+        parent.wait(timeout=5)
+        if group_file.exists():
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(int(group_file.read_text()), signal.SIGKILL)
+        if parent.stderr is not None:
+            parent.stderr.close()
+
+
+@pytest.mark.parametrize("_attempt", range(5))
+def test_cancel_at_spawn_never_leaves_an_output_pipe_open(_attempt: int) -> None:
+    # Exercise the guard startup window before the actual media tool has started.
+    cancel = threading.Event()
+    spawned: list[subprocess.Popen[bytes]] = []
+
+    def at_spawn(proc: subprocess.Popen[bytes]) -> None:
+        spawned.append(proc)
+        cancel.set()
+
+    started = time.monotonic()
+    with pytest.raises(ToolCancelled):
+        run_tool([PY, "-c", SLEEP], timeout_s=60, cancel=cancel, on_spawn=at_spawn)
+    assert time.monotonic() - started < 5
+    assert spawned[0].poll() is not None

@@ -269,7 +269,7 @@ class DerivedMediaResult(BaseModel):
 
 class DerivedCleanupResult(BaseModel):
     """
-    What the derived-media cleanup removed. It only ever removes entries inside library/derived/ that no artifact row points at, and never follows links (a link is removed as a link and counted in skipped_links).
+    What the derived-media cleanup removed. It only ever removes entries inside the configured derived-media root that no artifact row points at, and never follows links (a link is removed as a link and counted in skipped_links).
     """
 
     model_config = ConfigDict(
@@ -302,7 +302,7 @@ class DerivedArtifact(BaseModel):
     path: Annotated[
         str | None,
         Field(
-            description="Relative to the library folder: derived/<asset-id>/<kind>-<key16>[.mp4|.bin]. A filmstrip path is a folder.",
+            description="Relative to storage_root (library when omitted): derived/<asset-id>/<kind>-<key16>[.mp4|.bin]. A filmstrip path is a folder.",
             pattern="^derived/ast_[0-9A-HJKMNP-TV-Z]{26}/(proxy-[0-9a-f]{16}\\.mp4|filmstrip-[0-9a-f]{16}|waveform-[0-9a-f]{16}\\.bin)$",
         ),
     ] = None
@@ -337,7 +337,7 @@ class DerivedArtifact(BaseModel):
 
 class AssetDerivedMedia(BaseModel):
     """
-    Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under library/derived/<asset-id>/; 'path' is relative to the library folder. Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.
+    Derived playback media of one asset (spec 8.3, M08): the proxy decision and the state of each artifact (proxy, filmstrip thumbnails, waveform). Artifacts are replaceable files under derived/<asset-id>/; 'path' is relative to storage_root (library when omitted). Each artifact records its recipe and a cache key over the asset's SHA-256, the kind, and the recipe; an artifact whose key differs from the current one is 'stale'.
     """
 
     model_config = ConfigDict(
@@ -352,6 +352,12 @@ class AssetDerivedMedia(BaseModel):
             title="AssetId",
         ),
     ]
+    storage_root: Annotated[
+        Literal["library", "cache"] | None,
+        Field(
+            description="Root for artifact paths: library (also the default for documents without this field) or the host-configured disposable cache. Actual filesystem paths remain private to the worker. Added in 1.27."
+        ),
+    ] = None
     proxy_decision: ProxyDecision
     artifacts: Annotated[
         list[DerivedArtifact],

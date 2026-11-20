@@ -22,7 +22,8 @@ platforms' rules are unit-tested on every CI runner.
 | `venv_python(repo)` | Development worker interpreter | `.venv/Scripts/python.exe` | `.venv/bin/python` | `.venv/bin/python` |
 | `reveal_command()` | Show a file in the file manager | `%SystemRoot%\explorer.exe /select,"…"` | `/usr/bin/open -R -- …` | `xdg-open <folder>` |
 | `hide_console()` | Start helper processes without a console window | `CREATE_NO_WINDOW` | nothing to do | nothing to do |
-| `is_cloud_placeholder()` | Skip files that are only in the cloud | OneDrive offline/recall attributes | not detected yet (M35: File Provider) | no |
+| `observe_lifecycle()` | Native system lifecycle notifications | no change | AppKit workspace sleep/wake, ordered coordinator | no change |
+| `is_cloud_placeholder()` | Skip files that are only in the cloud | OneDrive offline/recall attributes | `SF_DATALESS` metadata; no content open | no |
 
 Windows behavior is unchanged. The Windows code moved verbatim from `host.rs`,
 `reveal.rs`, `phone.rs`, `worker/supervisor.rs` and `watch/fsprobe.rs`, and the Windows
@@ -39,13 +40,13 @@ Linux development uses `xdg-open` from `PATH`. CI runs `--version-report` with o
 
 | Area | Today | macOS work |
 |---|---|---|
-| Paths | `app_dirs`; only the library (`data`) is used | M35 moves proxies, thumbnails and analysis caches to `cache`, logs to `logs`, and staging to `temp` |
-| Dialogs | `tauri-plugin-dialog` (native `NSOpenPanel`/`NSSavePanel` on macOS); no OS code in the app | M35: remembered locations and reauthorization |
+| Paths | `app_dirs`; macOS derived media uses `cache`, rotating logs use `logs`, phone staging uses `temp`; atomic finalization staging stays beside its destination | [M35 storage and recovery](./macos-files-and-lifecycle.md) |
+| Dialogs | `tauri-plugin-dialog` (native `NSOpenPanel`/`NSSavePanel` on macOS); no OS code in the app | M35: persisted native library selection, same-root reauthorization and hash-verified original relink |
 | Keychain / secrets | Nothing persists a secret: the worker token and phone tokens exist only in memory for one launch or session | M35: Keychain behind this module if a secret must persist (`secret_store` in the report) |
-| Processes | Worker and phone gateway by absolute path, argument arrays, piped stdin token, `kill_on_drop`; `hide_console` | M34: bundle-relative sidecars on macOS; M35: `SIGTERM`, quit and sleep/wake |
+| Processes | Worker and phone gateway by absolute path, argument arrays, piped stdin token, `kill_on_drop`; `hide_console` | M34: bundle-relative sidecars on macOS; M35: ordered quit/sleep/wake, stdin EOF recovery and guarded macOS tool sessions |
 | Menus | Tauri's default menu (`menus: default` in the report) | M38: native application menus and `Command` shortcuts |
-| Lifecycle | `RunEvent` handling in `host.rs` stops the worker and gateway on exit | M35: sleep/wake and forced-exit recovery; M38: quit confirmation |
-| Network prompts | Phone LAN off by default (M31 consent) | M35: explain the macOS local-network and firewall prompts |
+| Lifecycle | `RunEvent` handling in `host.rs` stops the worker and gateway on exit | M35: ordered native sleep/wake and forced-exit recovery; M38: quit confirmation |
+| Network prompts | Phone LAN off by default (M31 consent) | M35: purpose string and pre-QR local-network/firewall guidance |
 
 ## Version report
 
