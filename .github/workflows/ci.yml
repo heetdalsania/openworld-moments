@@ -210,6 +210,15 @@ jobs:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
       - run: pnpm --filter @openworld-moments/desktop test
+        if: matrix.arch != 'x86_64'
+      - name: Frontend validation (native Intel macOS)
+        if: matrix.arch == 'x86_64'
+        run: |
+          pnpm format:check:ts
+          pnpm lint:ts
+          pnpm typecheck:ts
+          pnpm test:ts
+          pnpm --filter @openworld-moments/desktop build
       - name: Verify and extract pinned media sources
         run: uv run --locked --no-dev --group packaging --directory services/media-worker python ../../scripts/windows/prepare-sources.py
       - uses: actions/cache@v6.1.0

@@ -151,52 +151,58 @@ it("loads a single primary track with source boundaries, filmstrip, labelled tri
   expect(screen.getByRole("heading", { name: "Export" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Render" })).toBeTruthy();
 });
-it("keyboard-only numeric trim/split/reorder/remove and undo/redo are command-backed and autosave/reload", async () => {
-  const user = userEvent.setup();
-  let view = editor();
-  await ready();
-  const input = screen.getByLabelText("Source in (ms)");
-  input.focus();
-  await user.clear(input);
-  await user.type(input, "13000");
-  await user.keyboard("{Enter}");
-  expect(screen.getByLabelText("Source in (ms)")).toHaveProperty("value", String(13000));
-  const offset = screen.getByLabelText("Split offset in cut (ms)");
-  offset.focus();
-  await user.clear(offset);
-  await user.type(offset, "1000");
-  await user.keyboard("{Enter}");
-  expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(3);
-  const move = screen.getByRole("button", { name: "Move later" });
-  move.focus();
-  await user.keyboard("{Enter}");
-  const ws = await openWorkspace(PID);
-  expect(ws.document.project.tracks[0]?.segments[1]?.source_in_ms).toBe(13000);
-  const remove = screen.getByRole("button", { name: "Remove selected cut" });
-  remove.focus();
-  await user.keyboard("{Enter}");
-  expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(2);
-  const section = screen.getByRole("heading", { name: fixture.project.title }).closest("section");
-  if (!section) throw new Error("editor");
-  section.focus();
-  await user.keyboard("{Control>}z{/Control}");
-  expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(3);
-  await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
-  expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(2);
-  await user.keyboard("{Control>}s{/Control}");
-  await waitFor(() =>
-    expect(screen.getByRole("status", { name: "Project save status" }).textContent).toContain(
-      "Saved",
-    ),
-  );
-  const saved = structuredClone(document);
-  view.unmount();
-  resetWorkspaces();
-  view = editor();
-  await ready();
-  expect((await openWorkspace(PID)).document).toEqual(saved);
-  view.unmount();
-});
+// This walkthrough drives the full keyboard sequence and reloads the saved project.
+// Allow extra time on shared CI runners while keeping the usual timeout for other tests.
+it(
+  "keyboard-only numeric trim/split/reorder/remove and undo/redo are command-backed and autosave/reload",
+  { timeout: 20_000 },
+  async () => {
+    const user = userEvent.setup();
+    let view = editor();
+    await ready();
+    const input = screen.getByLabelText("Source in (ms)");
+    input.focus();
+    await user.clear(input);
+    await user.type(input, "13000");
+    await user.keyboard("{Enter}");
+    expect(screen.getByLabelText("Source in (ms)")).toHaveProperty("value", String(13000));
+    const offset = screen.getByLabelText("Split offset in cut (ms)");
+    offset.focus();
+    await user.clear(offset);
+    await user.type(offset, "1000");
+    await user.keyboard("{Enter}");
+    expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(3);
+    const move = screen.getByRole("button", { name: "Move later" });
+    move.focus();
+    await user.keyboard("{Enter}");
+    const ws = await openWorkspace(PID);
+    expect(ws.document.project.tracks[0]?.segments[1]?.source_in_ms).toBe(13000);
+    const remove = screen.getByRole("button", { name: "Remove selected cut" });
+    remove.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(2);
+    const section = screen.getByRole("heading", { name: fixture.project.title }).closest("section");
+    if (!section) throw new Error("editor");
+    section.focus();
+    await user.keyboard("{Control>}z{/Control}");
+    expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(3);
+    await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+    expect(screen.getAllByRole("button", { name: /clip.mp4/ })).toHaveLength(2);
+    await user.keyboard("{Control>}s{/Control}");
+    await waitFor(() =>
+      expect(screen.getByRole("status", { name: "Project save status" }).textContent).toContain(
+        "Saved",
+      ),
+    );
+    const saved = structuredClone(document);
+    view.unmount();
+    resetWorkspaces();
+    view = editor();
+    await ready();
+    expect((await openWorkspace(PID)).document).toEqual(saved);
+    view.unmount();
+  },
+);
 it("does not invoke editing shortcuts while typing and rejects invalid trim without losing draft values", async () => {
   editor();
   await ready();
