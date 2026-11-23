@@ -777,7 +777,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "cyclonedx-python-lib", extras = ["json-validation"], specifier = ">=11,<12" },
+    { name = "cyclonedx-python-lib", extras = ["json-validation"], specifier = ">=11.12.0,<12" },
     { name = "httpx2", specifier = ">=2.16.0" },
     { name = "mypy", specifier = ">=2.4.1" },
     { name = "opencv-python-headless", specifier = ">=4.12,<5" },
