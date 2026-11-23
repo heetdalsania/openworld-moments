@@ -177,4 +177,4 @@ The run's failures were fixed with regression tests:
 ([prompt](./M29-windows-rerun-prompt.md)) was waived and has **not** been run.
 The phone upload of more than one video and the single-click model cancel are
 therefore verified by automated tests only, not on Windows hardware. They are deferred to the non-blocking
-[M40 — Windows deferred verification](./M40-windows-deferred-verification.md).
+[M40 — Deferred device verification](./M40-windows-deferred-verification.md).

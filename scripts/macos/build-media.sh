@@ -6,9 +6,9 @@
 #   uv run --directory services/media-worker python ../../scripts/windows/prepare-sources.py
 #   bash scripts/macos/build-media.sh arm64     # or x86_64; on a native Mac of that arch
 #
-# Static FFmpeg libraries, libx264 the only external codec, autodetection off (so no
-# VideoToolbox, AudioToolbox, Secure Transport, zlib or iconv): the executables link
-# only libSystem and run on macOS 14+. No user media is processed.
+# Static FFmpeg libraries, libx264 the only third-party codec, and explicitly
+# enabled Apple VideoToolbox frameworks. Autodetection stays off. No user media
+# is processed.
 set -euo pipefail
 arch="${1:?usage: build-media.sh arm64|x86_64}"
 case "$arch" in
@@ -52,6 +52,7 @@ toolchain="../../toolchain-$arch"
 ./configure --prefix=/opt/openworld-moments-unused --target-os=darwin --arch="$ffarch" --cc=clang \
   --disable-autodetect --disable-network --disable-doc --disable-debug \
   --disable-shared --enable-static --enable-gpl --enable-libx264 --disable-ffplay \
+  --enable-videotoolbox \
   --pkg-config-flags=--static \
   --extra-cflags="-I$toolchain/include $flags" \
   --extra-ldflags="-L$toolchain/lib -arch $arch -mmacosx-version-min=$minimum"
@@ -59,6 +60,11 @@ make -j"$(sysctl -n hw.logicalcpu)"
 
 mkdir -p "$out"
 cp ffmpeg ffprobe "$out/"
+# Check the compiled features, independently of whether this machine has hardware.
+encoders="$("$out/ffmpeg" -hide_banner -encoders)"
+accelerators="$("$out/ffmpeg" -hide_banner -hwaccels)"
+grep -Eq '[[:space:]]h264_videotoolbox[[:space:]]' <<< "$encoders"
+grep -qx 'videotoolbox' <<< "$accelerators"
 {
   clang --version | head -1
   echo "SDK $(xcrun --show-sdk-version)"

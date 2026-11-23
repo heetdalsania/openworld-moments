@@ -391,7 +391,8 @@ export interface RenderOptions {
 export const renderPresets = (): Promise<RenderPreset[]> => call("GET", "/v1/render/presets");
 
 /** Encoders that passed a real test encode with this FFmpeg; others carry a reason. */
-export const renderEncoders = (): Promise<RenderEncoders> => call("GET", "/v1/render/encoders");
+export const renderEncoders = (presetId: string): Promise<RenderEncoders> =>
+  call("GET", `/v1/render/encoders?preset_id=${encodeURIComponent(presetId)}`);
 
 /** Renders the project's last saved revision into the library. */
 export const renderProject = (id: string, options: RenderOptions): Promise<Job> =>

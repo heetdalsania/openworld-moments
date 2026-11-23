@@ -1,7 +1,8 @@
 ## Milestone handoff
 
 - Milestone: M31 — Accessibility, onboarding, and documentation
-- Outcome: **Implemented; not yet complete.** The Windows manual checks (a clean
+- Outcome: **Complete by maintainer decision.** The Windows manual checks below were
+  waived and deferred to the non-blocking [M40](./M40-windows-deferred-verification.md); they have not been run. The Windows manual checks (a clean
   standard-account pass through every guide, and Narrator/NVDA smoke tests) are
   outstanding; the [Windows runbook](./M31-windows-accessibility-runbook.md) lists them.
   Everything else is done and checked automatically or in a real browser engine.

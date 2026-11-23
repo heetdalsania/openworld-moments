@@ -90,7 +90,7 @@ beforeEach(() => {
     preset("horizontal-1080p30", "Horizontal 1080p, 30 fps"),
     preset("horizontal-720p30", "Horizontal 720p, 30 fps"),
   ]);
-  host.route("GET /v1/render/encoders", {
+  const encoders = {
     schema_version: "1.18",
     ffmpeg_version: "7.1.1",
     encoders: [
@@ -110,6 +110,16 @@ beforeEach(() => {
         reason: "Not built into this FFmpeg.",
       },
     ],
+  };
+  host.route("GET /v1/render/encoders?preset_id=horizontal-1080p30", encoders);
+  host.route("GET /v1/render/encoders?preset_id=horizontal-720p30", encoders);
+  host.route("GET /v1/render/encoders?preset_id=vertical-1080x1920-30", {
+    ...encoders,
+    encoders: encoders.encoders.map((e) =>
+      e.id === "h264_videotoolbox"
+        ? { ...e, available: false, reason: "The test encode failed for this preset." }
+        : e,
+    ),
   });
   host.route(`GET /v1/projects/${PID}/renders`, () => renders);
   host.route(`POST /v1/projects/${PID}/render`, (body: unknown) =>
@@ -281,7 +291,12 @@ describe("export panel", () => {
     panel();
     expect((await screen.findByRole("alert")).textContent).toContain("VideoToolbox stopped");
     expect(host.posts(`/v1/projects/${PID}/render`)).toEqual([]);
-    await user.click(screen.getByRole("button", { name: "Render with the CPU encoder instead" }));
+    const retry = screen.getByRole("button", { name: "Render with the CPU encoder instead" });
+    const presets = screen.getByRole("combobox", { name: /Preset/ });
+    await user.selectOptions(presets, "horizontal-720p30");
+    expect(retry).toHaveProperty("disabled", true);
+    await user.selectOptions(presets, "horizontal-1080p30");
+    await user.click(retry);
     expect(host.posts(`/v1/projects/${PID}/render`)).toEqual([
       { preset_id: "horizontal-1080p30", encoder: "libx264" },
     ]);
@@ -407,6 +422,26 @@ describe("export panel", () => {
     upsertJob({ ...running, state: "ready" });
     expect(await screen.findByText(/checks passed/)).toBeTruthy();
   });
+});
+
+it("reloads hardware availability for the selected size and falls back to CPU selection", async () => {
+  host.route("GET /v1/render/presets", [
+    preset("horizontal-1080p30", "Horizontal"),
+    { ...preset("vertical-1080x1920-30", "Vertical"), width: 1080, height: 1920 },
+  ]);
+  const user = userEvent.setup();
+  panel();
+  await screen.findByRole("option", { name: "Apple VideoToolbox" });
+  const encoder = screen.getByRole("combobox", { name: /Encoder/ });
+  await user.selectOptions(encoder, "h264_videotoolbox");
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Preset/ }),
+    "vertical-1080x1920-30",
+  );
+  expect(
+    await screen.findByRole("option", { name: "Apple VideoToolbox (unavailable)" }),
+  ).toHaveProperty("disabled", true);
+  expect(encoder).toHaveProperty("value", "libx264");
 });
 
 it("requires explicit vertical review and invalidates it when the document changes", async () => {

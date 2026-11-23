@@ -41,7 +41,7 @@ from openworld_moments.media.tools import MediaTools
 from openworld_moments.privacy.service import PrivacyError, PrivacyReviewService
 from openworld_moments.projects.service import ProjectError, ProjectService
 from openworld_moments.redaction import Redactor
-from openworld_moments.render.encoders import CPU, ENCODERS, EncoderProbe, EncoderSpec
+from openworld_moments.render.encoders import CPU, ENCODERS, VIDEOTOOLBOX, EncoderProbe, EncoderSpec
 from openworld_moments.render.plan import (
     LUT_NAMES,
     RenderError,
@@ -165,25 +165,34 @@ class Renderer:
 
     # -- catalog and status ----------------------------------------------------------
 
-    def encoder_status(self, *, refresh: bool = False) -> dict[str, Any]:
+    def encoder_status(
+        self, *, refresh: bool = False, preset_id: str | None = None
+    ) -> dict[str, Any]:
         tool = self.tools.tool("ffmpeg")
+        preset = self.presets.get(preset_id) if preset_id is not None else None
         return normalize(
             load(
                 "render-encoders",
                 {
                     "schema_version": SCHEMA_VERSION,
                     "ffmpeg_version": tool.version or "unknown",
-                    "encoders": self.probe.status(tool, refresh=refresh),
+                    "encoders": self.probe.status(tool, refresh=refresh, preset=preset),
                 },
             )
         )
 
-    def _encoder(self, encoder_id: str) -> EncoderSpec:
+    def _encoder(
+        self, encoder_id: str, preset: dict[str, Any], cancel: threading.Event | None = None
+    ) -> EncoderSpec:
         spec = self.encoders.get(encoder_id)
         if spec is None:
             raise RenderError("render.unknown_encoder", "That encoder is not supported.")
         if spec.kind == "hardware":
-            status = {e["id"]: e for e in self.encoder_status()["encoders"]}.get(spec.id)
+            tool = self.tools.tool("ffmpeg")
+            statuses = self.probe.status(
+                tool, preset=preset if spec.id == VIDEOTOOLBOX.id else None, cancel=cancel
+            )
+            status = next((entry for entry in statuses if entry["id"] == spec.id), None)
             if status is None or not status["available"]:
                 raise RenderError(
                     "render.encoder_unavailable",
@@ -202,8 +211,8 @@ class Renderer:
         state = self._project(params["project_id"])
         self._check_revision(state, params)
         self._privacy(state)
-        self.presets.get(params["preset_id"])
-        encoder = self._encoder(params.get("encoder", CPU.id))
+        preset = self.presets.get(params["preset_id"])
+        encoder = self._encoder(params.get("encoder", CPU.id), preset)
         self._check_sources(state)
         facts = {}
         used = {
@@ -229,7 +238,7 @@ class Renderer:
         build_plan(
             state["document"],
             facts,
-            self.presets.get(params["preset_id"]),
+            preset,
             encoder,
             ffmpeg_version="check",
             omit_text=bool(params.get("omit_text", False)),
@@ -417,6 +426,7 @@ class Renderer:
                     (rate.num, rate.den) if rate and rate.num > 0 and rate.den > 0 else None,
                     ToneMapSettings(transfer) if transfer else None,  # type: ignore[arg-type]
                     *display_size(video),
+                    video.color.range,
                 )
                 paths[aid] = path
                 stats[aid] = (before.st_size, before.st_mtime_ns)
@@ -451,7 +461,7 @@ class Renderer:
             self._check_sources(state)
             self._store(job_id, project_revision=state["revision"])
             preset = self.presets.get(params["preset_id"])
-            encoder = self._encoder(encoder_id)
+            encoder = self._encoder(encoder_id, preset, cancel)
             facts, paths, stats = self._verify(state, cancel)
             tool = self.tools.tool("ffmpeg")
             plan = build_plan(
@@ -543,7 +553,14 @@ class Renderer:
             raise RenderCancelled from exc
         except RenderError as exc:
             fallback = None
-            if exc.code == "render.hardware_encoder_failed":
+            if exc.code == "render.hardware_encoder_failed" or (
+                encoder_id == VIDEOTOOLBOX.id
+                and exc.code
+                in {
+                    "render.encoder_unavailable",
+                    "render.validation_failed",
+                }
+            ):
                 fallback = {"encoder": CPU.id, "reason": exc.message}
             self._store(
                 job_id,

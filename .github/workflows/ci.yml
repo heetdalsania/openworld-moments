@@ -217,7 +217,7 @@ jobs:
         with:
           path: output/packaging/media
           key: macos-${{ matrix.arch }}-media-${{ hashFiles('scripts/windows/sources.json', 'scripts/macos/build-media.sh') }}
-      - name: Build FFmpeg and FFprobe with libx264 only (macOS 14+)
+      - name: Build FFmpeg and FFprobe with libx264 and VideoToolbox (macOS 14+)
         if: steps.media-cache.outputs.cache-hit != 'true'
         run: |
           if [ "${{ matrix.arch }}" = "x86_64" ]; then brew install nasm; fi
@@ -247,6 +247,27 @@ jobs:
         run: python3 scripts/macos/build-shell.py --arch ${{ matrix.arch }}
       - name: Bundled runtime smoke (empty environment, Unicode paths, CPU render, damage)
         run: python3 scripts/macos/runtime-smoke.py "target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app/Contents/Resources/runtime"
+      - name: Media and render matrix using the bundled tools
+        env:
+          OWM_REQUIRE_FFMPEG: "1"
+        run: |
+          # Only the fixture generator needs libx265. All application tests use the packaged binary.
+          if ! ffmpeg -hide_banner -encoders 2>/dev/null | grep ' libx265 ' >/dev/null; then
+            brew install ffmpeg
+          fi
+          export OWM_FIXTURE_FFMPEG="$(command -v ffmpeg)"
+          RUNTIME="$GITHUB_WORKSPACE/target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app/Contents/Resources/runtime"
+          export OWM_FFMPEG="$RUNTIME/tools/ffmpeg"
+          export OWM_FFPROBE="$RUNTIME/tools/ffprobe"
+          export OWM_MACOS_MEDIA_REPORT="$GITHUB_WORKSPACE/output/packaging/macos/media-parity-${{ matrix.arch }}.json"
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            export OPENSSL_DIR="$GITHUB_WORKSPACE/output/packaging/openssl-x86_64"
+            export OPENSSL_STATIC=1 MACOSX_DEPLOYMENT_TARGET=14.0
+          fi
+          uv sync --locked --all-packages --group packaging
+          uv run --no-sync --directory services/media-worker pytest \
+            tests/render tests/media/test_macos_media.py tests/media/test_derived.py \
+            tests/media/test_render.py tests/media/test_vertical_render.py
       - name: SBOM for this architecture, verified against the runtime; secret and path scan
         run: |
           RUNTIME=../../apps/desktop/src-tauri/bundle-input/runtime

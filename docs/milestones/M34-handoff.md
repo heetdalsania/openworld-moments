@@ -1,7 +1,8 @@
 ## Milestone handoff
 
 - Milestone: M34 — macOS worker and media toolchain
-- Outcome: **Implemented; not yet complete.**
+- Outcome: **Complete by maintainer decision.** The physical Intel Mac launch below was
+  waived and deferred to the non-blocking [M40](./M40-windows-deferred-verification.md); it has not been run.
   - **Still to run:** a physical Intel Mac launch (together with M33's). Both
     architectures now pass CI on native runners: the Intel job freezes the worker with
     the source-built cryptography, passes the Mach-O audit, the runtime smoke and the

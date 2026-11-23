@@ -22,7 +22,7 @@ from openworld_moments.privacy.blur import pixels as blur_pixels
 from openworld_moments.render.encoders import EncoderSpec, video_args
 from openworld_moments.render.layout import FIT, fit_rect, pixels, position_expression, warnings
 
-ENGINE_VERSION = "1.2.0"
+ENGINE_VERSION = "1.3.0"
 AUDIO_RATE = 48000
 #: One FFmpeg input per segment piece; bounded for argv length (Windows: 32 767 chars).
 MAX_PIECES = 120
@@ -63,6 +63,7 @@ class SourceFacts:
     tone_map: ToneMapSettings | None
     width: int = 1920
     height: int = 1080
+    color_range: str | None = None
 
 
 def _seconds(ms: int) -> str:
@@ -301,8 +302,9 @@ def _video_chain(
 ) -> list[str]:
     steps: list[str] = []
     if source.tone_map is not None:
+        source_range = "pc" if source.color_range == "pc" else "tv"
         steps += [
-            "scale=in_color_matrix=bt2020:in_range=tv",
+            f"scale=in_color_matrix=bt2020:in_range={source_range}",
             "format=gbrp16le",
             f"lut3d=file={LUT_NAMES[source.tone_map.transfer]}:interp={source.tone_map.interpolation}",
             "scale=out_color_matrix=bt709:out_range=tv",
@@ -472,6 +474,20 @@ def compile_plan(
         "[vout]",
         *(["-map", "[aout]"] if with_audio else ["-an"]),
         *video_args(encoder, preset),
+        *(
+            [
+                "-color_primaries",
+                "bt709",
+                "-color_trc",
+                "bt709",
+                "-colorspace",
+                "bt709",
+                "-color_range",
+                "tv",
+            ]
+            if any(source.tone_map is not None for source in sources)
+            else []
+        ),
         *(
             [
                 "-c:a",

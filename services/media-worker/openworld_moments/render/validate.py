@@ -173,6 +173,7 @@ def validate_output(
         f"{duration_ms} ms (target {target} ms, tolerance {DURATION_TOLERANCE_MS} ms)",
     )
     out = plan["output"]
+    sdr_color_ok = True
     if len(videos) == 1:
         video = videos[0]
         fps = _fps(video.get("avg_frame_rate"))
@@ -201,6 +202,12 @@ def validate_output(
             f"{float(fps) if fps else 0:.3f} fps (target {float(wanted):.3f})",
         )
         check("rotation", audit["video"]["rotation"] == 0, "Upright, no rotation metadata")
+        if any(source.get("tone_mapped") for source in plan["sources"]):
+            colors = tuple(
+                video.get(key)
+                for key in ("color_primaries", "color_transfer", "color_space", "color_range")
+            )
+            sdr_color_ok = colors == ("bt709", "bt709", "bt709", "tv")
     else:
         check("video_stream", False, f"{len(videos)} video streams (expected 1)")
     if audios:
@@ -223,9 +230,10 @@ def validate_output(
         + (f", {audit['audio']['codec']}" if audios else ""),
     )
     extra = set(audit["tags"]) - ALLOWED_TAGS
-    check(
-        "metadata", not extra, "No source metadata copied" if not extra else "Unexpected tags kept"
-    )
+    metadata_detail = "Unexpected tags kept" if extra else "No source metadata copied"
+    if not sdr_color_ok:
+        metadata_detail = "Tone-mapped output is missing BT.709 limited-range tags"
+    check("metadata", not extra and sdr_color_ok, metadata_detail)
 
     ffmpeg = tools.tool("ffmpeg")
     points = {

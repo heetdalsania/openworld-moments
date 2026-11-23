@@ -317,7 +317,7 @@ def test_probe_requires_a_real_test_encode(monkeypatch: pytest.MonkeyPatch) -> N
     assert not statuses["h264_nvenc"]["available"]
     assert "test encode failed" in statuses["h264_nvenc"]["reason"]
     assert statuses["h264_qsv"]["reason"] == "Not built into this FFmpeg."
-    encodes = [c for c in calls if "testsrc2=size=320x240:rate=30:duration=0.5" in c]
+    encodes = [c for c in calls if any(arg.startswith("testsrc2=") for arg in c)]
     assert len(encodes) == 3  # every built encoder is actually exercised
     before = len(calls)
     EncoderProbe.status  # noqa: B018 - cached per FFmpeg version below
@@ -335,6 +335,57 @@ def test_failure_mapping_offers_cpu_fallback_only_for_hardware() -> None:
     assert failure_from_stderr(
         "av_interleaved_write_frame(): No space left on device", CPU
     ).code == ("render.disk_full")
+
+
+def test_videotoolbox_probe_distinguishes_presets_and_does_not_cache_cancellation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from openworld_moments.media.process import ToolCancelled
+    from openworld_moments.media.tools import ToolInfo
+
+    calls: list[str] = []
+
+    def fake_run(argv: list[str], **_: Any) -> ToolResult:
+        if "-encoders" in argv:
+            return ToolResult(0, b" V....D h264_videotoolbox  VT\n", "")
+        target = argv[argv.index("-i") + 1]
+        assert "+yuv420p" in argv
+        assert argv[argv.index("-allow_sw") + 1] == "0"
+        calls.append(target)
+        if len(calls) == 1:
+            raise ToolCancelled("cancelled")
+        return ToolResult(int("1080x1920" in target), b"", "")
+
+    monkeypatch.setattr(encoder_module, "run_tool", fake_run)
+    tool = ToolInfo("ffmpeg", ("ffmpeg",), "test", "ok", version="9.0.2")
+    probe = EncoderProbe({"h264_videotoolbox": ENCODERS["h264_videotoolbox"]})
+    horizontal = copy.deepcopy(encoder_module.PROBE_PRESET)
+    vertical = {**horizontal, "width": 1080, "height": 1920}
+    with pytest.raises(ToolCancelled):
+        probe.status(tool, preset=horizontal)
+    assert probe.status(tool, preset=horizontal)[0]["available"]
+    assert not probe.status(tool, preset=vertical)[0]["available"]
+    assert not probe.status(tool, preset={**vertical, "fps": "source"})[0]["available"]
+    assert probe.status(tool, preset=horizontal)[0]["available"]
+    assert len(calls) == 3
+
+
+def test_intel_videotoolbox_uses_bitrate_instead_of_unsupported_quality_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(encoder_module, "sys", SimpleNamespace(platform="darwin"))
+    monkeypatch.setattr(encoder_module, "platform", SimpleNamespace(machine=lambda: "x86_64"))
+    preset = {**encoder_module.PROBE_PRESET, "video": {"codec": "h264", "crf": 20}}
+    args = video_args(encoder_module.VIDEOTOOLBOX, preset)
+    assert "-q:v" not in args
+    assert args[args.index("-b:v") + 1] == "12000k"
+    explicit = video_args(
+        encoder_module.VIDEOTOOLBOX,
+        {**preset, "video": {"codec": "h264", "bitrate_kbps": 3200}},
+    )
+    assert explicit[explicit.index("-b:v") + 1] == "3200k"
 
 
 def test_output_estimate_scales_with_duration_and_bitrate() -> None:
