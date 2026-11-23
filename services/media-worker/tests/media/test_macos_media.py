@@ -76,6 +76,8 @@ def make_hlg_fixture(ffmpeg: ToolInfo, target: Path) -> None:
 def test_native_macos_media_matrix(
     tools: MediaTools, ffmpeg: ToolInfo, ffprobe: ToolInfo, media_dir: Path, tmp_path: Path
 ) -> None:
+    if sys.platform == "win32":  # `resource` is POSIX-only; tells mypy on Windows too
+        pytest.skip("native macOS media matrix")
     import resource
 
     hevc = media_dir / "hevc.mp4"
