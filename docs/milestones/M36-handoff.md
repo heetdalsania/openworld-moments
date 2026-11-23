@@ -1,8 +1,9 @@
 ## Milestone handoff
 
 - Milestone: M36 — macOS media and render parity
-- Outcome: Implementation and Apple Silicon synthetic validation are in place.
-  Full completion requires the Intel hardware results and packaged-player walkthrough.
+- Outcome: **Complete by maintainer decision.** Implementation and Apple Silicon synthetic
+  validation are in place. The Intel hardware results and packaged-player walkthrough
+  were waived and deferred to the non-blocking [M40](./M40-windows-deferred-verification.md); they have not been run.
 - Files and modules changed: macOS FFmpeg build and native CI matrix, worker
   encoder probe and render validation, Export panel and host allowlist, synthetic
   media tests, README and milestone ledger.

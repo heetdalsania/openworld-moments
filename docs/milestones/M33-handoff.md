@@ -1,7 +1,8 @@
 ## Milestone handoff
 
 - Milestone: M33 — macOS foundation and CI
-- Outcome: **Implemented; not yet complete.**
+- Outcome: **Complete by maintainer decision.** The physical Intel Mac launch below was
+  waived and deferred to the non-blocking [M40](./M40-windows-deferred-verification.md); it has not been run.
   - **Still to run:**
     - the physical launch smoke test on an Intel Mac;
     - an on-screen look at the system-check line on the Apple Silicon Mac (the screen

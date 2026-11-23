@@ -1,6 +1,6 @@
 # M35 physical Mac validation
 
-Status: **pending**. Run on a clean macOS account with the M35 development app, an external drive, a configured OneDrive File Provider folder and a phone. Record build SHA, architecture, macOS version, hardware and observed permissions. Use only synthetic/owned clips. Do not change M32 or deferred earlier-milestone results.
+Status: **waived by maintainer decision; deferred to the non-blocking [M40](./M40-windows-deferred-verification.md)**. Not yet run. Run on a clean macOS account with the M35 development app, an external drive, a configured OneDrive File Provider folder and a phone. Record build SHA, architecture, macOS version, hardware and observed permissions. Use only synthetic/owned clips. Do not change M32 or deferred earlier-milestone results.
 
 1. Start with phone transfer off. Check files appear only in the [documented paths](../platforms/macos-files-and-lifecycle.md#files-and-storage). Import a local Unicode/long-path clip using native selection; verify its SHA-256 is unchanged. Prepare playback, delete only the disposable cache, and rebuild it.
 2. Configure only one watched capture folder. Put a clip in a different, unconfigured folder and confirm it is never scanned/imported. Add a slowly copying clip to the configured folder: import only after completion and stability. Restart and verify no duplicate asset/import job.
