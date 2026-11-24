@@ -41,12 +41,12 @@ attestation, which proves the file came from this repository's CI workflow at a
 specific commit. With the [GitHub CLI](https://cli.github.com/):
 
 ```bash
-gh attestation verify OpenWorld-Moments_0.1.0-alpha.29_Windows_x64-setup.exe \
+gh attestation verify OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe \
   --repo heetdalsania/openworld-moments
 ```
 
-Pull-request builds are not attested; only use packages from `main`, and later
-from published releases.
+Pull-request builds are not attested; only use packages from published releases or
+from `main`.
 
 ## 3. Read the SBOM
 

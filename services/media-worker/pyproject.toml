@@ -59,7 +59,7 @@ python_version = "3.12"
 strict = true
 files = ["openworld_moments", "tests"]
 # Supply-chain scripts imported by tests/security (M30) are type-checked too.
-mypy_path = ["../../scripts/security", "../../scripts/windows"]
+mypy_path = ["../../scripts/security", "../../scripts/windows", "../../scripts/release"]
 
 # OpenTimelineIO (test-only validator for M27 exports) ships no type information.
 [[tool.mypy.overrides]]

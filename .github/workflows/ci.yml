@@ -391,13 +391,14 @@ jobs:
       - name: Stage the test-only upgrade installer for client qualification
         shell: pwsh
         run: |
-          $upgrade = Get-ChildItem 'target/x86_64-pc-windows-msvc/release/bundle/nsis/*alpha.29.1*-setup.exe' | Select-Object -First 1
+          $version = (Get-Content -Raw -LiteralPath 'apps/desktop/src-tauri/tauri.packaged.conf.json' | ConvertFrom-Json).version
+          $upgrade = Get-ChildItem "target/x86_64-pc-windows-msvc/release/bundle/nsis/*_${version}.1_*-setup.exe" | Select-Object -First 1
           if (-not $upgrade) { throw 'Upgrade package missing' }
           $out = New-Item -ItemType Directory -Force -Path 'output/packaging/upgrade-test'
           Copy-Item -LiteralPath $upgrade.FullName -Destination $out
           $hash = (Get-FileHash -LiteralPath (Join-Path $out $upgrade.Name) -Algorithm SHA256).Hash.ToLowerInvariant()
           Set-Content -Path (Join-Path $out 'SHA256SUMS.txt') -Value "$hash  $($upgrade.Name)" -Encoding ascii
-          Set-Content -Path (Join-Path $out 'README.txt') -Encoding utf8 -Value 'TEST ONLY. Same source and frozen runtime as the candidate with version 0.1.0-alpha.29.1, used solely to exercise the M29 upgrade path on a clean Windows 11 client. Never distribute.'
+          Set-Content -Path (Join-Path $out 'README.txt') -Encoding utf8 -Value "TEST ONLY. Same source and frozen runtime as the candidate with version $version.1, used solely to exercise the upgrade path on a clean Windows 11 client. Never distribute."
       - name: Assemble checksums, source, notices and SBOM
         run: uv run --locked --group packaging --directory services/media-worker python ../../scripts/windows/artifacts.py
       - name: Verify the SBOM against the package and scan artifacts for secrets and paths

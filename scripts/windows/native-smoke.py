@@ -14,6 +14,10 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from release_version import packaged_version, upgrade_test_version  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "output/packaging"
 
@@ -105,7 +109,8 @@ def exercise(page, installed: Path, mode: str) -> None:
             raise RuntimeError(f"Packaged worker did not become ready: {status}")
         time.sleep(0.25)
     identity = page.evaluate("() => window.__TAURI_INTERNALS__.invoke('app_info')")
-    expected = "0.1.0-alpha.29.1" if mode == "upgrade" else "0.1.0-alpha.29"
+    version = packaged_version(ROOT)
+    expected = upgrade_test_version(version) if mode == "upgrade" else version
     assert identity["version"] == expected, identity
     doctor = api("GET", "/v1/system-doctor")
     assert doctor["packaged"] and doctor["ready"], doctor["checks"]
@@ -195,6 +200,26 @@ def exercise(page, installed: Path, mode: str) -> None:
             )
         )
         assert rendered["state"] == "ready"
+        # M32: the alpha promises both aspect ratios, so the packaged smoke renders the
+        # 9:16 preset too, with the layout explicitly reviewed as a user would confirm it.
+        vertical = finish(
+            api(
+                "POST",
+                f"/v1/projects/{pid}/render",
+                {
+                    "preset_id": "vertical-1080x1920-30",
+                    "encoder": "libx264",
+                    "expected_revision": project["revision"],
+                    "review_layout": True,
+                },
+            )
+        )
+        assert vertical["state"] == "ready"
+        renders = api("GET", f"/v1/projects/{pid}/renders")
+        assert {r["preset_id"] for r in renders if r["status"] == "ready"} >= {
+            "horizontal-1080p30",
+            "vertical-1080x1920-30",
+        }, renders
         assert hashlib.sha256(clip.read_bytes()).hexdigest() == digest
         (OUT / "saved-project-id.txt").write_text(pid)
     else:

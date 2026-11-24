@@ -90,16 +90,23 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
         (scripts / name).write_text("build input fixture")
     (tmp_path / "scripts/packaging").mkdir()
     (tmp_path / "scripts/packaging/runtime_bundle.py").write_text("build input fixture")
+    config = tmp_path / "apps/desktop/src-tauri"
+    config.mkdir(parents=True)
+    (config / "tauri.packaged.conf.json").write_text('{"version": "0.1.0-alpha.7"}')
     installers = tmp_path / "target/x86_64-pc-windows-msvc/release/bundle/nsis"
     installers.mkdir(parents=True)
-    (installers / "Moments_0.1.0-alpha.29_x64-setup.exe").write_bytes(b"installer fixture")
+    (installers / "Moments_0.1.0-alpha.7_x64-setup.exe").write_bytes(b"installer fixture")
+    # M32: the test-only upgrade build (<version>.1) never enters the release set.
+    (installers / "Moments_0.1.0-alpha.7.1_x64-setup.exe").write_bytes(b"upgrade fixture")
     module.main()
     release = out / "release"
     (release / "stale-media.mp4").write_bytes(b"never include stale generated media")
     module.main()
     assert not (release / "stale-media.mp4").exists()
+    raw = (release / "checksums.txt").read_bytes()
+    assert b"\r" not in raw  # LF only, on Windows too, so sha256sum -c works everywhere
     listed = []
-    for line in (release / "checksums.txt").read_text().splitlines():
+    for line in raw.decode("utf-8").splitlines():
         expected, name = line.split("  ", 1)
         listed.append(name)
         assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
@@ -107,6 +114,8 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
     assert "runtime-notices.zip" in listed
     assert {"sbom.cdx.json", "SECURITY.md", "VERIFY.md", "runtime_bundle.py"} <= set(listed)
     assert "config.log" not in listed
+    assert "OpenWorld-Moments_0.1.0-alpha.7_Windows_x64-setup.exe" in listed
+    assert not [name for name in listed if "alpha.7.1" in name]
 
 
 def test_stdlib_archive_normalization_preserves_code_and_detects_changes(tmp_path: Path) -> None:

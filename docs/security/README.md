@@ -63,7 +63,7 @@ its gate.
   `machine-learning-model` components with `scope: excluded` (download-only, never
   shipped), with license, revision, size and SHA-256.
 - **Files:** every packaged runtime file with its SHA-256 (1,936 in
-  0.1.0-alpha.29).
+  0.1.0-alpha.29; the exact count for each release is in its `sbom.cdx.json`).
 - **Not included:** WebView2, a Microsoft-managed Windows component (recorded on the
   root component).
 
