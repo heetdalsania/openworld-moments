@@ -253,15 +253,18 @@ class Run(Protocol):
         self,
         args: Sequence[str],
         *,
-        sensitive: bool = False,
+        label: str | None = None,
         check: bool = True,
         timeout: float = 1800,
     ) -> Result: ...
 
 
 class Runner:
-    """Runs a program by argument array. Output is scrubbed of secret values; a
-    `sensitive` command is logged by program and subcommand only."""
+    """Runs a program by argument array. Output is scrubbed of secret values.
+
+    A command that carries a secret must pass `label`, a literal such as
+    "security import": its log line and any error are built from the label alone,
+    never from `args`, so no argument can reach a log."""
 
     def __init__(self, redact: Redactor, echo: Callable[[str], None] = print) -> None:
         self.redact = redact
@@ -271,26 +274,26 @@ class Runner:
         self,
         args: Sequence[str],
         *,
-        sensitive: bool = False,
+        label: str | None = None,
         check: bool = True,
         timeout: float = 1800,
     ) -> Result:
-        program = Path(args[0]).name
-        shown = (
-            " ".join([program, *args[1:2]]) + " [arguments withheld]"
-            if sensitive
-            else shlex.join([program, *args[1:]])
-        )
-        self.echo(f"$ {self.redact(shown)}")
+        if label is not None:
+            name = label
+            self.echo(f"$ {label} [arguments withheld]")
+        else:
+            name = Path(args[0]).name
+            self.echo(f"$ {self.redact(shlex.join([name, *args[1:]]))}")
         try:
             done = subprocess.run(  # noqa: S603 - argument array, no shell
                 list(args), capture_output=True, text=True, timeout=timeout, check=False
             )
         except (OSError, subprocess.TimeoutExpired) as error:
-            raise SigningError(f"{program}: {self.redact(str(error))}") from None
+            reason = type(error).__name__ if label is not None else self.redact(str(error))
+            raise SigningError(f"{name}: {reason}") from None
         result = Result(done.returncode, self.redact(done.stdout), self.redact(done.stderr))
         if check and result.returncode != 0:
-            raise SigningError(f"{program} failed ({result.returncode}): {tail(result.text)}")
+            raise SigningError(f"{name} failed ({result.returncode}): {tail(result.text)}")
         return result
 
 
@@ -643,7 +646,7 @@ def notarize(
         result = run(
             ["/usr/bin/xcrun", "notarytool", "submit", str(upload), *auth,
              "--wait", "--timeout", "45m", "--output-format", "json"],
-            sensitive=True, check=False, timeout=3000,
+            label="xcrun notarytool submit", check=False, timeout=3000,
         )  # fmt: skip
         try:
             submission = json.loads(result.stdout)
@@ -655,7 +658,7 @@ def notarize(
         log_path = logs / f"notarization-{label}.json"
         fetched = run(
             ["/usr/bin/xcrun", "notarytool", "log", submission_id, *auth, str(log_path)],
-            sensitive=True, check=False, timeout=600,
+            label="xcrun notarytool log", check=False, timeout=600,
         )  # fmt: skip
         log = None
         if fetched.returncode == 0 and log_path.is_file():
@@ -719,19 +722,25 @@ def signing_keychain(
     security = "/usr/bin/security"
     try:
         write_private(certificate, credentials.p12)
-        run([security, "create-keychain", "-p", password, str(keychain)], sensitive=True)
+        run(
+            [security, "create-keychain", "-p", password, str(keychain)],
+            label="security create-keychain",
+        )
         run([security, "set-keychain-settings", "-lut", "21600", str(keychain)])
-        run([security, "unlock-keychain", "-p", password, str(keychain)], sensitive=True)
+        run(
+            [security, "unlock-keychain", "-p", password, str(keychain)],
+            label="security unlock-keychain",
+        )
         run(
             [security, "import", str(certificate), "-k", str(keychain),
              "-P", credentials.p12_password, "-f", "pkcs12", "-T", "/usr/bin/codesign"],
-            sensitive=True,
+            label="security import",
         )  # fmt: skip
         certificate.unlink()
         run(
             [security, "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
              "-s", "-k", password, str(keychain)],
-            sensitive=True,
+            label="security set-key-partition-list",
         )  # fmt: skip
         previous = _keychain_list(run)
         run([security, "list-keychains", "-d", "user", "-s", str(keychain), *previous])

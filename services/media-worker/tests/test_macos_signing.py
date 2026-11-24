@@ -156,12 +156,12 @@ class Fake:
         self,
         args: Sequence[str],
         *,
-        sensitive: bool = False,
+        label: str | None = None,
         check: bool = True,
         timeout: float = 1800,
     ) -> Any:
         args = list(args)
-        self.calls.append((args, sensitive))
+        self.calls.append((args, label is not None))
         program = Path(args[0]).name
         out, err, code = "", "", 0
         if program == "codesign" and "--force" in args:
@@ -300,16 +300,23 @@ def test_runner_withholds_sensitive_arguments_and_scrubs_output() -> None:
     echoed: list[str] = []
     run = signing.Runner(signing.Redactor([secret]), echoed.append)
     script = f"import sys; print({secret!r}); print({secret!r}, file=sys.stderr)"
-    result = run([sys.executable, "-c", script, "-P", secret], sensitive=True)
+    result = run([sys.executable, "-c", script, "-P", secret], label="python secret-test")
     assert secret not in result.stdout and secret not in result.stderr
     assert "[REDACTED]" in result.stdout
     assert echoed and all(secret not in line for line in echoed)
-    assert "arguments withheld" in echoed[0]
+    # The log line of a labelled command is the label alone, never derived from args.
+    assert echoed[0] == "$ python secret-test [arguments withheld]"
     with pytest.raises(signing.SigningError) as error:
-        run([sys.executable, "-c", script + "; sys.exit(4)"], sensitive=True)
+        run([sys.executable, "-c", script + "; sys.exit(4)"], label="python secret-test")
     assert secret not in str(error.value) and "(4)" in str(error.value)
     with pytest.raises(signing.SigningError, match="missing-program"):
         run(["/nonexistent/missing-program"])
+    with pytest.raises(signing.SigningError) as missing:
+        run([f"/nonexistent/{secret}"], label="security import")
+    assert secret not in str(missing.value) and str(missing.value).startswith("security import:")
+    # Unlabelled commands are echoed in full, but still scrubbed.
+    run([sys.executable, "-c", "pass", secret])
+    assert secret not in echoed[-1] and "[REDACTED]" in echoed[-1]
 
 
 # -- signing order and commands ------------------------------------------------------------
@@ -601,7 +608,7 @@ def test_ad_hoc_mode_ignores_credentials(tmp_path: Path) -> None:
 def assert_no_secrets(fake: Fake, tmp_path: Path, *texts: str) -> None:
     for args, sensitive in fake.calls:
         if any(secret in " ".join(args) for secret in SECRETS):
-            assert sensitive, f"{args[:2]} carries a secret but is not marked sensitive"
+            assert sensitive, f"{args[:2]} carries a secret but has no log label"
     for path in (tmp_path / "out").rglob("*"):
         if path.is_file():
             content = path.read_bytes()

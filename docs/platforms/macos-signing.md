@@ -217,8 +217,9 @@ How they are protected:
   - a final `always()` step deletes any `owm-signing` keychain that is left over.
 - **API key:** the `.p8` is written mode 0600 into a temporary folder and deleted after
   each `notarytool` call.
-- **Logs:** commands that carry a secret are logged as
-  `security import [arguments withheld]`, and all program output is scrubbed of every
+- **Logs:** a command that carries a secret must pass a literal label to the runner.
+  Its log line and any error are built from that label alone, never from the
+  arguments (`security import [arguments withheld]`), and all program output is scrubbed of every
   secret value, including the decoded key's lines. Tests cover partial and malformed
   credentials, redaction, and the absence of secrets from logs, errors and every output
   file.
