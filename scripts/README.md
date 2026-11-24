@@ -18,4 +18,11 @@ called only from a job that pins its OS.
   environment: doctor, import, render, cancellation, missing/corrupt tools (M34).
 - `macos/build-openssl.sh` — static OpenSSL LTS for macOS 14 from `macos/openssl.json`,
   for the Intel source build of cryptography (M34).
+- `macos/sign-and-package.py` — M37: signs a built app inside out with the Hardened
+  Runtime (ad hoc without Apple credentials, Developer ID with them), re-hashes the
+  runtime inventory, notarizes and staples when credentials exist, builds the
+  architecture-labelled DMG, and verifies signatures and Gatekeeper (`package`); checks
+  a DMG by install, replace, tamper and uninstall (`verify-dmg`); writes `checksums.txt`
+  (`checksums`); reports the signing mode (`check-credentials`). See
+  `docs/platforms/macos-signing.md`.
 - `packaging/runtime_bundle.py` — freeze steps shared by the Windows and macOS builds.

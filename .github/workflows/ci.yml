@@ -280,6 +280,30 @@ jobs:
             --exceptions ../../security/artifact-scan-exceptions-macos.json --report $OUT/artifact-scan.json
           cp apps/desktop/src-tauri/bundle-input/runtime/inventory.json output/packaging/macos/runtime-inventory-${{ matrix.arch }}.json
           cp output/packaging/macos-runtime-smoke.json output/packaging/macos/runtime-smoke-${{ matrix.arch }}.json
+      # M37: pull requests never see Apple credentials (they live only in the protected
+      # macos-release environment, .github/workflows/macos-release.yml), so this signs
+      # ad hoc with the Hardened Runtime, builds the architecture-labelled DMG and reports
+      # notarization as SKIPPED. The unsigned zip above is what the release workflow signs.
+      - name: Signing mode (pull requests have no Apple credentials; expect SKIPPED)
+        run: python3 scripts/macos/sign-and-package.py check-credentials
+      - name: Sign inside out (ad hoc, Hardened Runtime), build and sign the DMG
+        run: python3 scripts/macos/sign-and-package.py package --arch ${{ matrix.arch }} --mode adhoc
+      - name: Signed runtime smoke (Hardened Runtime, re-hashed inventory)
+        run: python3 scripts/macos/runtime-smoke.py "target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app/Contents/Resources/runtime"
+      - name: DMG install, replace, tamper and uninstall checks
+        run: python3 scripts/macos/sign-and-package.py verify-dmg output/packaging/macos/release-${{ matrix.arch }}/*.dmg --arch ${{ matrix.arch }} --expect adhoc
+      - name: DMG SBOM and checksums, verified against the signed runtime; secret and path scan
+        run: |
+          APP="../../target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app"
+          REL=../../output/packaging/macos/release-${{ matrix.arch }}
+          RUN="uv run --locked --no-dev --group packaging --with cyclonedx-python-lib[json-validation]==11.12.0 --directory services/media-worker python"
+          DMG="../../$(ls output/packaging/macos/release-${{ matrix.arch }}/*.dmg)"
+          $RUN ../../scripts/security/sbom.py --inventory "$APP/Contents/Resources/runtime/inventory.json" --installer "$DMG" --output $REL/sbom-macos-${{ matrix.arch }}.cdx.json
+          python3 scripts/macos/sign-and-package.py checksums output/packaging/macos/release-${{ matrix.arch }}
+          $RUN ../../scripts/security/verify_sbom.py --sbom $REL/sbom-macos-${{ matrix.arch }}.cdx.json \
+            --inventory "$APP/Contents/Resources/runtime/inventory.json" --runtime-dir "$APP/Contents/Resources/runtime" --release-dir $REL
+          $RUN ../../scripts/security/scan_artifacts.py $REL \
+            --exceptions ../../security/artifact-scan-exceptions-macos-release.json --report ../../output/packaging/macos/release-scan-${{ matrix.arch }}.json
       - uses: actions/upload-artifact@v7.0.2
         if: success()
         with:

@@ -1,7 +1,11 @@
 {
   "bundle": {
+    "category": "Video",
+    "copyright": "© OpenWorld Moments contributors. AGPL-3.0-or-later.",
+    "shortDescription": "Local-first gameplay capture library and story editor",
     "macOS": {
-      "minimumSystemVersion": "14.0"
+      "minimumSystemVersion": "14.0",
+      "hardenedRuntime": true
     }
   }
 }
