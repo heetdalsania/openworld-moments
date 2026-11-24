@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from build_paths import redact  # noqa: E402
+from release_version import installer_name, packaged_version  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "output/packaging"
@@ -41,14 +42,18 @@ def main() -> None:
     if release.exists():
         shutil.rmtree(release)
     release.mkdir()
+    # M32: the version comes from the packaged Tauri overlay; the trailing "_" keeps the
+    # test-only upgrade installer (<version>.1) out of the release set.
+    version = packaged_version(ROOT)
+    installer = release / installer_name(version)
     installers = list(
-        (ROOT / "target/x86_64-pc-windows-msvc/release/bundle/nsis").glob("*alpha.29_*-setup.exe")
+        (ROOT / "target/x86_64-pc-windows-msvc/release/bundle/nsis").glob(
+            f"*_{version}_*-setup.exe"
+        )
     )
     if len(installers) != 1:
-        raise RuntimeError("Expected exactly one M29 alpha installer")
-    shutil.copyfile(
-        installers[0], release / "OpenWorld-Moments_0.1.0-alpha.29_Windows_x64-setup.exe"
-    )
+        raise RuntimeError(f"Expected exactly one {version} installer")
+    shutil.copyfile(installers[0], installer)
     for path in (OUT / "sources").iterdir():
         shutil.copyfile(path, release / path.name)
     for path in (
@@ -75,7 +80,7 @@ def main() -> None:
         (release / path).write_text(redact(text), encoding="utf-8")
     # M30: a CycloneDX SBOM of exactly this package, plus the disclosure policy and
     # verification instructions, all covered by checksums.txt below.
-    write_sbom(release / "OpenWorld-Moments_0.1.0-alpha.29_Windows_x64-setup.exe", release)
+    write_sbom(installer, release)
     shutil.copyfile(ROOT / "SECURITY.md", release / "SECURITY.md")
     shutil.copyfile(ROOT / "docs/security/release-verification.md", release / "VERIFY.md")
     files = []

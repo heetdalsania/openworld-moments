@@ -9,7 +9,11 @@ $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9223'
 $env:OWM_WORKER_PYTHON = 'Z:\missing-python.exe'
 $env:OWM_FFMPEG = 'Z:\missing-ffmpeg.exe'
 $env:OWM_FFPROBE = 'Z:\missing-ffprobe.exe'
-$installer = Get-ChildItem 'target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe' | Select-Object -First 1
+# M32: one source for the version (tauri.packaged.conf.json); upgrades test <version>.1.
+$version = (Get-Content -Raw -LiteralPath 'apps/desktop/src-tauri/tauri.packaged.conf.json' | ConvertFrom-Json).version
+if (-not $version) { throw 'Packaged version missing' }
+$upgradeVersion = "$version.1"
+$installer = Get-ChildItem "target/x86_64-pc-windows-msvc/release/bundle/nsis/*_${version}_*-setup.exe" | Select-Object -First 1
 if (-not $installer) { throw 'NSIS installer missing' }
 function Install-App($package) {
   $result = Start-Process -FilePath $package -ArgumentList "/S /D=$install" -Wait -PassThru
@@ -54,11 +58,11 @@ Install-App $installer.FullName
 Test-App 'repair'
 if (-not (Test-Path $sentinel)) { throw 'Repair removed user data' }
 # Build a test-only higher version; source and frozen runtimes remain identical.
-python -c "import json,pathlib;p=pathlib.Path('apps/desktop/src-tauri/tauri.packaged.conf.json');d=json.loads(p.read_text());d['version']='0.1.0-alpha.29.1';(p.parent/'bundle-input/upgrade-test.conf.json').write_text(json.dumps(d))"
+python -c "import json,pathlib;p=pathlib.Path('apps/desktop/src-tauri/tauri.packaged.conf.json');d=json.loads(p.read_text());d['version']+='.1';(p.parent/'bundle-input/upgrade-test.conf.json').write_text(json.dumps(d))"
 if ($LASTEXITCODE -ne 0) { throw 'Upgrade test config failed' }
 pnpm --filter @openworld-moments/desktop run tauri build --config src-tauri/bundle-input/upgrade-test.conf.json --target x86_64-pc-windows-msvc --bundles nsis
 if ($LASTEXITCODE -ne 0) { throw 'Upgrade test build failed' }
-$upgrade = Get-ChildItem 'target/x86_64-pc-windows-msvc/release/bundle/nsis/*alpha.29.1*-setup.exe' | Select-Object -First 1
+$upgrade = Get-ChildItem "target/x86_64-pc-windows-msvc/release/bundle/nsis/*_${upgradeVersion}_*-setup.exe" | Select-Object -First 1
 if (-not $upgrade) { throw 'Upgrade package missing' }
 Install-App $upgrade.FullName
 Test-App 'upgrade'
