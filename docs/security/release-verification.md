@@ -70,3 +70,12 @@ project's CI runs the full check (`scripts/security/verify_sbom.py`) on every bu
   an unknown publisher. Verify the checksum and provenance instead of disabling
   security software.
 - There is no automatic update. Install new versions by hand after verifying them.
+
+## macOS DMGs (M37)
+
+macOS is not a supported release yet: no DMG has been Developer ID signed or notarized,
+and CI's `_adhoc-unnotarized` DMGs must not be used as releases. Once notarized DMGs
+exist, verify them with `checksums.txt`, `codesign`, `stapler`, `spctl` and `lipo` as
+described in [macOS signing — manual verification](../platforms/macos-signing.md#manual-verification).
+The per-DMG SBOM (`sbom-macos-<arch>.cdx.json`) records the DMG's SHA-256 and every
+signed runtime file.

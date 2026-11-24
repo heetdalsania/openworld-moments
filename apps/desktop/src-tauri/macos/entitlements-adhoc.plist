@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  M37: AD HOC BUILDS ONLY, and only for Resources/runtime/owm-worker.
+
+  An ad hoc signature has no Team ID, so the Hardened Runtime's library validation
+  refuses to let the frozen worker load its own (equally ad hoc) libpython and
+  extension modules. A Developer ID build signs every library with the same team and
+  needs no exception: scripts/macos/sign-and-package.py never applies this file with a
+  Developer ID identity and fails verification if the key appears in such a build.
+  See docs/platforms/macos-signing.md#entitlements.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

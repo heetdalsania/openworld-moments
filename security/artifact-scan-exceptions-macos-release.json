@@ -1,0 +1,4 @@
+{
+  "description": "Exceptions for scanning a macOS release folder (M37): the DMG, its SBOM, checksums, notices, the signing report, DMG checks and notarization logs. There are none: signing and notarization output must never carry a secret, a home folder or a CI workspace path. The app's own runtime is scanned separately with artifact-scan-exceptions-macos.json.",
+  "exceptions": []
+}
