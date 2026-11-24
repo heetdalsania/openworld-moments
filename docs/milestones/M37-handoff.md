@@ -182,7 +182,7 @@
   - **M39** stays blocked. It publishes the notarized candidates with a combined
     `checksums.txt`, the GPL source archives and the clean-machine matrix.
   - **M40** is unchanged.
-- Pull request: PR pending
+- Pull request: [#58](https://github.com/heetdalsania/openworld-moments/pull/58)
 - Screenshots, reports, or artifacts:
   - CI artifacts `macOS-<arch>-unsigned-dev` contain `release-<arch>/`: the DMG,
     SBOM, checksums, notices, signing report and DMG check.
