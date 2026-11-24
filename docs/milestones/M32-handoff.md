@@ -25,10 +25,10 @@
       expected version (never the upgrade-test build), and version agreement across
       the inventory, SBOM and native reports;
     - `ci-summary`: every job in a `gh run view` result succeeded.
-  - **Tests:** `services/media-worker/tests/release/test_release_check.py` (26 tests:
-    success, tampering, missing/unlisted files, wrong versions, malformed checksums,
-    links/folders, CLI exit codes, CI summaries, triage labels, no hard-coded version
-    left in Windows scripts). The packaging assembly test now proves the upgrade-test
+  - **Tests:** `services/media-worker/tests/release/test_release_check.py` (27 tests:
+    success, tampering, missing/unlisted files, wrong versions, malformed and CRLF
+    checksums, links/folders, CLI exit codes, CI summaries, triage labels, no
+    hard-coded version left in Windows scripts). The packaging assembly test now proves the upgrade-test
     installer is excluded. mypy covers `scripts/release`.
   - **Release documents** (`docs/releases/0.1.0-alpha.32/`): release notes (the draft's
     text), compatibility matrix, detector metrics with fixture licence/consent audit,
@@ -44,6 +44,11 @@
     0.18.2 → 0.18.3. RUSTSEC-2026-0594 was published on 2026-11-23 and failed the
     Security scans gate on this branch. The release must ship with no open
     vulnerability. No code changes.
+  - **Prerequisite repair:** `scripts/windows/artifacts.py` writes `checksums.txt` with
+    LF line endings. Before, CRLF from Windows text mode broke the documented
+    `sha256sum -c` / `shasum -c` verification on macOS and Linux (since M29). This was
+    found by downloading the first draft's assets. The first draft's assets were
+    replaced.
 - Public contracts or migrations: none. Contracts stay at 1.27; the schema stays at 19.
   The release set's file list is unchanged except for the version in the installer name.
 - Commands run: `OWM_REQUIRE_FFMPEG=1 pnpm check`; worker `ruff`, `mypy` (darwin,

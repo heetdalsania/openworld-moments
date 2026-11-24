@@ -52,9 +52,17 @@ FFmpeg binaries stays a documented accepted risk (`security/artifact-scan-except
 
 All are ancestors of `ccb1b79`. M00–M19, M21, M22, M24 and M33–M36 are also merged.
 
-**Release-blocking issues:** none. The repository had no open issues on 2026-11-23. The
-only blocker found during M32, RUSTSEC-2026-0594 (published that day; fails the Security
-scans gate), is fixed in this branch.
+**Release-blocking issues:** none. The repository had no open issues on 2026-11-23. M32
+found two blockers and fixed both in this branch:
+
+- **RUSTSEC-2026-0594**, published that day, failed the Security scans gate. Fixed by
+  updating `cookie` to 0.18.3.
+- **CRLF `checksums.txt`.** Re-downloading the first draft showed that the Windows build
+  wrote `checksums.txt` with CRLF line endings. `shasum -c` / `sha256sum -c` on macOS
+  and Linux, as documented in `VERIFY.md`, read the carriage return as part of each file
+  name and failed. This affected every candidate since M29. `artifacts.py` now writes
+  LF; `release_check.py` refuses CRLF; and the packaging test asserts LF on the Windows
+  CI runner too.
 
 ## 3. Acceptance criteria
 
@@ -94,11 +102,11 @@ Clippy, Ruff, REUSE), type checks (tsc, mypy), tests and contract drift all pass
 | TypeScript contracts | 401 passed |
 | Desktop (Vitest) | 294 passed |
 | Rust | 77 passed |
-| Release tooling (`tests/release`, part of the worker suite) | 26 passed |
+| Release tooling (`tests/release`, part of the worker suite) | 27 passed (26 at the full local gate, plus the CRLF case added afterwards; all 27 also pass on the Windows CI runner) |
 
 Worker mypy also passes for `--platform win32`.
 
-### CI ([run 45307283279](https://github.com/heetdalsania/openworld-moments/actions/runs/45307283279), PR #57 head `32c8c5d`)
+### CI ([run 45321380541](https://github.com/heetdalsania/openworld-moments/actions/runs/45321380541), PR #57 head `825838c`)
 
 `release_check.py ci-summary` on `gh run view --json ...` output: **ok**. All 12 jobs
 succeeded: TypeScript (Linux); Python and Rust on Ubuntu and Windows (OCR and FFmpeg
@@ -124,7 +132,7 @@ PR builds are not attested; attestation happens on the `main` run after merge.
 
 ### Downloaded release set
 
-`gh run download 45307283279 -n Windows-x64-alpha-candidate`, then
+`gh run download 45321380541 -n Windows-x64-alpha-candidate`, then
 `release_check.py verify-artifacts --version 0.1.0-alpha.32`: **ok**, every check passed.
 
 - Exactly one installer, of the expected version.
@@ -137,33 +145,36 @@ PR builds are not attested; attestation happens on the `main` run after merge.
   - `native-upgrade.json`: `0.1.0-alpha.32.1`;
   - `reproducibility.json`: frozen payload identical.
 
-The inventory records commit `e1a09a9`, GitHub's merge of the PR head into `main`.
+The inventory records commit `917a833`, GitHub's merge of the PR head into `main`.
+
+`shasum -a 256 -c checksums.txt` on macOS also passes for every file (LF line endings).
+The draft's assets were downloaded again from the release and passed the same checks.
 
 These are the files attached to the draft release (to be replaced by the attested `main`
 build before publishing, section 8):
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe` | 40,976,090 | `0499adb2e510a9b035792facac6f3078c21c554eb01dabb2db27bb051d55af33` |
-| `SECURITY.md` | 2,764 | `4dcafecc43f475ef43a0fb9a35a2e4f4611553a65aba4b0306a9795b757e1e4a` |
+| `OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe` | 40,977,707 | `25febf6bfe41f7d3a4d5d68dae2430ef1d06900b030d2da01edef49897d16954` |
+| `SECURITY.md` | 2,782 | `c8c25db16760acdb0d62c5bdfb9efeb94ce182d2d82eca3f4f67bf3559417418` |
 | `THIRD_PARTY_NOTICES.txt` | 424 | `4367d39b60d7571d5a6088d329b0a91cbcbec5d172004cdaa0a5e21045668f70` |
-| `VERIFY.md` | 3,035 | `036ce1c744af50a2e87320b06d4773aa58876679ab743399043647c059e01eb8` |
+| `VERIFY.md` | 3,027 | `e34dfdbe4d493bbd6bfffb293fb74823eb670c681e8c653b86f22a03a1310f63` |
 | `build-media.sh` | 1,483 | `8f594994fb83217704424291014add6fa336fe6fa538040e07ec6e9ef185ae8a` |
 | `build-packages.txt` | 2,339 | `63ed169bdcbc135595493f7af052410bc24c38299ffaf6baaa68ceb770cacbd1` |
-| `checksums.txt` | 1,861 | `333c393f4178309b9703d710ea5bee350c2375c532b75c1509184b8888f54f50` |
+| `checksums.txt` | 1,840 | `b75bb6bc9f428e599111f6c29cc803b0cf9646ffb3320201929e545c8a1431f9` |
 | `compiler.txt` | 253 | `7091e6a9e7da9f7119dba5d159300d5639e3cfc711974dc5c1bb12492220e3ac` |
 | `ffmpeg-9.0.2.tar.xz` | 12,040,788 | `8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e` |
 | `freeze-worker.py` | 4,682 | `9af907feed0a57019a76056521c6136ad5dd22ee7cf6a8c36173fe351a42efdf` |
-| `native-import-render.json` | 3,565 | `ca38e319469bd106277e8d328ba4bb8296b113b45f34f9a28f51cf086e433748` |
-| `native-repair.json` | 3,558 | `087e7030e7183b1fac7fed2516a06eadc01e80e83a13c06f86ff967ddb50a6ba` |
-| `native-uninstall.json` | 285 | `cb13cbfd9b8e653b296865f0c418842f58dee3e768a1ee03a3741b4dfa7f97fc` |
-| `native-upgrade.json` | 3,561 | `e14aba0b8f3e9e2dfab27f9d55abc35093f471f93253803338760fc8b293cd2d` |
+| `native-import-render.json` | 3,565 | `5be64a3b8e3f84beffc25e3da5d561d25895a80149e87f9a781ae725a7644b49` |
+| `native-repair.json` | 3,558 | `a3632f4e0cf8301fe9c4d6873e4f6dd0a6f9a6b4199a0f8817363f8344e4f8d4` |
+| `native-uninstall.json` | 285 | `fb53bd588cfd1b20bf7e41c6a4b142c49cc74502bfb721866d6ecb7078af35c3` |
+| `native-upgrade.json` | 3,561 | `270f38fc9bfef35d43bfb0181973d20a7db5313ff7d05d0eeac477e6e8e41ba8` |
 | `python-notices.json` | 2,992 | `e5c8dad8728045a378dedf4c6da97aeefb614bec73b3dc680a30f4649c5fdcaf` |
 | `reproducibility.json` | 103 | `66d2722c48a757a4471de423a27a850cd5b2d4a10f9109bfba6e1fbd0edc982e` |
-| `runtime-inventory.json` | 243,959 | `61172b8e4797e996afa67e9b0630f98ddb5bfe2d80574a76e7096096c008343d` |
-| `runtime-notices.zip` | 1,831,041 | `33550f27bff4638c6b18fd115544e2755ee140dab65e77a6ca38adfda24dee56` |
+| `runtime-inventory.json` | 243,959 | `25e39e44a96b3bdf0cea9a8fb2f8381859b873d77fb84069f2a0fcb422ea8bfb` |
+| `runtime-notices.zip` | 1,831,041 | `84ddcd2b5a85e602bedb67ad625ab488053771118db90b9edff6ca8edf6041e4` |
 | `runtime_bundle.py` | 9,273 | `ffac4b3a0a3123a24f4476ecdf4d6d691bc30e01d064b6594a421271196bf94d` |
-| `sbom.cdx.json` | 802,044 | `2f2fa1c768f806229cf5d36bee678f918dfd7833e5b7ebb4a3f184e7689cdecb` |
+| `sbom.cdx.json` | 802,044 | `c8a6a975dbc822c34e86cd5278caa57ab4b4034c027b12037359bee312b7d784` |
 | `sources.json` | 627 | `bd038f6ac8ef0c48df2728528337f6da237b43d4492e0a6aac70c0cedb6f1af6` |
 | `x264-c24e06c2e184345ceb33eb20a15d1024d9fd3497.tar.gz` | 1,035,587 | `090d730e867fc63631782a1287974635d1237d0fa7c6fd1d09fd543620a56689` |
 
