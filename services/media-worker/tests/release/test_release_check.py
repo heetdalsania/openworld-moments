@@ -86,7 +86,7 @@ def rewrite_checksums(root: Path) -> None:
         for p in sorted(root.iterdir())
         if p.name != "checksums.txt"
     ]
-    (root / "checksums.txt").write_text("\n".join(lines) + "\n")
+    (root / "checksums.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
 
 
 def failed(result: dict[str, Any]) -> set[str]:
