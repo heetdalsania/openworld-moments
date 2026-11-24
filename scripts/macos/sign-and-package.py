@@ -250,47 +250,50 @@ class Result:
 
 class Run(Protocol):
     def __call__(
-        self,
-        args: Sequence[str],
-        *,
-        label: str | None = None,
-        check: bool = True,
-        timeout: float = 1800,
+        self, args: Sequence[str], *, check: bool = True, timeout: float = 1800
+    ) -> Result: ...
+
+    def secret(
+        self, label: str, args: Sequence[str], *, check: bool = True, timeout: float = 1800
     ) -> Result: ...
 
 
 class Runner:
     """Runs a program by argument array. Output is scrubbed of secret values.
 
-    A command that carries a secret must pass `label`, a literal such as
-    "security import": its log line and any error are built from the label alone,
-    never from `args`, so no argument can reach a log."""
+    A command that carries a secret must use `secret(label, args)`, where the label is
+    a literal such as "security import". That method never logs or reports anything
+    derived from `args`: its log line and any error are built from the label alone.
+    Only `__call__`, for commands without a secret, echoes its (scrubbed) arguments."""
 
     def __init__(self, redact: Redactor, echo: Callable[[str], None] = print) -> None:
         self.redact = redact
         self.echo = echo
 
-    def __call__(
-        self,
-        args: Sequence[str],
-        *,
-        label: str | None = None,
-        check: bool = True,
-        timeout: float = 1800,
-    ) -> Result:
-        if label is not None:
-            name = label
-            self.echo(f"$ {label} [arguments withheld]")
-        else:
-            name = Path(args[0]).name
-            self.echo(f"$ {self.redact(shlex.join([name, *args[1:]]))}")
+    def __call__(self, args: Sequence[str], *, check: bool = True, timeout: float = 1800) -> Result:
+        name = Path(args[0]).name
+        self.echo(f"$ {self.redact(shlex.join([name, *args[1:]]))}")
         try:
             done = subprocess.run(  # noqa: S603 - argument array, no shell
                 list(args), capture_output=True, text=True, timeout=timeout, check=False
             )
         except (OSError, subprocess.TimeoutExpired) as error:
-            reason = type(error).__name__ if label is not None else self.redact(str(error))
-            raise SigningError(f"{name}: {reason}") from None
+            raise SigningError(f"{name}: {self.redact(str(error))}") from None
+        return self._finish(name, done, check)
+
+    def secret(
+        self, label: str, args: Sequence[str], *, check: bool = True, timeout: float = 1800
+    ) -> Result:
+        self.echo(f"$ {label} [arguments withheld]")
+        try:
+            done = subprocess.run(  # noqa: S603 - argument array, no shell
+                list(args), capture_output=True, text=True, timeout=timeout, check=False
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise SigningError(f"{label}: {type(error).__name__}") from None
+        return self._finish(label, done, check)
+
+    def _finish(self, name: str, done: subprocess.CompletedProcess[str], check: bool) -> Result:
         result = Result(done.returncode, self.redact(done.stdout), self.redact(done.stderr))
         if check and result.returncode != 0:
             raise SigningError(f"{name} failed ({result.returncode}): {tail(result.text)}")
@@ -643,10 +646,11 @@ def notarize(
         run(["/usr/bin/ditto", "-c", "-k", "--keepParent", str(target), str(upload)])
     auth = ["--key", str(key), "--key-id", credentials.key_id, "--issuer", credentials.issuer_id]
     try:
-        result = run(
+        result = run.secret(
+            "xcrun notarytool submit",
             ["/usr/bin/xcrun", "notarytool", "submit", str(upload), *auth,
              "--wait", "--timeout", "45m", "--output-format", "json"],
-            label="xcrun notarytool submit", check=False, timeout=3000,
+            check=False, timeout=3000,
         )  # fmt: skip
         try:
             submission = json.loads(result.stdout)
@@ -656,9 +660,10 @@ def notarize(
             raise SigningError(f"notarizing {label}: {explain_notary_failure(result.text)}")
         submission_id = str(submission["id"])
         log_path = logs / f"notarization-{label}.json"
-        fetched = run(
+        fetched = run.secret(
+            "xcrun notarytool log",
             ["/usr/bin/xcrun", "notarytool", "log", submission_id, *auth, str(log_path)],
-            label="xcrun notarytool log", check=False, timeout=600,
+            check=False, timeout=600,
         )  # fmt: skip
         log = None
         if fetched.returncode == 0 and log_path.is_file():
@@ -722,25 +727,25 @@ def signing_keychain(
     security = "/usr/bin/security"
     try:
         write_private(certificate, credentials.p12)
-        run(
+        run.secret(
+            "security create-keychain",
             [security, "create-keychain", "-p", password, str(keychain)],
-            label="security create-keychain",
         )
         run([security, "set-keychain-settings", "-lut", "21600", str(keychain)])
-        run(
+        run.secret(
+            "security unlock-keychain",
             [security, "unlock-keychain", "-p", password, str(keychain)],
-            label="security unlock-keychain",
         )
-        run(
+        run.secret(
+            "security import",
             [security, "import", str(certificate), "-k", str(keychain),
              "-P", credentials.p12_password, "-f", "pkcs12", "-T", "/usr/bin/codesign"],
-            label="security import",
         )  # fmt: skip
         certificate.unlink()
-        run(
+        run.secret(
+            "security set-key-partition-list",
             [security, "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:",
              "-s", "-k", password, str(keychain)],
-            label="security set-key-partition-list",
         )  # fmt: skip
         previous = _keychain_list(run)
         run([security, "list-keychains", "-d", "user", "-s", str(keychain), *previous])

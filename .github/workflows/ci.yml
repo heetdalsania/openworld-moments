@@ -297,7 +297,7 @@ jobs:
           APP="../../target/${{ matrix.arch == 'arm64' && 'aarch64' || 'x86_64' }}-apple-darwin/release/bundle/macos/OpenWorld Moments.app"
           REL=../../output/packaging/macos/release-${{ matrix.arch }}
           RUN="uv run --locked --no-dev --group packaging --with cyclonedx-python-lib[json-validation]==11.12.0 --directory services/media-worker python"
-          DMG="$(ls $REL/*.dmg)"
+          DMG="../../$(ls output/packaging/macos/release-${{ matrix.arch }}/*.dmg)"
           $RUN ../../scripts/security/sbom.py --inventory "$APP/Contents/Resources/runtime/inventory.json" --installer "$DMG" --output $REL/sbom-macos-${{ matrix.arch }}.cdx.json
           python3 scripts/macos/sign-and-package.py checksums output/packaging/macos/release-${{ matrix.arch }}
           $RUN ../../scripts/security/verify_sbom.py --sbom $REL/sbom-macos-${{ matrix.arch }}.cdx.json \
