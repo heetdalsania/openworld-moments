@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  M37: Hardened Runtime entitlements for every executable in the macOS app (the
+  Tauri host, the frozen worker, FFmpeg and FFprobe).
+
+  Deliberately empty. Reviewed in docs/platforms/macos-signing.md#entitlements:
+  no App Sandbox (ADR-0008), no JIT or unsigned executable memory, no library
+  validation exception (every bundled library is signed by the same identity),
+  no DYLD environment variables, no debugger attachment (get-task-allow).
+  Adding a key needs a written reason there and an update to
+  ALLOWED_ENTITLEMENTS in scripts/macos/sign-and-package.py.
+-->
+<plist version="1.0">
+<dict/>
+</plist>

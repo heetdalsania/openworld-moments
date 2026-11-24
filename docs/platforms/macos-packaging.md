@@ -1,7 +1,9 @@
 # macOS worker and media toolchain (M34)
 
-Status: **development builds**. Unsigned and not notarized (M37), and not a supported
-release until M39. The macOS app now ships its own worker and media tools: a Mac
+Status: **development builds**. M37 adds inside-out signing with the Hardened Runtime
+and per-architecture DMGs ([macOS signing](./macos-signing.md)); without Apple
+credentials they are signed ad hoc and not notarized, and macOS is not a supported
+release until M37's Developer ID run and M39. The macOS app now ships its own worker and media tools: a Mac
 needs no Homebrew, no system Python, no developer tools and no shell `PATH`.
 
 ## What ships
@@ -36,8 +38,8 @@ OpenWorld Moments.app/Contents/
 
 `tauri.macos-packaged.conf.json` adds the runtime as a Tauri resource. The plain
 macOS configuration doesn't, so `cargo test` and `pnpm build` work without a frozen
-runtime. M37 decides whether code in `Resources/` must move to `Frameworks/` or
-`Helpers/` for signing.
+runtime. M37 keeps the code in `Resources/runtime` and signs each Mach-O file there
+as nested code before the bundle ([where the code lives](./macos-signing.md#where-the-code-lives)).
 
 ## Sidecar launch rules
 
@@ -172,8 +174,9 @@ Sizes (Apple Silicon): runtime 92 MiB (tools 43 MiB, `_internal` 36 MiB, notices
 - **No hardware acceleration yet:** VideoToolbox is excluded (autodetection off). CPU
   `libx264` is the correctness path. The [M36 media matrix](./macos-media-parity.md)
   records VideoToolbox availability independently for each fixed-rate preset.
-- **Unsigned:** the bundled worker and tools carry only linker or PyInstaller ad-hoc
-  signatures. Signing order, entitlements and notarization are M37.
+- **Signing:** `build-shell.py` output carries only linker or PyInstaller ad hoc
+  signatures. `sign-and-package.py` (M37) re-signs it inside out with the Hardened
+  Runtime and re-hashes `inventory.json`; see [macOS signing](./macos-signing.md).
 - **cryptography on Intel** is built from source with `OPENSSL_STATIC=1` against
   OpenSSL 3.5.9 from `scripts/macos/openssl.json` (checksum-verified, built for macOS 14,
   listed in the SBOM and notices). The first CI run used Homebrew's OpenSSL instead:
