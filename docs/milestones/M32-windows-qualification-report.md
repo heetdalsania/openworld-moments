@@ -16,7 +16,7 @@ non-blocking [M40 section E](./M40-windows-deferred-verification.md#e-windows-pu
 
 | Item | Frozen value |
 |---|---|
-| Base | `main` at `ccb1b79` (M36 merged) plus the M32 branch ([PR #57](https://github.com/heetdalsania/openworld-moments/pull/57)) |
+| Base | `main` at `ccb1b79` (M36 merged), then `cdc9b68` (M37 work in progress, PR #58) merged in, plus the M32 branch ([PR #57](https://github.com/heetdalsania/openworld-moments/pull/57)) |
 | Installer version | `0.1.0-alpha.32` in `apps/desktop/src-tauri/tauri.packaged.conf.json`, now the only place it is written |
 | Library schema | 19 (`0019_model_downloads.sql`; no migration since M29) |
 | Contracts | 1.27 |
@@ -106,7 +106,7 @@ Clippy, Ruff, REUSE), type checks (tsc, mypy), tests and contract drift all pass
 
 Worker mypy also passes for `--platform win32`.
 
-### CI ([run 45321380541](https://github.com/heetdalsania/openworld-moments/actions/runs/45321380541), PR #57 head `825838c`)
+### CI ([run 45325432445](https://github.com/heetdalsania/openworld-moments/actions/runs/45325432445), PR #57 head `ae4683c`, after merging `main` with M37)
 
 `release_check.py ci-summary` on `gh run view --json ...` output: **ok**. All 12 jobs
 succeeded: TypeScript (Linux); Python and Rust on Ubuntu and Windows (OCR and FFmpeg
@@ -132,7 +132,7 @@ PR builds are not attested; attestation happens on the `main` run after merge.
 
 ### Downloaded release set
 
-`gh run download 45321380541 -n Windows-x64-alpha-candidate`, then
+`gh run download 45325432445 -n Windows-x64-alpha-candidate`, then
 `release_check.py verify-artifacts --version 0.1.0-alpha.32`: **ok**, every check passed.
 
 - Exactly one installer, of the expected version.
@@ -145,7 +145,7 @@ PR builds are not attested; attestation happens on the `main` run after merge.
   - `native-upgrade.json`: `0.1.0-alpha.32.1`;
   - `reproducibility.json`: frozen payload identical.
 
-The inventory records commit `917a833`, GitHub's merge of the PR head into `main`.
+The inventory records commit `5098ebd`, GitHub's merge of the PR head into `main`.
 
 `shasum -a 256 -c checksums.txt` on macOS also passes for every file (LF line endings).
 The draft's assets were downloaded again from the release and passed the same checks.
@@ -155,26 +155,26 @@ build before publishing, section 8):
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
-| `OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe` | 40,977,707 | `25febf6bfe41f7d3a4d5d68dae2430ef1d06900b030d2da01edef49897d16954` |
+| `OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe` | 40,979,874 | `1b61cf9e699703cb1ed0f784c8b97ba89ccf3ecf7668a93b642e214b13bb4b0c` |
 | `SECURITY.md` | 2,782 | `c8c25db16760acdb0d62c5bdfb9efeb94ce182d2d82eca3f4f67bf3559417418` |
 | `THIRD_PARTY_NOTICES.txt` | 424 | `4367d39b60d7571d5a6088d329b0a91cbcbec5d172004cdaa0a5e21045668f70` |
-| `VERIFY.md` | 3,027 | `e34dfdbe4d493bbd6bfffb293fb74823eb670c681e8c653b86f22a03a1310f63` |
+| `VERIFY.md` | 3,518 | `ec36e0068eeb55ef20d068c6a7b7283479aae6db6ad1a3d01dcd4fa62a6bf23c` |
 | `build-media.sh` | 1,483 | `8f594994fb83217704424291014add6fa336fe6fa538040e07ec6e9ef185ae8a` |
 | `build-packages.txt` | 2,339 | `63ed169bdcbc135595493f7af052410bc24c38299ffaf6baaa68ceb770cacbd1` |
-| `checksums.txt` | 1,840 | `b75bb6bc9f428e599111f6c29cc803b0cf9646ffb3320201929e545c8a1431f9` |
+| `checksums.txt` | 1,840 | `74ad1a7bc9c2b04ccfd42e1dff10341519f589cf7c06658f2a035b65b67dc01a` |
 | `compiler.txt` | 253 | `7091e6a9e7da9f7119dba5d159300d5639e3cfc711974dc5c1bb12492220e3ac` |
 | `ffmpeg-9.0.2.tar.xz` | 12,040,788 | `8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e` |
 | `freeze-worker.py` | 4,682 | `9af907feed0a57019a76056521c6136ad5dd22ee7cf6a8c36173fe351a42efdf` |
-| `native-import-render.json` | 3,565 | `5be64a3b8e3f84beffc25e3da5d561d25895a80149e87f9a781ae725a7644b49` |
-| `native-repair.json` | 3,558 | `a3632f4e0cf8301fe9c4d6873e4f6dd0a6f9a6b4199a0f8817363f8344e4f8d4` |
-| `native-uninstall.json` | 285 | `fb53bd588cfd1b20bf7e41c6a4b142c49cc74502bfb721866d6ecb7078af35c3` |
-| `native-upgrade.json` | 3,561 | `270f38fc9bfef35d43bfb0181973d20a7db5313ff7d05d0eeac477e6e8e41ba8` |
+| `native-import-render.json` | 3,565 | `484e9fac6a6f77114e10e9a09432322150bf70f2b78fba1ca760c758c9426d96` |
+| `native-repair.json` | 3,558 | `aea30e18749eefe691e5a72e26596f7d70ade8a4e39c66e63b2e83a8d65fb94a` |
+| `native-uninstall.json` | 285 | `49b73b1ee0cb436a35d7e1c4ee2507442722e57773a38e0937e14b3dacc6700c` |
+| `native-upgrade.json` | 3,561 | `b964cb3ca3e0ee7caf0e784a8ec81b47a55c55b9988c81b786796651fada9c79` |
 | `python-notices.json` | 2,992 | `e5c8dad8728045a378dedf4c6da97aeefb614bec73b3dc680a30f4649c5fdcaf` |
 | `reproducibility.json` | 103 | `66d2722c48a757a4471de423a27a850cd5b2d4a10f9109bfba6e1fbd0edc982e` |
-| `runtime-inventory.json` | 243,959 | `25e39e44a96b3bdf0cea9a8fb2f8381859b873d77fb84069f2a0fcb422ea8bfb` |
-| `runtime-notices.zip` | 1,831,041 | `84ddcd2b5a85e602bedb67ad625ab488053771118db90b9edff6ca8edf6041e4` |
+| `runtime-inventory.json` | 243,959 | `5279ec1046e2f4fd27de913ac3640d04d2c2ec1d724d7af09f9252c66b040f50` |
+| `runtime-notices.zip` | 1,831,041 | `1522e7411ce1da88a56879ea7bb78615ac5eaa1eab539f4ba761fe096153f751` |
 | `runtime_bundle.py` | 9,273 | `ffac4b3a0a3123a24f4476ecdf4d6d691bc30e01d064b6594a421271196bf94d` |
-| `sbom.cdx.json` | 802,044 | `c8a6a975dbc822c34e86cd5278caa57ab4b4034c027b12037359bee312b7d784` |
+| `sbom.cdx.json` | 802,044 | `70e2c4bbca0ea9e039cdb68c3a2efa8b47331805df21398c3ecb98d482ed42fe` |
 | `sources.json` | 627 | `bd038f6ac8ef0c48df2728528337f6da237b43d4492e0a6aac70c0cedb6f1af6` |
 | `x264-c24e06c2e184345ceb33eb20a15d1024d9fd3497.tar.gz` | 1,035,587 | `090d730e867fc63631782a1287974635d1237d0fa7c6fd1d09fd543620a56689` |
 
