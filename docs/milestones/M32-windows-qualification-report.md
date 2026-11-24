@@ -150,6 +150,10 @@ The inventory records commit `5098ebd`, GitHub's merge of the PR head into `main
 `shasum -a 256 -c checksums.txt` on macOS also passes for every file (LF line endings).
 The draft's assets were downloaded again from the release and passed the same checks.
 
+The draft's assets come from run 45325432445 at PR head `ae4683c`, and the draft targets
+that commit. Every later commit on this branch only changes M32 documents (this report and the
+handoff), not any build input.
+
 These are the files attached to the draft release (to be replaced by the attested `main`
 build before publishing, section 8):
 
