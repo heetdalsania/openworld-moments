@@ -78,7 +78,13 @@ def sha256(path: Path) -> str:
 
 
 def parse_checksums(text: str) -> dict[str, str]:
-    """``<sha256>  <name>`` lines; plain names only, no duplicates, no blank entries."""
+    """``<sha256>  <name>`` LF-terminated lines; plain names, no duplicates or blanks.
+
+    Carriage returns are refused: macOS/Linux ``sha256sum -c`` treats them as part of
+    the file name, so a CRLF file fails the documented verification.
+    """
+    if "\r" in text:
+        raise ValueError(f"{CHECKSUMS} must use LF line endings, not CRLF")
     entries: dict[str, str] = {}
     for number, line in enumerate(text.splitlines(), 1):
         match = _LINE.fullmatch(line)
@@ -159,7 +165,7 @@ def verify_artifacts(root: Path, version: str) -> dict[str, Any]:
     listed: dict[str, str] = {}
     if CHECKSUMS in files:
         try:
-            listed = parse_checksums(files[CHECKSUMS].read_text("utf-8"))
+            listed = parse_checksums(files[CHECKSUMS].read_bytes().decode("utf-8"))
         except (ValueError, UnicodeDecodeError) as error:
             report.check("checksums:format", False, str(error))
         else:

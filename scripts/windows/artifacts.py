@@ -86,7 +86,9 @@ def main() -> None:
     files = []
     for path in sorted(release.iterdir()):
         files.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}")
-    (release / "checksums.txt").write_text("\n".join(files) + "\n", encoding="utf-8")
+    # M32: LF only. Text mode on Windows wrote CRLF, which `sha256sum -c` and `shasum -c`
+    # on macOS/Linux read as part of each file name, failing verification.
+    (release / "checksums.txt").write_bytes(("\n".join(files) + "\n").encode("utf-8"))
     first = json.loads((OUT / "repro-first.json").read_text())
     second = json.loads((RUNTIME / "inventory.json").read_text())
     assert first["files"] == second["files"], "Frozen payload reproducibility changed"

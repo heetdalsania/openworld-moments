@@ -155,6 +155,7 @@ def test_every_versioned_report_must_agree(tmp_path: Path) -> None:
         f"{'a' * 64}  dir\\file\n",
         f"{'a' * 64}  ..\n",
         f"{'a' * 64}  same\n{'b' * 64}  same\n",
+        f"{'a' * 64}  file.txt\r\n",  # CRLF breaks sha256sum -c on macOS/Linux
     ],
 )
 def test_malformed_checksum_files_are_refused(text: str) -> None:

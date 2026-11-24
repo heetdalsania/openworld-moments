@@ -103,8 +103,10 @@ def test_candidate_checksums_survive_reassembly_without_stale_media(tmp_path: Pa
     (release / "stale-media.mp4").write_bytes(b"never include stale generated media")
     module.main()
     assert not (release / "stale-media.mp4").exists()
+    raw = (release / "checksums.txt").read_bytes()
+    assert b"\r" not in raw  # LF only, on Windows too, so sha256sum -c works everywhere
     listed = []
-    for line in (release / "checksums.txt").read_text().splitlines():
+    for line in raw.decode("utf-8").splitlines():
         expected, name = line.split("  ", 1)
         listed.append(name)
         assert hashlib.sha256((release / name).read_bytes()).hexdigest() == expected
