@@ -1,10 +1,28 @@
 # Compatibility notes
 
 > **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-11 (M31).
+> **Last checked:** 2026-11-23 (M32).
 
 This page is versioned with the app. Each release adds a section; older sections stay
 for reference.
+
+## 0.1.0-alpha.32 — first public alpha (M32)
+
+The first public Windows release. Everything in the section below still applies, with
+these changes:
+
+- **Version:** `0.1.0-alpha.32`, an unsigned per-user installer from the GitHub release
+  page. Check it with `checksums.txt` before installing.
+- **Tested:** this build passed automated install, import, 16:9 and 9:16 render,
+  repair, upgrade and uninstall checks on a hosted Windows Server runner. The clean
+  Windows 11 PC run was done with the earlier `0.1.0-alpha.29` build; a clean-PC run of
+  this build is still to be done.
+- **Standard (non-administrator) accounts** are expected to work but are untested.
+- **Data formats:** documents use contract version **1.27**; the library database is
+  unchanged (version 19), so upgrading from `0.1.0-alpha.29` runs no migration.
+- **Games:** no game is listed as compatible yet. See the
+  [release compatibility matrix](../releases/0.1.0-alpha.32/compatibility-matrix.md) and
+  [detector metrics](../releases/0.1.0-alpha.32/detector-metrics.md).
 
 ## 0.1.0 alpha (M29–M31)
 

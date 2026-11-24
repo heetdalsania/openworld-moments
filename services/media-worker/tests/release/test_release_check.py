@@ -225,3 +225,21 @@ def test_ci_summary_allows_only_named_skips(tmp_path: Path) -> None:
     assert release_check.main(["ci-summary", str(path), "--allow-skipped", "DCO sign-off"]) == 0
     with pytest.raises(ValueError, match="no jobs"):
         release_check.ci_summary({"status": "completed"})
+
+
+# -- post-release triage labels -------------------------------------------------------
+
+
+def test_triage_labels_cover_every_issue_template() -> None:
+    labels = json.loads((ROOT / ".github/labels.json").read_text("utf-8"))
+    names = [label["name"] for label in labels]
+    assert len(names) == len(set(names))
+    assert all(re.fullmatch(r"[0-9a-f]{6}", label["color"]) for label in labels)
+    assert all(0 < len(label["description"]) <= 100 for label in labels)
+    assert {"release-blocker", "data-loss", "installer", f"alpha:{VERSION}"} <= set(names)
+    used = set()
+    for template in (ROOT / ".github/ISSUE_TEMPLATE").glob("*.yml"):
+        match = re.search(r"^labels: \[(.*)\]$", template.read_text("utf-8"), re.MULTILINE)
+        if match:
+            used |= {name.strip() for name in match.group(1).split(",") if name.strip()}
+    assert used and used <= set(names)

@@ -1,0 +1,56 @@
+[
+  { "name": "bug", "color": "d73a4a", "description": "Something isn't working" },
+  {
+    "name": "accessibility",
+    "color": "f143ab",
+    "description": "Barrier affecting people with disabilities"
+  },
+  {
+    "name": "documentation",
+    "color": "0075ca",
+    "description": "Improvements or additions to documentation"
+  },
+  {
+    "name": "detector",
+    "color": "5319e7",
+    "description": "A detector missed an event or reported a false one"
+  },
+  { "name": "milestone", "color": "c5def5", "description": "Milestone delivery task" },
+  {
+    "name": "alpha:0.1.0-alpha.32",
+    "color": "fbca04",
+    "description": "Reported against the 0.1.0-alpha.32 Windows release"
+  },
+  {
+    "name": "release-blocker",
+    "color": "b60205",
+    "description": "Must be fixed or rolled back before the next release"
+  },
+  {
+    "name": "data-loss",
+    "color": "b60205",
+    "description": "Library, project or source data was lost or changed"
+  },
+  { "name": "regression", "color": "e99695", "description": "Worked in an earlier build" },
+  {
+    "name": "installer",
+    "color": "1d76db",
+    "description": "Install, repair, upgrade, uninstall or SmartScreen"
+  },
+  { "name": "phone-upload", "color": "1d76db", "description": "LAN phone transfer" },
+  {
+    "name": "media",
+    "color": "1d76db",
+    "description": "Import, probe, playback copies or renders"
+  },
+  {
+    "name": "needs-repro",
+    "color": "ededed",
+    "description": "Waiting for steps or a diagnostics report"
+  },
+  {
+    "name": "footage-policy",
+    "color": "000000",
+    "description": "Leaked footage or official assets must be removed"
+  }
+]

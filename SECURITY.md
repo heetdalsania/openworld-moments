@@ -3,8 +3,8 @@
 ## Supported versions
 
 OpenWorld Moments is pre-release. Security fixes go to the `main` branch and the
-newest Windows alpha candidate built from it (currently `0.1.0-alpha.29`). There are
-no long-term supported releases yet; older candidates are not patched.
+newest Windows alpha built from it (currently the `0.1.0-alpha.32` public alpha). There
+are no long-term supported releases yet; older alphas and candidates are not patched.
 
 ## Reporting a vulnerability
 

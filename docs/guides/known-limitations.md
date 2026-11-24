@@ -1,16 +1,21 @@
 # Known limitations
 
 > **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-11 (M31).
+> **Last checked:** 2026-11-23 (M32).
 
 This is an alpha. These are the limits we know about, so nothing here should surprise
 you. Each is tracked by the milestone named in brackets.
 
 ## Platform and installation
 
-- **Windows only for now.** macOS builds are planned (M33–M38).
-- **The installer is not signed.** Windows SmartScreen may warn or, under some company
-  policies, block it. Check the download with `checksums.txt`.
+- **Windows 11 x64 only for now.** macOS packages are in progress (M37–M39); Windows 10,
+  Windows on Arm and Linux are not supported.
+- **The installer is not signed.** Windows SmartScreen will probably show "Windows
+  protected your PC" for a browser download, and some company policies block it.
+  Check the download with `checksums.txt` before choosing **Run anyway**.
+- **This release was not run on a clean Windows 11 PC.** `0.1.0-alpha.32` passed
+  automated checks on a hosted Windows Server runner; the clean-PC run used the earlier
+  `0.1.0-alpha.29` build. Standard (non-administrator) accounts are untested.
 - **No automatic updates.** Install new versions by hand after checking them.
 - **English only.** The interface and guides are not translated.
 
