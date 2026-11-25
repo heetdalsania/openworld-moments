@@ -41,12 +41,12 @@ attestation, which proves the file came from this repository's CI workflow at a
 specific commit. With the [GitHub CLI](https://cli.github.com/):
 
 ```bash
-gh attestation verify OpenWorld-Moments_0.1.0-alpha.29_Windows_x64-setup.exe \
+gh attestation verify OpenWorld-Moments_0.1.0-alpha.32_Windows_x64-setup.exe \
   --repo heetdalsania/openworld-moments
 ```
 
-Pull-request builds are not attested; only use packages from `main`, and later
-from published releases.
+Pull-request builds are not attested; only use packages from published releases or
+from `main`.
 
 ## 3. Read the SBOM
 
@@ -70,3 +70,12 @@ project's CI runs the full check (`scripts/security/verify_sbom.py`) on every bu
   an unknown publisher. Verify the checksum and provenance instead of disabling
   security software.
 - There is no automatic update. Install new versions by hand after verifying them.
+
+## macOS DMGs (M37)
+
+macOS is not a supported release yet: no DMG has been Developer ID signed or notarized,
+and CI's `_adhoc-unnotarized` DMGs must not be used as releases. Once notarized DMGs
+exist, verify them with `checksums.txt`, `codesign`, `stapler`, `spctl` and `lipo` as
+described in [macOS signing — manual verification](../platforms/macos-signing.md#manual-verification).
+The per-DMG SBOM (`sbom-macos-<arch>.cdx.json`) records the DMG's SHA-256 and every
+signed runtime file.

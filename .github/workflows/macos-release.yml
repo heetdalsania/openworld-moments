@@ -1,0 +1,176 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# M37: Developer ID signing, notarization and stapling of the macOS DMGs.
+#
+# A maintainer starts this by hand with the ID of a successful CI run on main. It
+# re-signs that run's unsigned app (exactly the bits CI built and tested) with the
+# Developer ID identity, notarizes and staples the app and the DMG, verifies them, and
+# uploads a release candidate. It publishes nothing: GitHub Releases are M39.
+#
+# Apple credentials exist only as secrets of the protected `macos-release` environment
+# (deployment branch rule: main only; required reviewer recommended). They are passed
+# only to the two steps that need them. Without them the job stops with a SKIPPED
+# notice and uploads nothing. See docs/platforms/macos-signing.md.
+name: macOS release signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: ID of a successful CI run on main whose macOS builds to sign
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-release
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    name: Developer ID sign, notarize and staple (${{ matrix.arch }})
+    environment: macos-release
+    permissions:
+      contents: read
+      actions: read # download the CI run's artifacts
+      id-token: write # build-provenance attestation
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+            python: cpython-3.12.14-macos-aarch64-none
+          - arch: x86_64
+            runner: macos-15-intel
+            python: cpython-3.12.14-macos-x86_64-none
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    steps:
+      - name: Resolve the CI run (successful, on main)
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          case "$RUN_ID" in ''|*[!0-9]*) echo "::error::ci_run_id must be a number"; exit 1 ;; esac
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" \
+            --jq '[.head_sha, .head_branch, .conclusion, .path] | @tsv' > run.tsv
+          IFS=$'\t' read -r SHA BRANCH CONCLUSION WORKFLOW < run.tsv
+          case "$WORKFLOW" in .github/workflows/ci.yml*) ;; *) echo "::error::run $RUN_ID is not a CI run"; exit 1 ;; esac
+          test "$BRANCH" = main || { echo "::error::run $RUN_ID is not on main"; exit 1; }
+          test "$CONCLUSION" = success || { echo "::error::run $RUN_ID did not succeed"; exit 1; }
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ steps.run.outputs.sha }}
+      - name: Apple credentials
+        id: creds
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: python3 scripts/macos/sign-and-package.py check-credentials
+      - name: Nothing to sign without Apple credentials
+        if: steps.creds.outputs.mode != 'developer-id'
+        run: |
+          echo "::notice title=macOS notarization SKIPPED::No Apple credentials in the macos-release environment. Nothing was signed with Developer ID and nothing is publishable. See docs/platforms/macos-signing.md."
+          {
+            echo "### macOS notarization SKIPPED (${{ matrix.arch }})"
+            echo
+            echo "The macos-release environment has no Apple Developer ID credentials."
+            echo "Nothing was signed with Developer ID, notarized or uploaded."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fetch the unsigned app from the CI run and check its hash
+        if: steps.creds.outputs.mode == 'developer-id'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n "macOS-${{ matrix.arch }}-unsigned-dev" -D output/ci-build
+          cd output/ci-build
+          ZIP="$(ls OpenWorld-Moments_*_macOS_${{ matrix.arch }}_unsigned-dev.zip)"
+          grep "  $ZIP\$" SHA256SUMS.txt | shasum -a 256 -c -
+          mkdir -p ../release-input
+          ditto -x -k "$ZIP" ../release-input
+      - uses: actions/cache/restore@v6.1.0
+        if: steps.creds.outputs.mode == 'developer-id' && matrix.arch == 'x86_64'
+        with:
+          path: output/packaging/openssl-x86_64
+          key: macos-x86_64-openssl-${{ hashFiles('scripts/macos/openssl.json', 'scripts/macos/build-openssl.sh') }}
+      - name: Static OpenSSL for macOS 14 (Intel, when not cached)
+        if: steps.creds.outputs.mode == 'developer-id' && matrix.arch == 'x86_64'
+        run: test -d output/packaging/openssl-x86_64 || bash scripts/macos/build-openssl.sh x86_64
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: steps.creds.outputs.mode == 'developer-id'
+        with:
+          version: "0.13.7"
+      - name: Worker environment for the SBOM (managed CPython 3.12.14, runtime packages)
+        if: steps.creds.outputs.mode == 'developer-id'
+        run: |
+          rustup show active-toolchain
+          EXTRA=""
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            OPENSSL_DIR="$GITHUB_WORKSPACE/output/packaging/openssl-x86_64"
+            OPENSSL_STATIC=1
+            MACOSX_DEPLOYMENT_TARGET=14.0
+            export OPENSSL_DIR OPENSSL_STATIC MACOSX_DEPLOYMENT_TARGET
+            EXTRA="--refresh-package cryptography"
+          fi
+          uv sync $EXTRA --managed-python --locked --all-packages --no-dev --group packaging --python ${{ matrix.python }}
+
+      - name: Sign inside out with Developer ID, notarize, staple (fails unless publishable)
+        if: steps.creds.outputs.mode == 'developer-id'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: >-
+          python3 scripts/macos/sign-and-package.py package --arch ${{ matrix.arch }}
+          --app "output/release-input/OpenWorld Moments.app" --mode developer-id --require-notarized
+      - name: Runtime smoke under Developer ID library validation
+        if: steps.creds.outputs.mode == 'developer-id'
+        run: python3 scripts/macos/runtime-smoke.py "output/release-input/OpenWorld Moments.app/Contents/Resources/runtime"
+      - name: DMG install, replace, tamper and uninstall checks; stapled ticket; Gatekeeper
+        if: steps.creds.outputs.mode == 'developer-id'
+        run: python3 scripts/macos/sign-and-package.py verify-dmg output/packaging/macos/release-${{ matrix.arch }}/*.dmg --arch ${{ matrix.arch }} --expect notarized
+      - name: DMG SBOM and checksums, verified against the signed runtime; secret and path scan
+        if: steps.creds.outputs.mode == 'developer-id'
+        run: |
+          APP="../../output/release-input/OpenWorld Moments.app"
+          REL=../../output/packaging/macos/release-${{ matrix.arch }}
+          RUN="uv run --locked --no-dev --group packaging --with cyclonedx-python-lib[json-validation]==11.12.0 --directory services/media-worker python"
+          DMG="$(ls $REL/*.dmg)"
+          $RUN ../../scripts/security/sbom.py --inventory "$APP/Contents/Resources/runtime/inventory.json" --installer "$DMG" --output $REL/sbom-macos-${{ matrix.arch }}.cdx.json
+          python3 scripts/macos/sign-and-package.py checksums output/packaging/macos/release-${{ matrix.arch }}
+          $RUN ../../scripts/security/verify_sbom.py --sbom $REL/sbom-macos-${{ matrix.arch }}.cdx.json \
+            --inventory "$APP/Contents/Resources/runtime/inventory.json" --runtime-dir "$APP/Contents/Resources/runtime" --release-dir $REL
+          $RUN ../../scripts/security/scan_artifacts.py $REL \
+            --exceptions ../../security/artifact-scan-exceptions-macos-release.json --report ../../output/packaging/macos/release-scan-${{ matrix.arch }}.json
+      - name: Attest build provenance of the release files
+        if: steps.creds.outputs.mode == 'developer-id'
+        uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: output/packaging/macos/release-${{ matrix.arch }}/*
+      - uses: actions/upload-artifact@v7.0.2
+        if: steps.creds.outputs.mode == 'developer-id' && success()
+        with:
+          name: macOS-${{ matrix.arch }}-notarized-release-candidate
+          path: output/packaging/macos/release-${{ matrix.arch }}/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Remove any leftover signing keychain
+        if: always()
+        run: |
+          security list-keychains -d user | tr -d '"' | while read -r keychain; do
+            case "$keychain" in *owm-signing*) security delete-keychain "$keychain" || true ;; esac
+          done

@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "packaging"))
 
 from build_paths import redact  # noqa: E402
+from release_version import packaged_version  # noqa: E402
 from runtime_bundle import (  # noqa: E402
     DEST,
     OUT,
@@ -87,7 +88,7 @@ def main() -> None:
     rust_notices(notices)
     metadata = {
         "format_version": 1,
-        "application": "0.1.0-alpha.29",
+        "application": packaged_version(ROOT),
         "python": "3.12.14",
         "pyinstaller": "6.22.3",
         "uv": "0.13.7",

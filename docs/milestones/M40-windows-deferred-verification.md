@@ -3,7 +3,7 @@
 ## Objective
 
 Run, on real hardware, the checks the maintainer waived while completing M10,
-M29, M31 and M33–M36, so that behaviour verified so far only by automated tests,
+M29, M31, M32 and M33–M36, so that behaviour verified so far only by automated tests,
 CI runners or synthetic fixtures is confirmed on physical Windows and macOS
 machines. This is a last-resort confirmation
 pass. **No milestone depends on M40, and it gates no release.** Defects it finds
@@ -14,7 +14,7 @@ become ordinary follow-up issues.
 M10, M29, M31 and M33–M36 merged (all complete by maintainer decision). It can
 run at any time after that, including after M32 or M39, on the newest available
 Windows installer and macOS bundles. Sections are independent; run whichever
-hardware is available.
+hardware is available. Section E needs the M32 release to be published first.
 
 ## Required context
 
@@ -77,6 +77,31 @@ Each item was waived or only partly covered in the M29 client run:
   silent, VFR, rotated, HEVC and PQ proxy samples through the app's media
   protocol on Apple Silicon (and Intel if available). Include an extended
   export with thermal observation.
+
+### E. Windows public alpha (M32)
+
+M32 prepared the `0.1.0-alpha.32` public alpha without a Windows machine; its
+clean-machine checks were waived by maintainer decision
+([qualification report](./M32-windows-qualification-report.md)). On a clean
+Windows 11 x64 PC, standard account where possible, using the installer
+**downloaded with a browser from the published GitHub release**:
+
+- **Download and verify:** the installer's SHA-256 equals its line in the
+  release's `checksums.txt`; `gh attestation verify` passes; record the
+  SmartScreen prompts (this covers the section A SmartScreen item).
+- **Version report:** the footer and **Settings → System check** show
+  `0.1.0-alpha.32`, "Packaged runtime" and passing core checks; a saved
+  diagnostics report names the same version.
+- **End-to-end journey:** import at least two overlapping synthetic or
+  self-recorded clips, group them into a session, review (approve, reject or
+  add) at least one event on the session timeline, create and trim a project,
+  complete the privacy review, then render **both** `horizontal-1080p30` and
+  `vertical-1080x1920-30`; both files play and the sources are unchanged.
+- **Upgrade from 0.1.0-alpha.29** (if that candidate is still available):
+  library, project, render and models retained; schema version stays 19.
+- **Console-transfer guides:** follow the [Xbox through OneDrive](../guides/xbox-onedrive.md)
+  and [PlayStation and phone clips](../guides/phone-upload.md) guides with the
+  current console and companion apps, and record any step that differs.
 
 ## Out of scope
 

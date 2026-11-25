@@ -9,7 +9,9 @@ public alpha release gate. No macOS/Linux installer is introduced here.
 
 - Per-user Unicode NSIS setup executable, application ID
   `org.openworldmoments.desktop`, product name **OpenWorld Moments**.
-- Candidate version `0.1.0-alpha.29`; downgrades are refused by the installer.
+- Version `0.1.0-alpha.32` (the M32 public alpha; M29 shipped the `0.1.0-alpha.29`
+  candidate), read by every packaging script from `tauri.packaged.conf.json`;
+  downgrades are refused by the installer.
 - Target: Windows 11 x64 with Microsoft's Evergreen WebView2 OS component.
   Microsoft [includes WebView2 with Windows 11](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/evergreen-vs-fixed-version).
   It is OS-managed rather than bundled/pinned by this app. Its exact user agent
@@ -102,9 +104,9 @@ selected by `build:windows`.
 CI uses pinned `windows-2025`, freezes twice and compares payload hashes, builds
 NSIS, then installs into a Unicode scratch path. It uses real WebView2/Tauri IPC
 to check the doctor/catalog, walk the M31 first-run setup to its system check and
-skip the rest, import synthetic media and render a privacy-reviewed project with
-bundled tools. It repairs the same version, builds a test-only higher
-version (`0.1.0-alpha.29.1`), checks saved projects/renders after upgrade and verifies
+skip the rest, import synthetic media and render a privacy-reviewed project to both
+the 16:9 and 9:16 presets with bundled tools. It repairs the same version, builds a
+test-only higher version (`<version>.1`, for example `0.1.0-alpha.32.1`), checks saved projects/renders after upgrade and verifies
 uninstall retention. It refuses to run against an existing library. CDP is enabled
 only by the CI harness, never in product defaults. Elevated hosted runners ignore
 WebView2 environment/HKCU overrides, so the harness temporarily sets a fixed,
