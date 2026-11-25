@@ -141,7 +141,7 @@ The qualification matrix must include:
 | M38 | macOS onboarding, menus, accessibility, diagnostics, and documentation |
 | M39 | Cross-platform release candidate and clean-machine qualification |
 
-M33–M36 can begin only after their declared dependencies are merged. M37 requires the signing prerequisites above. M39 is the first milestone after which the repository may claim that the downloadable application officially supports both Windows and macOS.
+M33–M36 can begin only after their declared dependencies are merged. M37 requires the signing prerequisites above. M38 needs only M37's merged credential-free signing and DMG pipeline; the clean-Mac Gatekeeper check of its install guide moves to M39, which requires notarized DMGs. M39 is the first milestone after which the repository may claim that the downloadable application officially supports both Windows and macOS.
 
 ## macOS definition of done
 
