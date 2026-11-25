@@ -23,7 +23,7 @@ function Test-Tool([string] $Name) {
 
 function Test-FFmpeg { (Test-Tool 'ffmpeg') -and (Test-Tool 'ffprobe') }
 
-$delays = @() # TEMPORARY: force the pinned fallback to test it
+$delays = @(0, 20, 60)
 for ($attempt = 1; $attempt -le $delays.Count -and -not (Test-FFmpeg); $attempt++) {
   if ($delays[$attempt - 1] -gt 0) {
     Write-Host "Waiting $($delays[$attempt - 1]) s before Chocolatey attempt $attempt"
