@@ -66,7 +66,10 @@ jobs:
         run: sudo apt-get install -y -q --no-install-recommends tesseract-ocr tesseract-ocr-eng
       - name: Install OCR (Windows)
         if: runner.os == 'Windows'
-        run: choco install tesseract -y --no-progress
+        # Retries Chocolatey, falls back to a pinned, checksummed installer and fails here
+        # unless tesseract >= 5 runs with English data.
+        shell: pwsh
+        run: ./.github/scripts/install-tesseract-windows.ps1
       - name: Media tool report (doctor)
         working-directory: services/media-worker
         run: uv run --locked python -m openworld_moments.doctor
