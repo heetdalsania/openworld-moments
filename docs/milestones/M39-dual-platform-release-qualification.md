@@ -19,6 +19,7 @@ Read the complete specification, macOS delivery plan, MILESTONES.md, SECURITY.md
 - Platform/architecture compatibility and performance matrix.
 - Signed/notarized DMGs, Windows installer, checksums, per-platform SBOMs, notices, and manifests.
 - Architecture-labelled GitHub Release assets and download guidance.
+- Clean-Mac validation of the M38 install guide's browser-download and Gatekeeper first-launch steps with the notarized DMGs (moved from M38 by its dependency change).
 - Cross-platform project/database portability and upgrade checks.
 - Published qualification report, known limitations, rollback instructions, and post-release smoke tests.
 
@@ -41,6 +42,7 @@ Read the complete specification, macOS delivery plan, MILESTONES.md, SECURITY.md
 - A nontechnical user completes the primary workflow on every supported platform/architecture without developer tools.
 - The same project contract and database version behave consistently across Windows and macOS.
 - macOS downloads pass Gatekeeper without bypass instructions and run natively on their labelled architecture.
+- The M38 install guide's download and first-launch steps are validated from a clean user account with the notarized DMG on Apple Silicon and Intel.
 - Release assets cannot be confused by filename, UI copy, or download documentation.
 - All artifacts match published checksums/SBOMs and report the same product/schema versions.
 - No cross-platform support claim exceeds the published clean-machine evidence and detector metrics.

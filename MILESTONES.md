@@ -130,7 +130,7 @@ flowchart TD
     M36 --> M37
     M31 --> M38[M38 macOS UX accessibility and docs]
     M35 --> M38
-    M37 --> M38
+    M37 -.->|DMG pipeline only| M38
     M32 --> M39[M39 Dual-platform release qualification]
     M37 --> M39
     M38 --> M39
@@ -153,6 +153,7 @@ Once their dependencies are merged, the following milestones are intentionally p
 - M33 can begin after M24/M29 while independent product milestones continue.
 - M40 can run at any time after its sources merge; nothing depends on it.
 - M35 and M36 may proceed in parallel after M34, but must coordinate bundle and capability contracts.
+- M38 can proceed while M37 waits for Apple credentials. It needs only M37's merged signing and DMG pipeline; the notarized install-guide check belongs to M39.
 
 Parallel agents must not edit the same generated contract or migration without coordinating first.
 
@@ -213,7 +214,7 @@ required check is skipped.
 | M35 | macOS files, permissions, and lifecycle | M07, M10, M33, M34 | Safe imports, watchers, storage, sleep/wake, and phone LAN flow | [Open](./docs/milestones/M35-macos-files-permissions-and-lifecycle.md) |
 | M36 | macOS media and render parity | M25, M33, M34 | Playback, proxy, VideoToolbox, color, and render parity | [Open](./docs/milestones/M36-macos-media-and-render-parity.md) |
 | M37 | macOS signing, notarization, and DMGs | M30, M34–M36 | Signed and notarized native DMGs | [Open](./docs/milestones/M37-macos-signing-notarization-and-dmg.md) |
-| M38 | macOS UX, accessibility, and documentation | M31, M35, M37 | Native conventions, VoiceOver, onboarding, and guides | [Open](./docs/milestones/M38-macos-ux-accessibility-and-docs.md) |
+| M38 | macOS UX, accessibility, and documentation | M31, M35, M37 DMG pipeline (#58) | Native conventions, VoiceOver, onboarding, and guides | [Open](./docs/milestones/M38-macos-ux-accessibility-and-docs.md) |
 | M39 | Dual-platform release qualification | M32, M37, M38 | Qualified Windows and macOS release assets | [Open](./docs/milestones/M39-dual-platform-release-qualification.md) |
 | M40 | Deferred device verification (non-blocking) | M10, M29, M31, M33–M36 | Hardware evidence for checks waived in M10, M29, M31 and M33–M36; gates nothing | [Open](./docs/milestones/M40-windows-deferred-verification.md) |
 
@@ -308,7 +309,8 @@ Each milestone pull request updates its own row **in the same pull request**, so
 | M36 | Complete | [#56](https://github.com/heetdalsania/openworld-moments/pull/56) | — | — | Bundled VideoToolbox and exact preset probes, same-preset CPU retry, validated BT.709 tags for HDR exports, and an automated media matrix for both native runner jobs. Apple Silicon results recorded. See [handoff](./docs/milestones/M36-handoff.md). Intel hardware results and packaged-player walkthrough waived by maintainer decision and deferred to non-blocking [M40](./docs/milestones/M40-windows-deferred-verification.md). |
 | M32 | Complete | [#57](https://github.com/heetdalsania/openworld-moments/pull/57) | — | Heet Dalsania | **Complete by maintainer decision; draft release only.** `0.1.0-alpha.32` release candidate (version now read from one file), packaged smoke renders 16:9 and 9:16, `release_check.py` artifact/CI verification, qualification report, compatibility matrix, synthetic-only detector metrics, privacy statement, release/migration notes, rollback and triage labels; RUSTSEC-2026-0594 fixed. Draft GitHub pre-release `v0.1.0-alpha.32` prepared for the maintainer to publish. See [report](./docs/milestones/M32-windows-qualification-report.md) and [handoff](./docs/milestones/M32-handoff.md). Clean-machine Windows checks and the post-publication smoke test waived by maintainer decision and deferred to non-blocking [M40](./docs/milestones/M40-windows-deferred-verification.md) section E. |
 | M37 | In progress | [#58](https://github.com/heetdalsania/openworld-moments/pull/58) | — | — | **Not complete: blocked on the Apple Developer Program prerequisite.** Built without credentials: inside-out Hardened Runtime signing of the runtime, host, app and DMG (`scripts/macos/sign-and-package.py`), reviewed empty entitlements (ad hoc-only library-validation exception for the worker), re-hashed runtime inventory, architecture-labelled DMGs with SBOM and checksums, install/replace/tamper/uninstall checks on both native CI runners, and a protected `macos-release` workflow that signs with Developer ID, notarizes, inspects logs, staples and gates publication, skipping clearly without secrets. Apple Silicon ad hoc DMG mounted, launched and passed `codesign --verify --deep --strict`; Gatekeeper rejected it as unnotarized (expected). Remaining: enroll, add the six `macos-release` secrets, run the notarization job for both architectures and the clean-Mac Gatekeeper/install/upgrade/uninstall checks. See [handoff](./docs/milestones/M37-handoff.md) and [macOS signing](./docs/platforms/macos-signing.md). |
-| M38–M40 | See dependency graph | — | — | — | — |
+| M38 | Ready | — | — | — | Dependencies met: M31, M35 and M37's credential-free DMG pipeline (#58). Starts before notarization by planning change; the notarized install-guide check moved to M39. |
+| M39–M40 | See dependency graph | — | — | — | — |
 
 ## Scope-change procedure
 
