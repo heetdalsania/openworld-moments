@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Announcer } from "./Announcer";
 import { describeError, revealLibrary } from "./api";
 import { AppearanceSettings } from "./AppearanceSettings";
@@ -18,7 +18,7 @@ import { hasUnsavedProjects } from "./projectWorkspace";
 import { AssetView } from "./AssetView";
 import { ImportPanel } from "./ImportPanel";
 import { JobCenter } from "./JobCenter";
-import { isActive, useJobFeed, useJobs } from "./jobs";
+import { isActive, percent, useJobFeed, useJobs } from "./jobs";
 import { LibraryView } from "./LibraryView";
 import { PhoneImport } from "./PhoneImport";
 import { navigate, type Route, routeHref, useRoute } from "./route";
@@ -85,6 +85,7 @@ function useDroppedPaths(onDrop: (paths: string[]) => void): boolean {
     let cancelled = false;
     getCurrentWebview()
       .onDragDropEvent((event) => {
+        if (cancelled) return;
         const payload = event.payload;
         if (payload.type === "over" || payload.type === "enter") setOver(true);
         else if (payload.type === "leave") setOver(false);
@@ -166,7 +167,17 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
   );
 }
 
-function NavLink({ route, current, children }: { route: Route; current: Route; children: string }) {
+function NavLink({
+  route,
+  current,
+  icon,
+  children,
+}: {
+  route: Route;
+  current: Route;
+  icon: string;
+  children: string;
+}) {
   const active =
     current.view === route.view ||
     (route.view === "projects" && current.view === "project") ||
@@ -175,6 +186,9 @@ function NavLink({ route, current, children }: { route: Route; current: Route; c
     (route.view === "settings" && current.view === "calibration");
   return (
     <a href={routeHref(route)} aria-current={active ? "page" : undefined}>
+      <span className="nav-icon" aria-hidden="true">
+        {icon}
+      </span>
       {children}
     </a>
   );
@@ -267,6 +281,7 @@ export function App() {
   useEffect(() => {
     const open = (event: globalThis.KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
+      if (target?.closest('[aria-modal="true"]')) return;
       const typing =
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
@@ -291,11 +306,24 @@ export function App() {
   const ready = worker?.status === "ready";
   useJobFeed(ready);
   const { jobs } = useJobs();
-  const activeJobs = jobs.filter((j) => isActive(j) && j.kind !== "diagnostic").length;
+  const runningJobs = jobs.filter((j) => isActive(j) && j.kind !== "diagnostic");
+  const activeJobs = runningJobs.length;
+  const [firstJob] = runningJobs;
+  const jobProgress = activeJobs === 1 && firstJob ? percent(firstJob) : null;
+  const jobsToggle = useRef<HTMLButtonElement>(null);
+  const closeJobs = () => {
+    setJobsOpen(false);
+    jobsToggle.current?.focus();
+  };
   const [jobsOpen, setJobsOpen] = useState(false);
   const [importPaths, setImportPaths] = useState<string[] | null>(null);
   const openImport = useCallback(() => setImportPaths([]), []);
-  const onDrop = useCallback((paths: string[]) => setImportPaths(paths), []);
+  const onDrop = useCallback(
+    (paths: string[]) => {
+      if (ready) setImportPaths(paths);
+    },
+    [ready],
+  );
   const dragging = useDroppedPaths(onDrop);
 
   return (
@@ -310,76 +338,95 @@ export function App() {
       >
         Skip to content
       </a>
-      <header className="topbar">
-        <span className="brand">OpenWorld Moments</span>
+      <aside className="sidebar" aria-label="Workspace">
+        <div className="brand">
+          <span className="brand-mark play-symbol" aria-hidden="true" />
+          <span>
+            OpenWorld <strong>Moments</strong>
+          </span>
+        </div>
         <nav aria-label="Primary">
-          <NavLink route={{ view: "library" }} current={route}>
+          <NavLink route={{ view: "library" }} current={route} icon="▤">
             Library
           </NavLink>
-          <NavLink route={{ view: "sessions" }} current={route}>
+          <NavLink route={{ view: "sessions" }} current={route} icon="◷">
             Sessions
           </NavLink>
-          <NavLink route={{ view: "projects" }} current={route}>
+          <NavLink route={{ view: "projects" }} current={route} icon="▱">
             Projects
           </NavLink>
-          <NavLink route={{ view: "search" }} current={route}>
+          <NavLink route={{ view: "search" }} current={route} icon="⌕">
             Search
           </NavLink>
-          <NavLink route={{ view: "settings" }} current={route}>
+          <NavLink route={{ view: "settings" }} current={route} icon="⚙︎">
             Settings
           </NavLink>
         </nav>
-        <div className="actions">
-          <button type="button" className="primary" onClick={openImport} disabled={!ready}>
-            Import
-          </button>
-          <a
-            className="button"
-            href={routeHref({ view: "phone" })}
-            aria-current={route.view === "phone" ? "page" : undefined}
-          >
-            Import from phone
-          </a>
-          <button
-            type="button"
-            aria-expanded={jobsOpen}
-            aria-controls="job-center"
-            onClick={() => setJobsOpen((open) => !open)}
-          >
-            Background jobs{activeJobs > 0 ? ` (${activeJobs} running)` : ""}
-          </button>
+        <div className="sidebar-status" aria-hidden="true">
+          <span className={ready ? "status-dot ready" : "status-dot"} />
+          {ready ? "Media worker ready" : "Media worker offline"}
         </div>
-      </header>
-      <WorkerBanner worker={worker} />
-      <Announcer />
-      <div className="body">
-        <main id="main" tabIndex={-1}>
-          {prefs.onboarding === "pending" ? (
-            <Onboarding workerReady={ready} onImport={openImport} />
-          ) : (
-            <Routes route={route} ready={ready} openImport={openImport} />
-          )}
-        </main>
-        {jobsOpen && (
-          <div id="job-center">
-            <JobCenter onClose={() => setJobsOpen(false)} />
+      </aside>
+      <div className="workspace">
+        <header className="workspace-bar">
+          <div className="actions">
+            <button type="button" className="primary" onClick={openImport} disabled={!ready}>
+              <span aria-hidden="true">＋</span> Import
+            </button>
+            <a
+              className="button"
+              href={routeHref({ view: "phone" })}
+              aria-current={route.view === "phone" ? "page" : undefined}
+            >
+              Import from phone
+            </a>
+            <button
+              type="button"
+              ref={jobsToggle}
+              aria-expanded={jobsOpen}
+              aria-controls={jobsOpen ? "job-center" : undefined}
+              onClick={() => setJobsOpen((open) => !open)}
+            >
+              Background jobs{activeJobs > 0 ? ` (${activeJobs} running)` : ""}
+              {jobProgress !== null && (
+                <span className="job-count" aria-hidden="true">
+                  {jobProgress}%
+                </span>
+              )}
+            </button>
           </div>
-        )}
+        </header>
+        <WorkerBanner worker={worker} />
+        <Announcer />
+        <div className="body">
+          <main id="main" tabIndex={-1}>
+            {prefs.onboarding === "pending" ? (
+              <Onboarding workerReady={ready} onImport={openImport} />
+            ) : (
+              <Routes route={route} ready={ready} openImport={openImport} />
+            )}
+          </main>
+          {jobsOpen && (
+            <div id="job-center">
+              <JobCenter onClose={closeJobs} />
+            </div>
+          )}
+        </div>
+        <footer className="footer">
+          <span>{info ? `Version ${info.version} (${info.stage})` : ""}</span>
+          <span>
+            Unofficial community project. Not affiliated with or endorsed by Rockstar Games.
+          </span>
+        </footer>
       </div>
-      <footer className="footer">
-        <span>{info ? `Version ${info.version} (${info.stage})` : ""}</span>
-        <span>
-          Unofficial community project. Not affiliated with or endorsed by Rockstar Games.
-        </span>
-      </footer>
-      {dragging && importPaths === null && (
+      {ready && dragging && (
         <div className="drop-hint" aria-hidden="true">
           Drop videos or folders to import
         </div>
       )}
       {importPaths !== null && (
         <ImportPanel
-          initialPaths={importPaths}
+          droppedPaths={importPaths}
           onClose={() => setImportPaths(null)}
           onStarted={() => setJobsOpen(true)}
         />

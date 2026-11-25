@@ -39,15 +39,24 @@ function baseName(path: string): string {
  * library keeps them, start an import job. Originals are never moved or changed.
  */
 export function ImportPanel({
-  initialPaths,
+  initialPaths = [],
+  droppedPaths,
   onClose,
   onStarted,
 }: {
-  initialPaths: string[];
+  initialPaths?: string[];
+  droppedPaths?: string[];
   onClose: () => void;
   onStarted: () => void;
 }) {
-  const [paths, setPaths] = useState<string[]>(initialPaths);
+  const [selection, setSelection] = useState({
+    drop: droppedPaths,
+    paths: [...new Set([...initialPaths, ...(droppedPaths ?? [])])],
+  });
+  const paths = selection.paths;
+  const merge = (existing: string[], incoming: string[]) => [
+    ...new Set([...existing, ...incoming]),
+  ];
   const [mode, setMode] = useState<ImportMode>(savedMode);
   const headingId = useId();
   const firstButton = useRef<HTMLButtonElement>(null);
@@ -57,9 +66,21 @@ export function ImportPanel({
     upsertJob(job);
   });
 
-  useDialogFocus(dialog, onClose, firstButton);
+  if (selection.drop !== droppedPaths) {
+    setSelection({
+      drop: droppedPaths,
+      paths: submit.busy ? paths : merge(paths, droppedPaths ?? []),
+    });
+  }
+  useDialogFocus(
+    dialog,
+    () => {
+      if (!submit.busy) onClose();
+    },
+    firstButton,
+  );
 
-  async function choose(directory: boolean) {
+  const picker = useAction(async (directory: boolean) => {
     const choice = await open({
       directory,
       multiple: true,
@@ -67,8 +88,10 @@ export function ImportPanel({
       ...(directory ? {} : { filters: [{ name: "Video", extensions: VIDEO_EXTENSIONS }] }),
     });
     const picked = asList(choice);
-    if (picked.length) setPaths((current) => [...new Set([...current, ...picked])]);
-  }
+    if (picked.length) {
+      setSelection((current) => ({ ...current, paths: merge(current.paths, picked) }));
+    }
+  });
 
   async function start() {
     saveMode(mode);
@@ -85,21 +108,37 @@ export function ImportPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
-        className="dialog"
+        className="dialog import-dialog"
       >
         <h2 id={headingId}>Import media</h2>
         <p className="muted">
           Choose video files or folders. Folders are searched for supported videos, including
           subfolders.
         </p>
-        <div className="row">
-          <button type="button" ref={firstButton} onClick={() => void choose(false)}>
-            Choose files…
-          </button>
-          <button type="button" onClick={() => void choose(true)}>
-            Choose folder…
-          </button>
+        <div className="import-dropzone">
+          <span className="feature-icon" aria-hidden="true">
+            ↑
+          </span>
+          <strong>Drop files or folders here</strong>
+          <div className="row center">
+            <button
+              type="button"
+              ref={firstButton}
+              disabled={picker.busy || submit.busy}
+              onClick={() => void picker.run(false)}
+            >
+              Choose files…
+            </button>
+            <button
+              type="button"
+              disabled={picker.busy || submit.busy}
+              onClick={() => void picker.run(true)}
+            >
+              Choose folder…
+            </button>
+          </div>
         </div>
+        {picker.error && <p role="alert">{describeError(picker.error)}</p>}
         {paths.length > 0 ? (
           <ul className="paths" aria-label="Selected for import">
             {paths.map((path) => (
@@ -109,7 +148,13 @@ export function ImportPanel({
                   type="button"
                   className="link"
                   aria-label={`Remove ${baseName(path)} from the selection`}
-                  onClick={() => setPaths((current) => current.filter((p) => p !== path))}
+                  disabled={submit.busy}
+                  onClick={() =>
+                    setSelection((current) => ({
+                      ...current,
+                      paths: current.paths.filter((item) => item !== path),
+                    }))
+                  }
                 >
                   Remove
                 </button>
@@ -119,7 +164,7 @@ export function ImportPanel({
         ) : (
           <p className="muted">Nothing selected yet. You can also drop files onto the window.</p>
         )}
-        <fieldset>
+        <fieldset disabled={submit.busy}>
           <legend>How should the library keep them?</legend>
           <label>
             <input
@@ -147,13 +192,13 @@ export function ImportPanel({
         </fieldset>
         {submit.error && <p role="alert">Import could not start: {describeError(submit.error)}</p>}
         <div className="row end">
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={onClose} disabled={submit.busy}>
             Cancel
           </button>
           <button
             type="button"
             className="primary"
-            disabled={paths.length === 0 || submit.busy}
+            disabled={paths.length === 0 || submit.busy || picker.busy}
             onClick={() => void start()}
           >
             {submit.busy ? "Starting…" : `Import ${paths.length || ""}`.trim()}
