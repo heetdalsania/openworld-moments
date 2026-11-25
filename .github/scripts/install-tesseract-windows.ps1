@@ -35,7 +35,7 @@ function Test-Tesseract {
   return $LASTEXITCODE -eq 0 -and ($langs -contains $Language)
 }
 
-$delays = @(0, 20, 60)
+$delays = @() # TEMPORARY: force the pinned fallback to test it
 for ($attempt = 1; $attempt -le $delays.Count -and -not (Test-Tesseract); $attempt++) {
   if ($delays[$attempt - 1] -gt 0) {
     Write-Host "Waiting $($delays[$attempt - 1]) s before Chocolatey attempt $attempt"
