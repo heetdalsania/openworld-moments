@@ -28,7 +28,7 @@ tokio-tungstenite = "0.30"
 futures-util = "0.3"
 getrandom = "0.4"
 hex = "0.4"
-notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+notify = { version = "9", default-features = false, features = ["macos_fsevent"] }
 tauri-plugin-dialog = "2"
 if-addrs = "0.13"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
