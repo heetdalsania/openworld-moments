@@ -31,7 +31,7 @@ hex = "0.4"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 tauri-plugin-dialog = "2"
 if-addrs = "0.13"
-qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+qrcode = { version = "0.15", default-features = false, features = ["svg"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = "0.6.2"
