@@ -57,13 +57,19 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
-        run: choco install ffmpeg -y --no-progress
+        # Retries Chocolatey, falls back to a pinned, checksummed build and fails here
+        # unless ffmpeg and ffprobe >= 6.0 run.
+        shell: pwsh
+        run: ./.github/scripts/install-ffmpeg-windows.ps1
       - name: Install OCR (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get install -y -q --no-install-recommends tesseract-ocr tesseract-ocr-eng
       - name: Install OCR (Windows)
         if: runner.os == 'Windows'
-        run: choco install tesseract -y --no-progress
+        # Retries Chocolatey, falls back to a pinned, checksummed installer and fails here
+        # unless tesseract >= 5 runs with English data.
+        shell: pwsh
+        run: ./.github/scripts/install-tesseract-windows.ps1
       - name: Media tool report (doctor)
         working-directory: services/media-worker
         run: uv run --locked python -m openworld_moments.doctor
@@ -135,7 +141,10 @@ jobs:
         run: sudo apt-get install -y -q --no-install-recommends ffmpeg
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
-        run: choco install ffmpeg -y --no-progress
+        # Retries Chocolatey, falls back to a pinned, checksummed build and fails here
+        # unless ffmpeg and ffprobe >= 6.0 run.
+        shell: pwsh
+        run: ./.github/scripts/install-ffmpeg-windows.ps1
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
