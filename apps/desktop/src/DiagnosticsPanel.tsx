@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useId, useState } from "react";
+import { useState } from "react";
 import { type DiagnosticsPreview, describeError, previewDiagnostics, saveDiagnostics } from "./api";
 import { useAction } from "./query";
 
@@ -10,7 +10,6 @@ import { useAction } from "./query";
  * saved file with.
  */
 export function DiagnosticsPanel({ workerReady }: { workerReady: boolean }) {
-  const id = useId();
   const [includeMessages, setIncludeMessages] = useState(false);
   const [preview, setPreview] = useState<DiagnosticsPreview | null>(null);
   const [saved, setSaved] = useState<boolean | null>(null);
@@ -23,8 +22,10 @@ export function DiagnosticsPanel({ workerReady }: { workerReady: boolean }) {
   });
   const error = load.error ?? save.error;
   return (
-    <section className="panel diagnostics" aria-labelledby={`${id}-heading`}>
-      <h2 id={`${id}-heading`}>Diagnostics for support</h2>
+    <section className="panel diagnostics" aria-labelledby="diagnostics-heading">
+      <h2 id="diagnostics-heading" tabIndex={-1}>
+        Diagnostics for support
+      </h2>
       <p>
         Save a report you can attach when asking for help. It lists app and tool versions, the
         system check, how many clips, sessions and projects you have, and recent error codes. It

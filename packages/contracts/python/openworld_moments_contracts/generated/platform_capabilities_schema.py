@@ -112,6 +112,34 @@ class PlatformIntegrations(BaseModel):
     menus: Literal["none", "default", "native"]
 
 
+class PlatformSigning(BaseModel):
+    """
+    M38: how the running application is signed, as the host checked it with the operating system's own code-signing and Gatekeeper tools. Only the classification is reported: never the signer's name, team, certificate or any path. Absent in documents written before 1.28.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    state: Annotated[
+        Literal[
+            "not-applicable", "unknown", "unsigned", "adhoc", "developer-id", "notarized", "other"
+        ],
+        Field(
+            description="not-applicable: not checked on this OS. unknown: the check could not run or timed out. unsigned: no signature. adhoc: signed without an identity (development and CI builds). developer-id: signed with a Developer ID but not notarized. notarized: Developer ID signed and accepted by Gatekeeper as notarized. other: any other signing identity."
+        ),
+    ]
+    hardened_runtime: Annotated[
+        bool | None,
+        Field(
+            description="Whether the executable carries the Hardened Runtime flag; null when not checked or unknown."
+        ),
+    ]
+    gatekeeper: Annotated[
+        Literal["not-applicable", "unknown", "accepted", "rejected"],
+        Field(description="Gatekeeper's assessment of the application."),
+    ]
+
+
 class PlatformCapabilities(BaseModel):
     """
     What the desktop host knows about the computer and build it runs on (M33). Written by the host, never by the worker. Carries no paths, user names or hardware identifiers.
@@ -134,3 +162,10 @@ class PlatformCapabilities(BaseModel):
         ),
     ]
     integrations: Annotated[PlatformIntegrations, Field(title="PlatformIntegrations")]
+    signing: Annotated[
+        PlatformSigning | None,
+        Field(
+            description="M38: how the running application is signed, as the host checked it with the operating system's own code-signing and Gatekeeper tools. Only the classification is reported: never the signer's name, team, certificate or any path. Absent in documents written before 1.28.",
+            title="PlatformSigning",
+        ),
+    ] = None

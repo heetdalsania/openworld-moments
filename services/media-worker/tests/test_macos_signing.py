@@ -764,3 +764,31 @@ def test_only_the_protected_release_workflow_sees_apple_secrets() -> None:
     ci = workflow("ci.yml")
     assert not any(f"secrets.{name}" in ci for name in signing.CREDENTIAL_NAMES)
     assert "sign-and-package.py package" in ci and "verify-dmg" in ci
+
+
+# -- M38: the app's own signing report -------------------------------------------------
+
+
+def _report(state: str, gatekeeper: str, hardened: bool | None = True) -> dict[str, Any]:
+    return {"signing": {"state": state, "hardened_runtime": hardened, "gatekeeper": gatekeeper}}
+
+
+def test_version_report_must_state_the_real_signing() -> None:
+    """verify-dmg checks that the system check and diagnostics describe the bundle as it
+    really is: ad hoc DMGs say adhoc, notarized ones notarized, and nothing overclaims."""
+    assert signing.signing_report_problems(_report("adhoc", "rejected"), "adhoc") == []
+    assert signing.signing_report_problems(_report("notarized", "accepted"), "notarized") == []
+    overclaim = signing.signing_report_problems(_report("notarized", "accepted"), "adhoc")
+    assert any("expected 'adhoc'" in p for p in overclaim)
+    assert any("gatekeeper" in p for p in overclaim)
+    underclaim = signing.signing_report_problems(_report("developer-id", "rejected"), "notarized")
+    assert any("expected 'notarized'" in p for p in underclaim)
+    assert signing.signing_report_problems(_report("adhoc", "rejected", None), "adhoc") == [
+        "signing: Hardened Runtime not reported"
+    ]
+    assert signing.signing_report_problems({}, "adhoc") == [
+        "signing: missing from the version report"
+    ]
+    assert signing.signing_report_problems({"signing": "adhoc"}, "adhoc") == [
+        "signing: missing from the version report"
+    ]

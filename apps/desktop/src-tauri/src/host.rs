@@ -72,6 +72,10 @@ fn development_repo() -> Option<PathBuf> {
 }
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>) -> Result<(), Box<dyn std::error::Error>> {
+    app.manage(crate::menu::QuitGuard::default());
+    // M38: check how this copy is signed once, in the background, so the system check
+    // and diagnostics don't wait for it.
+    std::thread::spawn(|| crate::signing::current(crate::platform::facts().family));
     let Some(command) = worker_command(app) else {
         app.manage(None::<Supervisor>);
         app.manage(None::<WatchService<WorkerSink>> as Watcher);
@@ -210,6 +214,60 @@ pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
     }
 }
 
+/// M38: this copy's signing state, checked once per launch off the async runtime.
+pub async fn signing_state() -> crate::signing::Signing {
+    let family = crate::platform::facts().family;
+    tauri::async_runtime::spawn_blocking(move || crate::signing::current(family))
+        .await
+        .unwrap_or(crate::signing::Signing::UNKNOWN)
+}
+
+/// M38: whether project edits are waiting to be saved, so Quit can ask first.
+#[tauri::command]
+pub fn quit_guard_set(guard: State<'_, crate::menu::QuitGuard>, unsaved: bool) {
+    guard.set_unsaved(unsaved);
+}
+
+/// M38: replace File ▸ Open Recent with recently opened projects (macOS only).
+#[tauri::command]
+pub fn menu_recent_set(
+    app: AppHandle,
+    projects: Vec<crate::menu::RecentProject>,
+) -> Result<(), Value> {
+    if projects.len() > 100 {
+        return Err(crate::media::route_refused());
+    }
+    #[cfg(target_os = "macos")]
+    crate::menu::set_recent(&app, &projects).map_err(|_| crate::media::route_refused())?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, projects);
+    Ok(())
+}
+
+fn open_failed() -> Value {
+    json!({"code":"open.failed","message":"The page could not be opened. The guides are in the docs/guides folder of the project on GitHub.","retryable":true})
+}
+
+/// M38: open a user guide in the browser, by fixed topic. The webview never sends a URL.
+#[tauri::command]
+pub fn guide_open(topic: String) -> Result<Value, Value> {
+    let url = crate::menu::guide_url(&topic).ok_or_else(crate::media::route_refused)?;
+    crate::platform::open_url(&url).map_err(|_| open_failed())?;
+    Ok(json!({ "shown": true }))
+}
+
+/// M38: open the System Settings pane where the user grants access (macOS only). It
+/// only shows the pane; nothing is changed and no protection is turned off.
+#[tauri::command]
+pub fn system_settings_open(pane: String) -> Result<Value, Value> {
+    if crate::platform::facts().family != crate::platform::Family::Macos {
+        return Err(crate::media::route_refused());
+    }
+    let url = crate::menu::settings_url(&pane).ok_or_else(crate::media::route_refused)?;
+    crate::platform::open_url(url).map_err(|_| open_failed())?;
+    Ok(json!({ "shown": true }))
+}
+
 fn unavailable() -> Value {
     json!({
         "status": "failed",
@@ -282,7 +340,7 @@ pub async fn worker_api(
         return Err(crate::media::route_refused());
     }
     let body = if method == "POST" && path == "/v1/diagnostics" {
-        Some(with_host_platform(&app, body))
+        Some(with_host_platform(&app, body).await)
     } else {
         body
     };
@@ -630,7 +688,8 @@ pub async fn diagnostics_export(
     state: State<'_, Option<Supervisor>>,
     include_messages: bool,
 ) -> Result<Value, Value> {
-    let body = with_host_platform(&app, Some(json!({ "include_messages": include_messages })));
+    let body =
+        with_host_platform(&app, Some(json!({ "include_messages": include_messages }))).await;
     save_worker_export(
         app,
         state,
@@ -644,11 +703,13 @@ pub async fn diagnostics_export(
 
 /// M33: diagnostics carry the host's platform report. The host writes it, replacing
 /// anything the webview sent, so the preview and the saved file show the same facts.
-fn with_host_platform<R: Runtime>(app: &AppHandle<R>, body: Option<Value>) -> Value {
+async fn with_host_platform<R: Runtime>(app: &AppHandle<R>, body: Option<Value>) -> Value {
     let version = app.package_info().version.to_string();
+    let facts = crate::platform::facts();
+    let signing = signing_state().await;
     host_platform_body(
         body,
-        crate::platform::capabilities(&version, &crate::platform::facts()),
+        crate::platform::capabilities(&version, &facts, &signing),
     )
 }
 

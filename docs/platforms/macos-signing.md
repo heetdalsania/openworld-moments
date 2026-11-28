@@ -130,6 +130,17 @@ Then `verify-dmg` (install, replace, tamper and uninstall checks), the SBOM with
 DMG hash, `checksums`, `verify_sbom.py --release-dir` and the release-folder secret
 scan.
 
+### The app's own signing report (M38)
+
+The installed app reports how it is signed in its system check, its `--version-report`
+and diagnostics (`platform-capabilities.signing`, contracts 1.28). It asks
+`/usr/bin/codesign --display` and `/usr/sbin/spctl --assess` about its own bundle and
+reports only `adhoc`, `developer-id`, `notarized`, `unsigned`, `other` or `unknown`,
+never the signer. It says `notarized` only when Gatekeeper accepted the bundle with the
+source *Notarized Developer ID*. `verify-dmg` checks the installed copy reports
+`adhoc` (Gatekeeper `rejected`) for ad hoc DMGs and `notarized` (Gatekeeper `accepted`)
+for notarized ones, with the Hardened Runtime flag, on both architectures.
+
 ## CI
 
 ### Every pull request and push (`ci.yml`, job `macOS build (<arch>)`)

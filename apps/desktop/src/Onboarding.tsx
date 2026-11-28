@@ -6,16 +6,31 @@ import { saveMode, savedMode } from "./ImportPanel";
 import { setOnboarding } from "./preferences";
 import { PrivacyChoices } from "./PrivacyChoices";
 import { SystemPanel } from "./SystemPanel";
+import { isMac } from "./keys";
+import { MacPermissions } from "./MacPermissions";
 import { addWatched, errorMessage, pickFolder } from "./watched";
 import { XBOX_SUPPORT_URL } from "./XboxOnboarding";
 
 export const GUIDES_URL = "https://github.com/heetdalsania/openworld-moments/tree/main/docs/guides";
 
-const STEPS = ["welcome", "system", "import", "privacy", "display", "done"] as const;
-type Step = (typeof STEPS)[number];
+const ALL_STEPS = [
+  "welcome",
+  "system",
+  "permissions",
+  "import",
+  "privacy",
+  "display",
+  "done",
+] as const;
+type Step = (typeof ALL_STEPS)[number];
+/** M38: macOS adds a step explaining its permission prompts; Windows keeps six steps. */
+export function setupSteps(mac: boolean = isMac()): Step[] {
+  return ALL_STEPS.filter((s) => mac || s !== "permissions");
+}
 const TITLES: Record<Step, string> = {
   welcome: "Welcome to OpenWorld Moments",
   system: "Welcome — check this computer",
+  permissions: "What macOS may ask",
   import: "How your clips get here",
   privacy: "Privacy choices",
   display: "Display and motion",
@@ -34,11 +49,12 @@ export function Onboarding({
   workerReady: boolean;
   onImport: () => void;
 }) {
+  const [steps] = useState(() => setupSteps());
   const [step, setStep] = useState<Step>("welcome");
   const heading = useRef<HTMLHeadingElement>(null);
   const shown = useRef<Step>(step);
   const id = useId();
-  const index = STEPS.indexOf(step);
+  const index = steps.indexOf(step);
   useEffect(() => {
     // Move focus to a new step's heading so keyboard and screen-reader users start there
     // (not on first display, where focus stays where the user left it).
@@ -47,20 +63,20 @@ export function Onboarding({
     heading.current?.focus();
   }, [step]);
 
-  const next = () => setStep(STEPS[Math.min(index + 1, STEPS.length - 1)] ?? "done");
-  const back = () => setStep(STEPS[Math.max(index - 1, 0)] ?? "welcome");
+  const next = () => setStep(steps[Math.min(index + 1, steps.length - 1)] ?? "done");
+  const back = () => setStep(steps[Math.max(index - 1, 0)] ?? "welcome");
   const finish = (state: "completed" | "skipped") => setOnboarding(state);
 
   return (
     <section className="view onboarding-flow" aria-labelledby={`${id}-heading`}>
       <p className="eyebrow" id={`${id}-progress`}>
-        Setup · step {index + 1} of {STEPS.length}
+        Setup · step {index + 1} of {steps.length}
       </p>
       <h1 id={`${id}-heading`} ref={heading} tabIndex={-1}>
         {TITLES[step]}
       </h1>
       <ol className="setup-steps" aria-label="Setup steps">
-        {STEPS.map((s, i) => (
+        {steps.map((s, i) => (
           <li key={s} aria-current={s === step ? "step" : undefined}>
             <span className="setup-step-state">
               {i < index ? "Done" : s === step ? "Current" : "Next"}
@@ -80,6 +96,7 @@ export function Onboarding({
             Settings.
           </p>
         ))}
+      {step === "permissions" && <MacPermissions />}
       {step === "import" && <ImportMethods workerReady={workerReady} />}
       {step === "privacy" && <PrivacyChoices embedded />}
       {step === "display" && <AppearanceSettings embedded />}

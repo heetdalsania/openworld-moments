@@ -91,6 +91,23 @@ def _platform_capabilities(doc: Document) -> Iterable[str]:
         yield f"directories.convention: {doc['os']['family']} uses {convention}"
     if doc["integrations"]["file_manager"] != file_manager:
         yield f"integrations.file_manager: {doc['os']['family']} uses {file_manager}"
+    # M38: the signing state is only checked on macOS, and never claims more than the
+    # Gatekeeper assessment supports.
+    signing = doc.get("signing")
+    if signing is not None:
+        not_checked = signing["state"] == "not-applicable"
+        if (doc["os"]["family"] == "macos") == not_checked:
+            yield "signing.state: not-applicable exactly when the OS is not macOS"
+        if (signing["gatekeeper"] == "not-applicable") != not_checked:
+            yield "signing.gatekeeper: not-applicable exactly when signing.state is"
+        if not_checked and signing["hardened_runtime"] is not None:
+            yield "signing.hardened_runtime: null when signing is not checked"
+        if signing["state"] == "notarized" and signing["gatekeeper"] != "accepted":
+            yield "signing.state: notarized requires a Gatekeeper acceptance"
+        if signing["state"] in {"unsigned", "adhoc"} and signing["gatekeeper"] == "accepted":
+            yield "signing.gatekeeper: Gatekeeper never accepts an unsigned or ad hoc application"
+        if signing["state"] == "unsigned" and signing["hardened_runtime"] is True:
+            yield "signing.hardened_runtime: an unsigned application has no Hardened Runtime"
 
 
 def _system_doctor(doc: Document) -> Iterable[str]:

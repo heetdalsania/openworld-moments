@@ -32,6 +32,14 @@ pub fn reveal_command(target: &Path, select: bool) -> Command {
     command
 }
 
+/// M38: a user guide in the default browser, by fixed URL (Explorer opens URLs).
+pub fn url_command(url: &str) -> Command {
+    let root = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
+    let mut command = Command::new(Path::new(&root).join("explorer.exe"));
+    command.arg(url);
+    command
+}
+
 /// Preserve pipes without opening a console window (`CREATE_NO_WINDOW`).
 pub fn hide_console(command: &mut tokio::process::Command) {
     command.creation_flags(0x0800_0000);

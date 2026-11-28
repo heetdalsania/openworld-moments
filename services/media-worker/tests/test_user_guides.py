@@ -15,7 +15,10 @@ IMAGES = GUIDES / "images"
 PAGES = sorted(GUIDES.glob("*.md"))
 LINK = re.compile(r"(!?)\[([^\]]*)\]\(([^)\s]+)\)")
 HEADER = re.compile(
-    r"^> \*\*Applies to:\*\* OpenWorld Moments \d+\.\d+\.\d+ alpha for Windows 11 \(x64\)\.\n"
+    r"^> \*\*Applies to:\*\* OpenWorld Moments \d+\.\d+\.\d+ "
+    # M38: Windows-only guides, guides that cover both, and the macOS preview guide.
+    r"(?:alpha for Windows 11 \(x64\)(?:, and the macOS 14\+ preview)?"
+    r"|preview for macOS 14 or later \(Apple Silicon and Intel\))\.\n"
     r"> \*\*Last checked:\*\* (\d{4}-\d{2}-\d{2}) \(M\d+\)",
     re.MULTILINE,
 )
@@ -53,6 +56,7 @@ def test_there_are_guides_for_every_required_topic() -> None:
         "known-limitations",
         "accessibility",
         "compatibility",
+        "macos",
     } <= names
 
 
@@ -119,3 +123,66 @@ def test_guides_do_not_point_at_personal_or_build_paths() -> None:
     for page in PAGES:
         text = page.read_text("utf-8")
         assert not re.search(r"(?i)c:\\users\\[a-z]|/users/[a-z]|runneradmin", text), page.name
+
+
+# -- M38: macOS guidance -----------------------------------------------------------------
+
+#: Advice that would weaken a system protection. A line may mention these only to say
+#: never to do it.
+RISKY = re.compile(
+    r"(?i)xattr|quarantine|spctl|master-disable|(?:disable|bypass|turn off|around)\s+gatekeeper"
+    r"|gatekeeper\s+off|open anyway|right-click.*\bopen\b|control-click|turn off the firewall"
+    r"|disable the firewall|firewall off|csrutil|\bsip\b|sudo|full disk access"
+    r"|security settings?|bypass|work around|get around"
+)
+NEGATION = re.compile(r"(?i)\bnever\b|\bdon['\u2019]t\b|\bdo not\b|\bnot\b|\bnone\b|\bno\b")
+
+
+@pytest.mark.parametrize("page", PAGES, ids=lambda p: p.stem)
+def test_guides_never_suggest_bypassing_macos_protections(page: Path) -> None:
+    text = re.sub(r"```.*?```", "", page.read_text("utf-8"), flags=re.DOTALL)
+    for number, line in enumerate(text.splitlines(), 1):
+        if RISKY.search(line):
+            assert NEGATION.search(line), f"{page.name}:{number}: {line.strip()}"
+
+
+def test_macos_guide_says_builds_are_previews_until_notarized() -> None:
+    text = (GUIDES / "macos.md").read_text("utf-8")
+    assert "macOS builds are previews" in text
+    assert "not for general" in text and "download" in text
+    assert "notarized" in text
+    for name in ("macos.md", "README.md", "known-limitations.md", "troubleshooting.md"):
+        assert re.search(r"(?i)preview", (GUIDES / name).read_text("utf-8")), name
+
+
+def test_macos_guide_covers_every_required_topic() -> None:
+    headings = anchors(GUIDES / "macos.md")
+    for required in (
+        "which-download",
+        "install",
+        "first-run-setup",
+        "permissions-and-recovery",
+        "getting-clips-onto-your-mac",
+        "menus-and-keyboard-shortcuts",
+        "update",
+        "uninstall",
+        "privacy-on-a-mac",
+        "diagnostics",
+        "validation",
+    ):
+        assert required in headings, required
+
+
+def test_architecture_selection_names_both_native_dmgs() -> None:
+    text = (GUIDES / "macos.md").read_text("utf-8")
+    assert "`OpenWorld-Moments_<version>_macOS_arm64.dmg`" in text
+    assert "`OpenWorld-Moments_<version>_macOS_x86_64.dmg`" in text
+    # The same naming as ADR-0008 and the signing script.
+    adr = (ROOT / "docs/architecture/adr/0008-macos-distribution.md").read_text("utf-8")
+    assert "_macOS_arm64.dmg" in adr and "_macOS_x86_64.dmg" in adr
+    assert re.search(r"Apple (Silicon|M1)", text) and "Intel" in text
+
+
+def test_macos_guide_links_the_signing_install_section() -> None:
+    targets = {target for _, _, target in links(GUIDES / "macos.md")}
+    assert "../platforms/macos-signing.md#install-upgrade-replace-and-uninstall" in targets

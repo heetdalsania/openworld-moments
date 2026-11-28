@@ -1,7 +1,7 @@
 # Accessibility
 
-> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-11 (M31).
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64), and the macOS 14+ preview.
+> **Last checked:** 2026-11-28 (M38).
 
 OpenWorld Moments is meant to be usable with a keyboard alone, with a screen reader, at
 large text sizes and in high contrast. This page lists what is supported, how it was
@@ -32,7 +32,7 @@ Everywhere:
 | Tab, Shift+Tab | Move between controls |
 | Enter, Space | Activate a button, link or checkbox |
 | First Tab on a page | **Skip to content** |
-| / or Ctrl+K | Open Search (or focus the search box) |
+| / or Ctrl+K (⌘K on a Mac) | Open Search (or focus the search box) |
 | Esc | Close the Import dialog; clear the search box |
 
 In Search, **Down** moves from the box into the results and **Up**/**Down** move between
@@ -60,11 +60,16 @@ Story editor (the full list is under **Editor keyboard shortcuts** in the editor
 | Home, End | Start or end |
 | S | Split the selected cut at the playhead |
 | Delete | Remove the selected cut |
-| Ctrl+Z, Ctrl+Shift+Z | Undo, redo |
-| Ctrl+S | Save now |
+| Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⇧⌘Z on a Mac) | Undo, redo |
+| Ctrl+S (⌘S on a Mac) | Save now |
 
 Cuts can be reordered with **Move earlier** and **Move later**, and trimmed with the in
 and out sliders (arrow keys) or by typing milliseconds.
+
+On a Mac the menu bar adds its own shortcuts (⌘, Settings, ⇧⌘I Import, ⌘F Find, ⌘1–⌘4
+screens, ⌘= and ⌘- text size, ⌘/ this list, ⌘Q Quit). The full list is in
+[the Mac guide](./macos.md#menus-and-keyboard-shortcuts) and in the app under
+**Help → Keyboard Shortcuts**.
 
 ## Screen readers
 
@@ -75,6 +80,26 @@ and out sliders (arrow keys) or by typing milliseconds.
   are in the app.
 - First-run setup moves focus to each new step's heading.
 - Dialogs keep focus inside until closed and return it to the control that opened them.
+
+## macOS
+
+- **VoiceOver** (⌘F5): every screen has landmarks (*Workspace*, *Primary* navigation,
+  *main*), headings and named controls. Use the rotor (VO-U) to jump by heading or
+  landmark. Job completion and failures are announced. Menus, the About panel and the
+  Quit question are standard macOS menus and alerts.
+- **Full Keyboard Access:** Tab reaches every control inside the app window. Turn on
+  **System Settings → Keyboard → Keyboard navigation** so Tab also moves between buttons
+  in macOS dialogs such as Open and Save.
+- **Voice Control:** buttons and links use their visible text as their name, so “Click
+  Import”, “Click Settings” or “Show numbers” work. The menu bar works with “Click
+  File” and so on.
+- **Increase contrast** (**Accessibility → Display**) makes secondary text full
+  strength and outlines stronger when the theme is *Match my system*. For the strongest
+  contrast choose **Settings → Display and motion → High contrast**.
+- **Reduce motion** (**Accessibility → Display**) turns off the app's transitions, as
+  does **Settings → Display and motion → Reduce motion**.
+- **Larger text and zoom:** **View → Make Text Bigger** (⌘=) up to 200%, or
+  **Settings → Display and motion**. macOS Zoom (**Accessibility → Zoom**) also works.
 
 ## Support matrix
 
@@ -94,6 +119,9 @@ What was checked for this version, and how. "Automated" checks run on every chan
 | Reduced motion | Browser smoke, from Settings and from the system setting | Transitions off |
 | Status announcements | Component tests of the live regions (automated) | Pass |
 | Windows Narrator, NVDA | Manual | **Not yet tested** (Windows qualification, M32) |
+| macOS menus and shortcuts | Automated layout, shortcut-conflict and action tests | Pass |
+| macOS setup and permission guidance | axe-core and keyboard tests of the macOS setup step and Settings panel (automated) | Pass |
+| macOS VoiceOver, Voice Control, Increase contrast, Reduce motion, zoom | Manual, installed ad hoc build on Apple Silicon | See the [M38 handoff](../milestones/M38-handoff.md) |
 | WebView2 on Windows 11 | Manual keyboard pass in the packaged app | **Not yet tested** (M32) |
 
 ### Known exceptions

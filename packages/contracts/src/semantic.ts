@@ -109,6 +109,25 @@ function* platformCapabilities(doc: PlatformCapabilities): Generator<string> {
     yield `directories.convention: ${doc.os.family} uses ${convention}`;
   if (doc.integrations.file_manager !== fileManager)
     yield `integrations.file_manager: ${doc.os.family} uses ${fileManager}`;
+  // M38: the signing state is only checked on macOS, and never claims more than the
+  // Gatekeeper assessment supports.
+  const signing = doc.signing;
+  if (signing) {
+    const macos = doc.os.family === "macos";
+    const notChecked = signing.state === "not-applicable";
+    if (macos === notChecked)
+      yield "signing.state: not-applicable exactly when the OS is not macOS";
+    if ((signing.gatekeeper === "not-applicable") !== notChecked)
+      yield "signing.gatekeeper: not-applicable exactly when signing.state is";
+    if (notChecked && signing.hardened_runtime !== null)
+      yield "signing.hardened_runtime: null when signing is not checked";
+    if (signing.state === "notarized" && signing.gatekeeper !== "accepted")
+      yield "signing.state: notarized requires a Gatekeeper acceptance";
+    if (["unsigned", "adhoc"].includes(signing.state) && signing.gatekeeper === "accepted")
+      yield "signing.gatekeeper: Gatekeeper never accepts an unsigned or ad hoc application";
+    if (signing.state === "unsigned" && signing.hardened_runtime === true)
+      yield "signing.hardened_runtime: an unsigned application has no Hardened Runtime";
+  }
 }
 function* systemDoctor(doc: SystemDoctor): Generator<string> {
   if (doc.ready !== !doc.checks.some((c) => c.status === "fail")) yield "ready: must match checks";

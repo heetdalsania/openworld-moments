@@ -22,6 +22,7 @@ import { formatClock } from "./SessionView";
 import { SessionPlayer, type PlayerState } from "./player";
 import { loadProjectMedia, type ProjectMedia } from "./projectMedia";
 import { newSegmentId, projectMarkers, projectTimeline } from "./projectTimeline";
+import { rememberProject } from "./menu";
 import { openWorkspace, type ProjectWorkspace } from "./projectWorkspace";
 import { useQuery } from "./query";
 import { frameMs, nearestBoundary, toSource } from "./timeline";
@@ -217,6 +218,7 @@ export function EditorView({ id, workerReady }: { id: string; workerReady: boole
         if (!cancelled) {
           setWorkspace(w);
           setError(undefined);
+          rememberProject(w.document.project.id, w.document.project.title);
         }
       },
       (e) => {

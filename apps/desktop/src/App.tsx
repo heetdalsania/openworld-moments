@@ -21,7 +21,7 @@ import { JobCenter } from "./JobCenter";
 import { isActive, percent, useJobFeed, useJobs } from "./jobs";
 import { LibraryView } from "./LibraryView";
 import { PhoneImport } from "./PhoneImport";
-import { navigate, type Route, routeHref, useRoute } from "./route";
+import { type Route, routeHref, useRoute } from "./route";
 import { SessionsView } from "./SessionsView";
 import { SearchView } from "./SearchView";
 import { SessionView } from "./SessionView";
@@ -30,6 +30,10 @@ import type { WatchedFolderView } from "./watched";
 import { ModelManager } from "./ModelManager";
 import { SystemPanel } from "./SystemPanel";
 import { XboxOnboarding } from "./XboxOnboarding";
+import { isMac, shortcut } from "./keys";
+import { MacPermissions } from "./MacPermissions";
+import { openGuide, openSearch, syncRecentMenu, useMenuActions, useQuitGuard } from "./menu";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { describeWorker, fetchWorkerStatus, onWorkerStatus, type WorkerStatus } from "./worker";
 
 function useWorkerStatus(): WorkerStatus | null {
@@ -109,8 +113,16 @@ function useDroppedPaths(onDrop: (paths: string[]) => void): boolean {
   return over;
 }
 
-function HelpPanel({ workerReady }: { workerReady: boolean }) {
+function HelpPanel({
+  workerReady,
+  onShortcuts,
+}: {
+  workerReady: boolean;
+  onShortcuts: () => void;
+}) {
   const library = useAction(revealLibrary);
+  const guides = useAction(() => openGuide(isMac() ? "macos" : "index"));
+  const error = library.error ?? guides.error;
   return (
     <section className="panel" aria-labelledby="help-heading">
       <h2 id="help-heading">Help and setup</h2>
@@ -119,6 +131,12 @@ function HelpPanel({ workerReady }: { workerReady: boolean }) {
         limitations are in the project documentation: <span className="url">{GUIDES_URL}</span>
       </p>
       <div className="row">
+        <button type="button" disabled={guides.busy} onClick={() => void guides.run()}>
+          {isMac() ? "Open the macOS guide" : "Open the user guides"}
+        </button>
+        <button type="button" onClick={onShortcuts}>
+          Keyboard shortcuts
+        </button>
         <button type="button" onClick={() => setOnboarding("pending")}>
           Run setup again
         </button>
@@ -127,15 +145,21 @@ function HelpPanel({ workerReady }: { workerReady: boolean }) {
           disabled={!workerReady || library.busy}
           onClick={() => void library.run()}
         >
-          Show library folder
+          {isMac() ? "Show library in Finder" : "Show library folder"}
         </button>
       </div>
-      {library.error && <p role="alert">{describeError(library.error)}</p>}
+      {error && <p role="alert">{describeError(error)}</p>}
     </section>
   );
 }
 
-function SettingsView({ workerReady }: { workerReady: boolean }) {
+function SettingsView({
+  workerReady,
+  onShortcuts,
+}: {
+  workerReady: boolean;
+  onShortcuts: () => void;
+}) {
   const [folders, setFolders] = useState<WatchedFolderView[] | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const onFolders = useCallback((views: WatchedFolderView[]) => setFolders(views), []);
@@ -160,9 +184,10 @@ function SettingsView({ workerReady }: { workerReady: boolean }) {
           System checks, models and watched folders are available once the media worker is running.
         </p>
       )}
+      {isMac() && <MacPermissions />}
       <AppearanceSettings />
       <DiagnosticsPanel workerReady={workerReady} />
-      <HelpPanel workerReady={workerReady} />
+      <HelpPanel workerReady={workerReady} onShortcuts={onShortcuts} />
     </section>
   );
 }
@@ -209,10 +234,12 @@ function Routes({
   route,
   ready,
   openImport,
+  openShortcuts,
 }: {
   route: Route;
   ready: boolean;
   openImport: () => void;
+  openShortcuts: () => void;
 }) {
   return (
     <>
@@ -252,7 +279,9 @@ function Routes({
       {route.view === "project" && <EditorView key={route.id} id={route.id} workerReady={ready} />}
       {route.view === "search" && <SearchView workerReady={ready} />}
       {route.view === "calibration" && ready && <CalibrationView />}
-      {route.view === "settings" && <SettingsView workerReady={ready} />}
+      {route.view === "settings" && (
+        <SettingsView workerReady={ready} onShortcuts={openShortcuts} />
+      )}
       {route.view === "phone" &&
         (ready ? (
           <PhoneImport />
@@ -292,11 +321,7 @@ export function App() {
       const command = event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey);
       if (!slash && !command) return;
       event.preventDefault();
-      if (window.location.hash === routeHref({ view: "search" })) {
-        document.getElementById("search-input")?.focus();
-      } else {
-        navigate({ view: "search" });
-      }
+      openSearch();
     };
     window.addEventListener("keydown", open);
     return () => window.removeEventListener("keydown", open);
@@ -325,6 +350,19 @@ export function App() {
     [ready],
   );
   const dragging = useDroppedPaths(onDrop);
+  // M38: native macOS menu actions, Open Recent and the Quit check.
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [menuMessage, setMenuMessage] = useState<string | null>(null);
+  const openShortcuts = useCallback(() => setShortcutsOpen(true), []);
+  useMenuActions({
+    ready,
+    openImport,
+    openJobs: () => setJobsOpen(true),
+    openShortcuts,
+    report: setMenuMessage,
+  });
+  useQuitGuard();
+  useEffect(() => syncRecentMenu(), []);
 
   return (
     <div className="app">
@@ -370,7 +408,14 @@ export function App() {
       <div className="workspace">
         <header className="workspace-bar">
           <div className="actions">
-            <button type="button" className="primary" onClick={openImport} disabled={!ready}>
+            <button
+              type="button"
+              className="primary"
+              onClick={openImport}
+              disabled={!ready}
+              aria-keyshortcuts={isMac() ? "Meta+Shift+I" : undefined}
+              title={isMac() ? `Import (${shortcut(["Shift", "Mod", "I"])})` : undefined}
+            >
               <span aria-hidden="true">＋</span> Import
             </button>
             <a
@@ -397,13 +442,26 @@ export function App() {
           </div>
         </header>
         <WorkerBanner worker={worker} />
+        {menuMessage && (
+          <div className="banner warn" role="alert">
+            {menuMessage}{" "}
+            <button type="button" onClick={() => setMenuMessage(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
         <Announcer />
         <div className="body">
           <main id="main" tabIndex={-1}>
             {prefs.onboarding === "pending" ? (
               <Onboarding workerReady={ready} onImport={openImport} />
             ) : (
-              <Routes route={route} ready={ready} openImport={openImport} />
+              <Routes
+                route={route}
+                ready={ready}
+                openImport={openImport}
+                openShortcuts={openShortcuts}
+              />
             )}
           </main>
           {jobsOpen && (
@@ -424,6 +482,7 @@ export function App() {
           Drop videos or folders to import
         </div>
       )}
+      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
       {importPaths !== null && (
         <ImportPanel
           droppedPaths={importPaths}

@@ -2,6 +2,7 @@
 // Export (M24): render the last saved project revision with a preset and an encoder
 // that passed a real test encode. A hardware failure offers the CPU encoder as an
 // explicit choice; text that cannot be drawn yet must be left out explicitly.
+import { revealLabel } from "./keys";
 import { useState } from "react";
 import { useLayoutProfile } from "./LayoutPanel";
 import { compatibleProfile, FIT, layoutWarnings } from "./verticalLayout";
@@ -124,7 +125,7 @@ function RenderRow({
       {record.status === "ready" && (
         <div className="row">
           <button type="button" disabled={reveal.busy} onClick={() => void reveal.run()}>
-            Show in folder
+            {revealLabel()}
           </button>
           <button type="button" disabled={manifest.busy} onClick={() => void manifest.run()}>
             Save manifest…

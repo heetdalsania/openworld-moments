@@ -138,6 +138,8 @@ token; downloaded models; release artifacts and the build pipeline that makes th
 | X2 | Telemetry or crash upload | None exists | Code review; no analytics dependencies in the SBOM | Resolved |
 | X3 | Plugins run arbitrary code | Plugins deferred | — | Resolved (not built) |
 | X4 | A support report leaks footage, file names, paths or tokens (M31) | Fixed `diagnostics-report` contract (counts and codes only; a schema-fixed privacy block); messages only on opt-in, redacted for paths, file names and tokens; whole text redacted again; preview before saving; the host saves it, never uploads | `tests/test_diagnostics.py`, contract fixtures | Resolved |
+| X5 | The signing report names the developer, or claims a notarization the app lacks (M38) | The host reports only a classification from `codesign`/`spctl`; `notarized` requires Gatekeeper's *Notarized Developer ID* acceptance, overrides read as unknown; contract rules reject inconsistent states and extra fields | `signing.rs` tests, contract fixtures, `test_signing_state_reaches_the_report_and_never_overclaims`, `verify-dmg` signing check | Resolved |
+| X6 | The webview makes the host open an arbitrary URL, file or settings pane (M38) | `guide_open` and `system_settings_open` take fixed topic/pane names mapped to constants; `open_url` refuses anything outside the project's GitHub pages and macOS privacy panes; started by absolute path without a shell | `menu.rs` and `platform` URL tests | Resolved |
 
 ## Accepted risks and exceptions
 
