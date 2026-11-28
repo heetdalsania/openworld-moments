@@ -1,15 +1,19 @@
 # Known limitations
 
-> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-23 (M32).
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64), and the macOS 14+ preview.
+> **Last checked:** 2026-11-28 (M38).
 
 This is an alpha. These are the limits we know about, so nothing here should surprise
 you. Each is tracked by the milestone named in brackets.
 
 ## Platform and installation
 
-- **Windows 11 x64 only for now.** macOS packages are in progress (M37–M39); Windows 10,
-  Windows on Arm and Linux are not supported.
+- **Windows 11 x64 only for now.** macOS builds are previews for testers until
+  notarized downloads are published (M37, M39); see [the Mac guide](./macos.md). Windows
+  10, Windows on Arm and Linux are not supported.
+- **Mac previews:** quitting from the Dock or by logging out doesn't ask about running
+  jobs (⌘Q and the window's close button do). Dropping files on the Dock icon doesn't
+  import them; drop them on the window instead.
 - **The installer is not signed.** Windows SmartScreen will probably show "Windows
   protected your PC" for a browser download, and some company policies block it.
   Check the download with `checksums.txt` before choosing **Run anyway**.

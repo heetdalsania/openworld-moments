@@ -29,7 +29,37 @@ use other as imp;
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 compile_error!("OpenWorld Moments builds only for x86_64 and aarch64");
 
-pub use imp::{hide_console, is_cloud_placeholder, observe_lifecycle, reveal_command};
+pub use imp::{hide_console, is_cloud_placeholder, observe_lifecycle, reveal_command, url_command};
+
+/// M38: open one of the app's fixed web or System Settings URLs. Anything else, in
+/// particular a `file:` URL or a value from the webview, is refused.
+pub fn open_url(url: &str) -> std::io::Result<()> {
+    if !url_allowed(url) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "URL not allowed",
+        ));
+    }
+    let mut child = url_command(url)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
+/// Project guide pages on GitHub and System Settings privacy panes, nothing else.
+pub fn url_allowed(url: &str) -> bool {
+    let safe = url
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b"-._~/:?#=&%".contains(&b));
+    safe && (url.starts_with("https://github.com/heetdalsania/openworld-moments/")
+        || (cfg!(target_os = "macos")
+            && url.starts_with("x-apple.systempreferences:com.apple.preference.security?Privacy_")))
+}
 
 /// Native system sleep/wake, distinct from a hidden or unfocused window.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -174,7 +204,13 @@ pub const WORKER_EXECUTABLE: &str = if cfg!(windows) {
 };
 
 /// The `platform-capabilities` contract document (no paths, names or identifiers).
-pub fn capabilities(host_version: &str, facts: &Facts) -> serde_json::Value {
+/// `signing` comes from [`crate::signing::current`]; it is a parameter so this stays a
+/// pure function.
+pub fn capabilities(
+    host_version: &str,
+    facts: &Facts,
+    signing: &crate::signing::Signing,
+) -> serde_json::Value {
     let (convention, file_manager) = match facts.family {
         Family::Windows => ("windows-appdata", "explorer"),
         Family::Macos => ("macos-standard", "finder"),
@@ -197,14 +233,28 @@ pub fn capabilities(host_version: &str, facts: &Facts) -> serde_json::Value {
         "support": support(facts),
         "directories": { "convention": convention },
         // Tokens remain per-launch/session in memory; nothing persists a secret.
-        // The app keeps the
-        // default Tauri menus until M38 adds native ones.
-        "integrations": { "file_manager": file_manager, "secret_store": "none", "menus": "default" },
+        // M38: macOS builds have native menus; Windows keeps its menu-free window.
+        "integrations": {
+            "file_manager": file_manager,
+            "secret_store": "none",
+            "menus": menus(facts.family),
+        },
+        "signing": signing,
     })
 }
 
+/// Which menus the window has: native macOS menus (M38), none on Windows (unchanged
+/// since M00), and the toolkit's defaults elsewhere.
+pub fn menus(family: Family) -> &'static str {
+    match family {
+        Family::Macos => "native",
+        Family::Windows => "none",
+        Family::Linux => "default",
+    }
+}
+
 /// Contract version the host writes. Kept equal to the contracts package by a test.
-pub const SCHEMA_VERSION: &str = "1.27";
+pub const SCHEMA_VERSION: &str = "1.28";
 
 /// Where the app keeps its files. Only `data` holds the canonical library today; M35
 /// moves disposable caches and logs into `cache` and `logs`.
@@ -262,7 +312,8 @@ pub fn venv_python(repo: &Path) -> PathBuf {
 
 /// The `--version-report` output: the capabilities document as indented JSON.
 pub fn version_report(host_version: &str, facts: &Facts) -> String {
-    serde_json::to_string_pretty(&capabilities(host_version, facts))
+    let signing = crate::signing::current(facts.family);
+    serde_json::to_string_pretty(&capabilities(host_version, facts, &signing))
         .unwrap_or_else(|_| "{}".to_owned())
 }
 
@@ -351,7 +402,12 @@ mod tests {
 
     #[test]
     fn capabilities_follow_the_contract_shape_and_carry_no_paths() {
-        let doc = capabilities("0.1.0", &mac("15.2", "aarch64", Some(false)));
+        let adhoc = crate::signing::Signing {
+            state: crate::signing::State::Adhoc,
+            hardened_runtime: Some(true),
+            gatekeeper: crate::signing::Gatekeeper::Rejected,
+        };
+        let doc = capabilities("0.1.0", &mac("15.2", "aarch64", Some(false)), &adhoc);
         assert_eq!(doc["schema_version"], SCHEMA_VERSION);
         assert_eq!(doc["os"]["family"], "macos");
         assert_eq!(doc["os"]["minimum"], MACOS_MINIMUM);
@@ -359,6 +415,9 @@ mod tests {
         assert_eq!(doc["build"]["profile"], "release");
         assert_eq!(doc["directories"]["convention"], "macos-standard");
         assert_eq!(doc["integrations"]["file_manager"], "finder");
+        assert_eq!(doc["integrations"]["menus"], "native");
+        assert_eq!(doc["signing"]["state"], "adhoc");
+        assert_eq!(doc["signing"]["gatekeeper"], "rejected");
         let text = doc.to_string();
         assert!(!text.contains('/') && !text.contains('\\'), "{text}");
         let keys: Vec<_> = doc.as_object().unwrap().keys().cloned().collect();
@@ -372,10 +431,17 @@ mod tests {
                 "integrations",
                 "os",
                 "schema_version",
+                "signing",
                 "support"
             ]
         );
-        let win = capabilities("0.1.0", &windows("x86_64", false));
+        let win = capabilities(
+            "0.1.0",
+            &windows("x86_64", false),
+            &crate::signing::Signing::NOT_APPLICABLE,
+        );
+        assert_eq!(win["integrations"]["menus"], "none");
+        assert_eq!(win["signing"]["state"], "not-applicable");
         assert_eq!(win["os"]["minimum"], serde_json::Value::Null);
         assert_eq!(win["directories"]["convention"], "windows-appdata");
         assert_eq!(win["build"]["bundled_worker"], true);
@@ -428,11 +494,45 @@ mod tests {
         let report: serde_json::Value =
             serde_json::from_str(&version_report("0.0.0", &facts)).unwrap();
         assert_eq!(report["build"]["target"], TARGET);
+        let signing = report["signing"]["state"].as_str().unwrap();
+        if cfg!(target_os = "macos") {
+            assert_ne!(signing, "not-applicable");
+            assert_ne!(signing, "notarized", "a test binary is never notarized");
+        } else {
+            assert_eq!(signing, "not-applicable");
+        }
         if cfg!(target_os = "macos") {
             let version = facts.os_version.expect("macOS reports its version");
             assert!(release(&version).is_some(), "{version}");
             assert!(facts.translated.is_some() || facts.arch == "x86_64");
         }
+    }
+
+    #[test]
+    fn only_the_apps_own_urls_open() {
+        assert!(url_allowed(
+            "https://github.com/heetdalsania/openworld-moments/blob/main/docs/guides/macos.md#install"
+        ));
+        for bad in [
+            "file:///etc/passwd",
+            "https://example.com/",
+            "https://github.com/someone-else/repo",
+            "https://github.com/heetdalsania/openworld-moments/../../x y",
+            "x-apple.systempreferences:com.apple.preference.security?Firewall",
+            "javascript:alert(1)",
+            "",
+        ] {
+            assert!(!url_allowed(bad), "{bad}");
+        }
+        assert_eq!(
+            url_allowed(
+                "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"
+            ),
+            cfg!(target_os = "macos")
+        );
+        let command = url_command("https://github.com/heetdalsania/openworld-moments/");
+        let name = command.get_program().to_string_lossy().to_lowercase();
+        assert!(!name.contains("cmd") && !name.ends_with("sh"), "{name}");
     }
 
     #[test]

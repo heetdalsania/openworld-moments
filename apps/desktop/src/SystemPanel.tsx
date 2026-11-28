@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useId } from "react";
 import { describeError, systemDoctor } from "./api";
-import { architectureName, osName, platformInfo, supportName, supportNotes } from "./platform";
+import {
+  architectureName,
+  osName,
+  platformInfo,
+  recommendedDownload,
+  signingName,
+  supportName,
+  supportNotes,
+} from "./platform";
 import { useQuery } from "./query";
 
 const STATUS_WORD = { pass: "Passed", warn: "Warning", fail: "Failed" } as const;
@@ -24,6 +32,10 @@ export function SystemPanel({ heading = "System check" }: { heading?: string }) 
             {osName(platform.data)} · {architectureName(platform.data)} build · version{" "}
             {platform.data.host_version} · {supportName(platform.data)}
           </p>
+          {signingName(platform.data) && <p>Signature: {signingName(platform.data)}</p>}
+          {recommendedDownload(platform.data) && (
+            <p>Right download for this Mac: the {recommendedDownload(platform.data)?.label} DMG.</p>
+          )}
           {supportNotes(platform.data).map((note) => (
             <p
               key={note}

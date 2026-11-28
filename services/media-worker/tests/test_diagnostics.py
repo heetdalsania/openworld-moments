@@ -223,6 +223,46 @@ def test_api_embeds_a_valid_host_report_and_drops_a_malformed_one(tmp_path: Path
             assert "/Users/alex" not in response.json()["content"]
 
 
+@pytest.mark.parametrize(
+    ("fixture", "state"),
+    [("macos-adhoc-preview.json", "adhoc"), ("macos-notarized.json", "notarized")],
+)
+def test_signing_state_reaches_the_report_and_never_overclaims(
+    tmp_path: Path, fixture: str, state: str
+) -> None:
+    """M38: the host's signing classification is reported as-is; a notarized claim
+    without Gatekeeper's acceptance, or a signer's name, drops the host block."""
+    from openworld_moments.api.app import ApiSettings, create_app
+    from openworld_moments.jobs.engine import JobEngine
+    from openworld_moments.jobs.handlers import BUILTIN_HANDLERS
+
+    host = json.loads((HOST_FIXTURES / "platform-capabilities/valid" / fixture).read_text("utf-8"))
+    token = secrets.token_hex(32)
+    database = Database.open(tmp_path / "database.sqlite3")
+    settings = ApiSettings(
+        token=token, allowed_hosts=frozenset({"testserver"}), require_loopback_peer=False
+    )
+    with TestClient(create_app(JobEngine(database, BUILTIN_HANDLERS), settings)) as client:
+        client.headers["Authorization"] = f"Bearer {token}"
+        body = client.post("/v1/diagnostics", json={"host": host}).json()
+        load("diagnostics-report", body["report"])
+        assert json.loads(body["content"])["host"]["signing"]["state"] == state
+
+        overclaim = {
+            **host,
+            "signing": {"state": "notarized", "hardened_runtime": True, "gatekeeper": "rejected"},
+        }
+        named = {
+            **host,
+            "signing": {**host["signing"], "authority": "Developer ID Application: Alex"},
+        }
+        for bad in (overclaim, named):
+            response = client.post("/v1/diagnostics", json={"host": bad})
+            assert response.status_code == 200
+            assert "host" not in response.json()["report"]
+            assert "Alex" not in response.json()["content"]
+
+
 def test_report_without_a_host_matches_the_m31_shape(tmp_path: Path) -> None:
     report = diagnostics.build_report(
         worker={"worker_version": "0", "api_version": "1", "schema_version": "1.25"},

@@ -26,6 +26,12 @@ pub fn reveal_command(target: &Path, select: bool) -> Command {
     command
 }
 
+pub fn url_command(url: &str) -> Command {
+    let mut command = Command::new("xdg-open");
+    command.arg(url);
+    command
+}
+
 pub fn hide_console(_command: &mut tokio::process::Command) {}
 
 pub fn is_cloud_placeholder(_meta: &std::fs::Metadata) -> bool {

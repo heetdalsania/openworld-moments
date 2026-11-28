@@ -47,6 +47,13 @@ pub fn reveal_command(target: &Path, select: bool) -> Command {
     command
 }
 
+/// M38: a user guide in the browser or a System Settings pane, by fixed URL.
+pub fn url_command(url: &str) -> Command {
+    let mut command = Command::new("/usr/bin/open");
+    command.arg(url);
+    command
+}
+
 /// Child processes never open a window on macOS.
 pub fn hide_console(_command: &mut tokio::process::Command) {}
 

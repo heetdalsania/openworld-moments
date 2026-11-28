@@ -64,6 +64,18 @@ export function install(
     if (command === "platform_info") return Promise.resolve(host.platform);
     if (command === "worker_status") return Promise.resolve(host.worker);
     if (command === "watched_folders_list") return Promise.resolve({ folders: [], status: [] });
+    // M38: menu, quit-guard and guide commands are recorded and succeed.
+    if (
+      command === "menu_recent_set" ||
+      command === "quit_guard_set" ||
+      command === "guide_open" ||
+      command === "system_settings_open"
+    ) {
+      host.calls.push({ method: "INVOKE", path: command, body: args });
+      return Promise.resolve(
+        command === "guide_open" || command === "system_settings_open" ? { shown: true } : null,
+      );
+    }
     if (command === "worker_api") {
       const method = String(args?.method);
       const path = String(args?.path);

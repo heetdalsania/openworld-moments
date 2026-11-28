@@ -1053,6 +1053,7 @@ export interface PlatformCapabilities {
   support: PlatformSupport;
   directories: PlatformDirectories;
   integrations: PlatformIntegrations;
+  signing?: PlatformSigning;
 }
 export interface PlatformOs {
   family: "windows" | "macos" | "linux";
@@ -1412,6 +1413,24 @@ export interface PlatformIntegrations {
    */
   secret_store: "none" | "keychain" | "credential-manager" | "secret-service";
   menus: "none" | "default" | "native";
+}
+/**
+ * M38: how the running application is signed, as the host checked it with the operating system's own code-signing and Gatekeeper tools. Only the classification is reported: never the signer's name, team, certificate or any path. Absent in documents written before 1.28.
+ */
+export interface PlatformSigning {
+  /**
+   * not-applicable: not checked on this OS. unknown: the check could not run or timed out. unsigned: no signature. adhoc: signed without an identity (development and CI builds). developer-id: signed with a Developer ID but not notarized. notarized: Developer ID signed and accepted by Gatekeeper as notarized. other: any other signing identity.
+   */
+  state:
+    "not-applicable" | "unknown" | "unsigned" | "adhoc" | "developer-id" | "notarized" | "other";
+  /**
+   * Whether the executable carries the Hardened Runtime flag; null when not checked or unknown.
+   */
+  hardened_runtime: boolean | null;
+  /**
+   * Gatekeeper's assessment of the application.
+   */
+  gatekeeper: "not-applicable" | "unknown" | "accepted" | "rejected";
 }
 export interface DiagnosticsWorker {
   api_version: string;
@@ -3557,6 +3576,7 @@ export interface PlatformCapabilities1 {
   support: PlatformSupport;
   directories: PlatformDirectories;
   integrations: PlatformIntegrations;
+  signing?: PlatformSigning;
 }
 export interface PrivacyReview {
   schema_version: string;

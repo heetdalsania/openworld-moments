@@ -85,7 +85,9 @@ export function SessionsView() {
   return (
     <section className="view" aria-labelledby="sessions-heading">
       <div className="view-head">
-        <h1 id="sessions-heading">Sessions</h1>
+        <h1 id="sessions-heading" tabIndex={-1}>
+          Sessions
+        </h1>
         <div className="row">
           <button type="button" disabled={group.busy} onClick={() => void group.run()}>
             Group clips into sessions

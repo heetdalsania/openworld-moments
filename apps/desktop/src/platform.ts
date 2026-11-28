@@ -50,3 +50,41 @@ export function supportNotes(info: PlatformCapabilities): string[] {
   if (reasons.has("linux-development")) notes.push("Linux is used for development only.");
   return notes;
 }
+
+/**
+ * M38: which macOS download suits this Mac. An Intel build under Rosetta means the Mac
+ * has Apple Silicon. `null` off macOS, or when an Intel build can't tell whether it is
+ * translated.
+ */
+export function recommendedDownload(
+  info: PlatformCapabilities,
+): { arch: "arm64" | "x86_64"; label: string } | null {
+  if (info.os.family !== "macos") return null;
+  if (info.architecture.binary === "aarch64" || info.architecture.translated === true)
+    return { arch: "arm64", label: "Apple Silicon (arm64)" };
+  if (info.architecture.translated === false) return { arch: "x86_64", label: "Intel (x86_64)" };
+  return null;
+}
+
+/** The release DMG name for an architecture (ADR-0008 naming). */
+export function dmgName(version: string, arch: "arm64" | "x86_64"): string {
+  return `OpenWorld-Moments_${version}_macOS_${arch}.dmg`;
+}
+
+const SIGNING = {
+  "not-applicable": null,
+  unknown: "Signature could not be checked",
+  unsigned: "Not signed",
+  adhoc: "Signed ad hoc for testing; not notarized by Apple",
+  "developer-id": "Signed with a Developer ID; not notarized by Apple",
+  notarized: "Signed with a Developer ID and notarized by Apple",
+  other: "Signed with a development certificate; not notarized by Apple",
+} as const;
+
+/**
+ * M38: how this copy is signed, in words. Only "notarized" claims notarization, and only
+ * the host can report it (after Gatekeeper accepted the bundle as notarized).
+ */
+export function signingName(info: PlatformCapabilities): string | null {
+  return info.signing ? SIGNING[info.signing.state] : null;
+}

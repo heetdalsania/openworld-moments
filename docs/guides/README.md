@@ -1,7 +1,7 @@
 # User guides
 
-> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-11 (M31). See [Validation](#validation).
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64), and the macOS 14+ preview.
+> **Last checked:** 2026-11-28 (M38). See [Validation](#validation).
 
 Task-based guides for people using the app. None of them need a terminal.
 
@@ -9,6 +9,9 @@ Task-based guides for people using the app. None of them need a terminal.
 
 - [Getting started](./getting-started.md): install, first-run setup, then import,
   review, edit, render and find the video. Includes the keyboard-only path.
+- [Using OpenWorld Moments on a Mac](./macos.md): which download, installing, macOS
+  permissions and recovery, the menu bar, updating, uninstalling and privacy. macOS
+  builds are previews until notarized downloads are published.
 
 ## Getting clips into the app
 
@@ -49,6 +52,7 @@ link and image in these guides resolves and that each guide carries its version 
 | PlayStation and phone clips | Phone transfer opt-in and upload page in automated tests; phone upload on Windows 11 in M29/M10 | 2026-11-11 |
 | Watched folders, capture cards | Automated tests and the development build | 2026-11-11 |
 | Troubleshooting, diagnostics | Diagnostics redaction tests; each fix matched to the message the app shows | 2026-11-11 |
+| Using OpenWorld Moments on a Mac | Automated architecture, menu, permission-guidance and link tests; the installed ad hoc build on Apple Silicon (M38 handoff). Notarized download steps are checked in M39 | 2026-11-28 |
 
 **Not yet done:** a full pass of every guide on a clean Windows 11 standard-user account.
 That run belongs to the Windows qualification in M32 and is listed in the M31 handoff.

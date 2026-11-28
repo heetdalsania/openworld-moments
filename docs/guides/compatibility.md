@@ -1,10 +1,23 @@
 # Compatibility notes
 
-> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-23 (M32).
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64), and the macOS 14+ preview.
+> **Last checked:** 2026-11-28 (M38).
 
 This page is versioned with the app. Each release adds a section; older sections stay
 for reference.
+
+## After 0.1.0-alpha.32: macOS preview (M37–M38)
+
+Not a release. Builds from `main` after `0.1.0-alpha.32` add:
+
+- **macOS 14+ previews** for Apple Silicon (`arm64`) and Intel (`x86_64`), signed ad hoc
+  and not notarized, with native menus and macOS setup and permission guidance. See
+  [Using OpenWorld Moments on a Mac](./macos.md).
+- **Data formats:** contract version **1.28**: the platform report in diagnostics adds a
+  `signing` block (how the app is signed; never the signer). 1.27 and older documents
+  still read. No database change.
+- **Windows:** unchanged, apart from the platform report now saying `menus: "none"`
+  (the Windows window has never had a menu bar).
 
 ## 0.1.0-alpha.32 — first public alpha (M32)
 

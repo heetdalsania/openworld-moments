@@ -963,6 +963,25 @@ def version_report_at(app: Path, home: Path) -> dict[str, Any]:
     return report
 
 
+def signing_report_problems(report: dict[str, Any], expect: str) -> list[str]:
+    """M38: the app's own signing report (system check and diagnostics) must state the
+    bundle's real signing: `adhoc` for ad hoc builds, `notarized` only for notarized
+    ones, and never a Gatekeeper acceptance an ad hoc build cannot have."""
+    signing = report.get("signing")
+    if not isinstance(signing, dict):
+        return ["signing: missing from the version report"]
+    wanted = "notarized" if expect == "notarized" else "adhoc"
+    problems = []
+    if signing.get("state") != wanted:
+        problems.append(f"signing: state {signing.get('state')!r}, expected {wanted!r}")
+    if signing.get("hardened_runtime") is not True:
+        problems.append("signing: Hardened Runtime not reported")
+    gatekeeper = "accepted" if wanted == "notarized" else "rejected"
+    if signing.get("gatekeeper") != gatekeeper:
+        problems.append(f"signing: gatekeeper {signing.get('gatekeeper')!r}, expected {gatekeeper!r}")
+    return problems
+
+
 def verify_dmg(
     dmg: Path, arch: str, run: Run, *, expect: str = "adhoc", launch: bool = True
 ) -> dict[str, Any]:
@@ -994,7 +1013,9 @@ def verify_dmg(
         if launch:
             report = version_report_at(app, home)
             problems += [f"version report: {p}" for p in shell.check_report(report, arch)]
+            problems += [f"version report: {p}" for p in signing_report_problems(report, expect)]
             results["version_report"] = report.get("build")
+            results["signing_report"] = report.get("signing")
         # The library lives outside the bundle, so replacing or deleting the app keeps it.
         data = home / "Library" / "Application Support" / "OpenWorld Moments"
         data.mkdir(parents=True)

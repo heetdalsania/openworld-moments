@@ -1,5 +1,11 @@
 # Contracts changelog
 
+## 1.28 — macOS UX and signing report (M38)
+
+- `platform-capabilities`: optional `signing` block (`state`, `hardened_runtime`, `gatekeeper`) with how the running application is signed, as the operating system's tools report it. It never names the signer, team or a path. Semantic rules: signing is `not-applicable` exactly off macOS; `notarized` requires a Gatekeeper acceptance; Gatekeeper never accepts an `unsigned` or `adhoc` app. The diagnostics report's embedded `host` follows the same rules.
+- `integrations.menus`: macOS hosts now write `native`, Windows hosts `none` (the enum is unchanged).
+- Existing 1.x documents remain readable (documents without `signing` stay valid); no SQL migration.
+
 ## 1.27 — macOS files and lifecycle (M35)
 
 - `derived-media`: optional `storage_root` distinguishes `library` from the configured disposable `cache`. Omission continues to mean `library`; existing artifact paths retain their format. Filesystem paths are not exposed.

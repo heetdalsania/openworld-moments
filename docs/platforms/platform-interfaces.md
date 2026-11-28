@@ -16,7 +16,9 @@ platforms' rules are unit-tested on every CI runner.
 |---|---|---|---|---|
 | `facts()` / `Probe` | OS family and version, binary architecture, translation, build target | version left to the worker's system check; translation unknown | `/usr/sbin/sysctl -n kern.osproductversion`, `sysctl.proc_translated` (absolute path, no shell) | not read |
 | `support(facts)` | `alpha`, `development` or `unsupported`, with reasons | x64 release = alpha; Arm = unsupported | development (`macos-preview`); below 14.0 or under Rosetta = unsupported | development |
-| `capabilities()` | The `platform-capabilities` contract document (1.25) | ✓ | ✓ | ✓ |
+| `capabilities()` | The `platform-capabilities` contract document (1.25; `signing` and `menus: native` since 1.28) | ✓ (`menus: none`, signing `not-applicable`) | ✓ (`menus: native`, signing from `signing::current`) | ✓ |
+| `signing::current()` (M38) | How this copy is signed, once per launch: `/usr/bin/codesign --display` and `/usr/sbin/spctl --assess` on the bundle, absolute paths, clean environment, 15 s timeout; classification only | not checked | `adhoc`, `developer-id`, `notarized` (only when Gatekeeper accepts it as notarized), `unsigned`, `other` or `unknown` | not checked |
+| `url_command()` / `open_url()` (M38) | Open a fixed user-guide page or System Settings privacy pane; anything else refused | `%SystemRoot%\explorer.exe <url>` | `/usr/bin/open <url>` | `xdg-open <url>` |
 | `app_dirs(app)` | Data, cache, log and temp folders | Tauri `app_data_dir` etc. (unchanged since M03) | `~/Library/Application Support/OpenWorld Moments`, `~/Library/Caches/…`, `~/Library/Logs/…`, `$TMPDIR/OpenWorld Moments` | Tauri XDG folders |
 | `bundled_worker(facts)` / `WORKER_EXECUTABLE` | Whether the build starts a worker from its own bundle, and its name | release builds, `runtime\owm-worker.exe` | release builds since M34, `Resources/runtime/owm-worker` | no |
 | `venv_python(repo)` | Development worker interpreter | `.venv/Scripts/python.exe` | `.venv/bin/python` | `.venv/bin/python` |
@@ -44,8 +46,8 @@ Linux development uses `xdg-open` from `PATH`. CI runs `--version-report` with o
 | Dialogs | `tauri-plugin-dialog` (native `NSOpenPanel`/`NSSavePanel` on macOS); no OS code in the app | M35: persisted native library selection, same-root reauthorization and hash-verified original relink |
 | Keychain / secrets | Nothing persists a secret: the worker token and phone tokens exist only in memory for one launch or session | M35: Keychain behind this module if a secret must persist (`secret_store` in the report) |
 | Processes | Worker and phone gateway by absolute path, argument arrays, piped stdin token, `kill_on_drop`; `hide_console` | M34: bundle-relative sidecars on macOS; M35: ordered quit/sleep/wake, stdin EOF recovery and guarded macOS tool sessions |
-| Menus | Tauri's default menu (`menus: default` in the report) | M38: native application menus and `Command` shortcuts |
-| Lifecycle | `RunEvent` handling in `host.rs` stops the worker and gateway on exit | M35: ordered native sleep/wake and forced-exit recovery; M38: quit confirmation |
+| Menus | M38: `menu.rs` builds the native macOS menu bar (`menus: native`); Windows keeps no menu bar (`menus: none`) | Done in M38 |
+| Lifecycle | `RunEvent` handling in `host.rs` stops the worker and gateway on exit | M35: ordered native sleep/wake and forced-exit recovery; M38: ⌘Q, Close Window and the close button ask first when jobs run or edits are unsaved (Dock Quit and logout can't be intercepted) |
 | Network prompts | Phone LAN off by default (M31 consent) | M35: purpose string and pre-QR local-network/firewall guidance |
 
 ## Version report

@@ -228,3 +228,30 @@ keyframes, local hashed decisions and explicit text-only deletion. Caption-panel
 sidecars now flush the project and use the gated `project_export` host command;
 `caption_export` is removed. Render engine 1.2.0 uses end-exclusive privacy blurs.
 Migration 0018 stores review configuration/decisions without copied evidence text.
+
+## M38 macOS menus, shortcuts and quitting
+
+- **Native menu bar (macOS only):** `src-tauri/src/menu.rs` describes the application,
+  File, Edit, View, Window and Help menus (`macos_layout`) and builds them with Tauri.
+  Edit uses AppKit's own Undo, Cut, Copy, Paste and Select All, so text fields behave
+  as in any Mac app; the editor's ⌘Z still reaches the page first and calls
+  `preventDefault`. App actions are emitted as `menu://action` with the item ID and
+  handled by `src/menu.ts` (`runMenuAction`). Tests on both sides keep the IDs and the
+  shortcut list (`ShortcutsDialog`) in step with the Rust layout.
+- **Windows is unchanged:** no menu bar (`menus: none` in the platform report), and the
+  same in-app shortcuts (/, Ctrl+K, Ctrl+Z, Ctrl+S).
+- **Open Recent:** the UI keeps up to ten recently opened projects (ID and title) under
+  the local-storage key `owm.recent-projects.v1` and sends them to the host
+  (`menu_recent_set`), which accepts only `prj_` IDs and single-line titles of up to 60
+  characters, with control and bidirectional characters removed.
+- **Quit:** ⌘Q, Close Window and the window's close button ask first (a native alert)
+  when the worker reports running jobs or the UI has unsaved project edits
+  (`quit_guard_set`). Dock Quit and logout terminate without asking (AppKit gives the
+  toolkit no chance to cancel); interrupted jobs are requeued or marked retryable by
+  the worker on its next start.
+- **Guides and System Settings:** `guide_open(topic)` and `system_settings_open(pane)`
+  map fixed names to fixed URLs in the host (`menu::guide_url`, `menu::settings_url`,
+  `platform::url_allowed`); the webview never sends a URL.
+- **macOS words:** `src/keys.ts` shows ⌘ and Finder on macOS (*Show in Finder*, *Show
+  library in Finder*) and keeps the Windows labels elsewhere. First-run setup adds a
+  *What macOS may ask* step (`MacPermissions`), also shown in Settings on macOS.

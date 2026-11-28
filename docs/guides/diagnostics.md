@@ -1,7 +1,7 @@
 # Diagnostics for support
 
-> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64).
-> **Last checked:** 2026-11-11 (M31).
+> **Applies to:** OpenWorld Moments 0.1.0 alpha for Windows 11 (x64), and the macOS 14+ preview.
+> **Last checked:** 2026-11-28 (M38).
 
 A diagnostics report helps someone else understand a problem without seeing your
 footage. You see the exact text before saving it, and nothing is sent anywhere: you
@@ -9,7 +9,8 @@ decide who gets the file.
 
 ## Save a report
 
-1. Open **Settings → Diagnostics for support**.
+1. Open **Settings → Diagnostics for support** (on a Mac, also **Help → Save Diagnostics
+   Report…**).
 2. Leave **Include error messages** unticked unless you are asked for them.
 3. Choose **Preview report** and read it.
 4. Choose **Save report…** and pick where to save it. Existing files are never
@@ -25,6 +26,10 @@ the preview.
 ## What it contains
 
 - App, worker and contract versions; operating system and processor type.
+- On a Mac: the macOS version, whether this is the Apple Silicon or Intel build and
+  whether it runs through Rosetta, and how the app is **signed** (`signing`): `adhoc`
+  for test builds, `developer-id`, or `notarized` only when Gatekeeper accepted it as
+  notarized. It never names the signer. See [Diagnostics on a Mac](./macos.md#diagnostics).
 - The system check results and bundled tool versions.
 - **Counts** of clips, sessions, projects, renders, watched folders, collections, event
   observations and transcript segments, plus the database version.
@@ -39,7 +44,7 @@ the preview.
 - Access tokens or other secrets.
 
 These rules are enforced, not just promised. The report has a fixed format
-(`diagnostics-report` contract 1.24) that has no place for names or paths and declares
+(`diagnostics-report` contract, since 1.24) that has no place for names or paths and declares
 its own privacy settings. Every message also passes through a redactor that removes
 paths, file names and tokens, and tests check it with realistic personal data.
 
